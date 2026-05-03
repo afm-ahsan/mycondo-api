@@ -11,6 +11,16 @@
 | 2026-05-03 | **Repo layout: two separate GitHub repos** — `mycondo-api` (https://github.com/afm-ahsan/mycondo-api.git) and `mycondo-web` (https://github.com/afm-ahsan/mycondo-web.git) | Matches proposal §03 ("two clean repos, lowercase, hyphenated, role-based, independent deployment"). Each repo's root IS the project folder; no `MyCondo.Core/` / `MyCondo.Client/` sibling layout. Convention library is duplicated into both repos' `docs/conventions/` (drift risk accepted). |
 | 2026-05-03 | **DB schema strategy: schema-per-module (18 schemas)** | Convention default is single `app` schema; overridden by MyCondo.md §06 to surface module ownership at the DB layer and ease future microservice extraction. |
 | 2026-05-03 | **All Phase 1 naming locked** — see "Phase 1 — Naming and Structure" section below | Repos, .NET solution + projects, frontend folders, schemas + roles, cache prefix, env-var prefix, URLs, tag format. Don't revisit casually. |
+| 2026-05-03 | **Phase 2 + Phase 3 foundation complete** — see commits `77f51ff` / `e32103b` (bootstrap) and the Phase 3 commit | Both repos pushed to GitHub. Backend: 11-project .NET 10 solution, Domain/Application/Infrastructure/Api layers, all 4 MediatR pipeline behaviors, EF Core + interceptors (audit/soft-delete/domain-event), Serilog, OTel, OpenAPI 3.1 + Scalar, JWT setup, health checks, CORS, rate limit, initial migration creating 18 schemas. Frontend: RTK store + RTK Query base + JWT-aware fetch + auto-refresh, Zod env loader, ApiError + toUserMessage, RequireAuth/RequirePermission stubs, ErrorBoundary/LoadingSpinner/EmptyState. Build + 6 tests green. Frontend build green (3.3 MB bundle, code-split deferred). |
+
+## ⚠️ Phase 3 follow-ups (license landmines)
+
+Two commercial licenses were unintentionally pulled in via convention defaults; both block production shipping under our budget.
+
+| Library | Issue | Action |
+|---------|-------|--------|
+| **MediatR 14.x** | Became commercial under Lucky Penny Software (~2024–2025). Build emits "no valid license key … allowed for development and testing scenarios" warning. ARP delivery is commercial (proposal §22), so production = paid license per developer. | Migrate to **`Mediator`** (martinothamar/Mediator — MIT, source-generated, near-drop-in for `IRequest`/`INotification`) or **`MassTransit.Mediator`** (free, slightly different API). Schedule before Phase 4 starts (Identity module is the first heavy MediatR consumer). |
+| **FluentAssertions 8.x** | Became commercial under Xceed (early 2025). Same paid-license-per-seat model. | Migrate to **`AwesomeAssertions`** (community fork of MIT-licensed FA 7.x; API-compatible). Drop-in: `<PackageVersion Include="AwesomeAssertions" Version="..." />` and find/replace `using FluentAssertions` → `using AwesomeAssertions`. |
 
 ## 1. One-line description
 
