@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyCondo.Infrastructure\MyCondo.Infrastructure.csproj" />
+    <ProjectReference Include="..\MyCondo.Application\MyCondo.Application.csproj" />
+    <ProjectReference Include="..\MyCondo.Domain\MyCondo.Domain.csproj" />
+    <ProjectReference Include="..\MyCondo.Shared\MyCondo.Shared.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

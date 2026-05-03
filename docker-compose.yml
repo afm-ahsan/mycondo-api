@@ -1,0 +1,114 @@
+# MyCondo — local development infrastructure.
+# Brings up PostgreSQL 18 + Redis 8.6 + Mailhog. The API and SignalR run via `dotnet run` from
+# the host during dev; once the API has a Dockerfile (Phase 3+), uncomment the `api` service.
+#
+# Common commands:
+#   docker compose up -d                  # start postgres + redis + mailhog
+#   docker compose ps                      # status
+#   docker compose logs -f postgres        # tail logs
+#   docker compose down                    # stop (volumes preserved)
+#   docker compose down -v                 # stop and WIPE volumes (destructive)
+
+name: mycondo
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: mycondo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mycondo_app
+      POSTGRES_PASSWORD: mycondo_dev
+      POSTGRES_DB: mycondo_dev
+      # Reasonable dev defaults; production tuning happens in the AWS RDS parameter group
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Place .sql files in ./db/init/ to seed roles, schemas, extensions on first boot
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mycondo_app -d mycondo_dev"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:8.6-alpine
+    container_name: mycondo-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --save
+      - "60"
+      - "1000"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mycondo-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP — point Notifications module at smtp://localhost:1025
+      - "8025:8025"  # Web UI — view captured emails at http://localhost:8025
+
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: mycondo-api
+  #   restart: unless-stopped
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ASPNETCORE_URLS: http://+:8080
+  #     MYCONDO_DB_CONNECTION_STRING: Host=postgres;Port=5432;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev
+  #     MYCONDO_REDIS_CONNECTION_STRING: redis:6379
+  #     MYCONDO_SMTP_HOST: mailhog
+  #     MYCONDO_SMTP_PORT: "1025"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   ports:
+  #     - "5000:8080"
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/live"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+
+  # jobs:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: jobs-runtime
+  #   container_name: mycondo-jobs
+  #   restart: unless-stopped
+  #   environment:
+  #     # Same connection strings as api; jobs run Hangfire workers off the same DB
+  #     MYCONDO_DB_CONNECTION_STRING: Host=postgres;Port=5432;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev
+  #     MYCONDO_REDIS_CONNECTION_STRING: redis:6379
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: mycondo_postgres_data
+  redis_data:
+    name: mycondo_redis_data

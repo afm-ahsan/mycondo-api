@@ -1,0 +1,69 @@
+# Build output
+bin/
+obj/
+out/
+*.dll
+*.pdb
+*.exe
+*.user
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.userprefs
+
+# Test results
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+TestResults/
+
+# Tooling
+.vshistory/
+.localhistory/
+*.cache
+*.tmp
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+artifacts/
+
+# Rider
+.idea/
+*.sln.iml
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Secrets
+*.user
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+.env
+.env.*
+!.env.example
+secrets.json
+
+# EF Core dump
+*.dbg
+
+# Docker
+docker-compose.override.local.yml
+
+# Logs
+logs/
+*.log
+
+# Misc
+.history/

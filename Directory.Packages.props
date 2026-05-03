@@ -1,0 +1,57 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!--
+    Centrally Managed Packages (CPM). Every package version is declared HERE, never in individual .csproj files.
+    Add a package: 'dotnet add (project) package (Name)' — appends the version here automatically.
+    Bump a package: edit the version below and rebuild.
+    Audit: 'dotnet list package outdated' and 'dotnet list package vulnerable' should both run clean before merge.
+  -->
+
+  <ItemGroup Label="Backend stack — added on demand">
+    <!-- Empty by default. Packages get added below as modules grow. -->
+    <!-- Anticipated for foundation infra (Phase 3): -->
+    <!-- <PackageVersion Include="MediatR" Version="..." /> -->
+    <!-- <PackageVersion Include="FluentValidation.AspNetCore" Version="..." /> -->
+    <!-- <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="..." /> -->
+    <!-- <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="..." /> -->
+    <!-- <PackageVersion Include="EFCore.NamingConventions" Version="..." /> -->
+    <!-- <PackageVersion Include="StackExchange.Redis" Version="..." /> -->
+    <!-- <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="..." /> -->
+    <!-- <PackageVersion Include="Hangfire.AspNetCore" Version="..." /> -->
+    <!-- <PackageVersion Include="Hangfire.PostgreSql" Version="..." /> -->
+    <!-- <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="..." /> -->
+    <!-- <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="..." /> -->
+    <!-- <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="..." /> -->
+    <!-- <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="..." /> -->
+    <!-- <PackageVersion Include="Scalar.AspNetCore" Version="..." /> -->
+    <!-- <PackageVersion Include="Serilog.AspNetCore" Version="..." /> -->
+    <!-- <PackageVersion Include="Serilog.Enrichers.CorrelationId" Version="..." /> -->
+    <!-- <PackageVersion Include="Serilog.Sinks.Seq" Version="..." /> -->
+    <!-- <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="..." /> -->
+    <!-- <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="..." /> -->
+    <!-- <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="..." /> -->
+    <!-- <PackageVersion Include="AWSSDK.S3" Version="..." /> -->
+    <!-- <PackageVersion Include="Dapper" Version="..." /> -->
+  </ItemGroup>
+
+  <ItemGroup Label="Test stack">
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <!-- Anticipated additions: -->
+    <!-- <PackageVersion Include="FluentAssertions" Version="..." /> -->
+    <!-- <PackageVersion Include="NSubstitute" Version="..." /> -->
+    <!-- <PackageVersion Include="Testcontainers.PostgreSql" Version="..." /> -->
+    <!-- <PackageVersion Include="Testcontainers.Redis" Version="..." /> -->
+    <!-- <PackageVersion Include="Respawn" Version="..." /> -->
+    <!-- <PackageVersion Include="NetArchTest.Rules" Version="..." /> -->
+    <!-- <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="..." /> -->
+  </ItemGroup>
+
+</Project>

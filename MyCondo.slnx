@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MyCondo.Api/MyCondo.Api.csproj" />
+    <Project Path="src/MyCondo.Application/MyCondo.Application.csproj" />
+    <Project Path="src/MyCondo.Domain/MyCondo.Domain.csproj" />
+    <Project Path="src/MyCondo.Infrastructure/MyCondo.Infrastructure.csproj" />
+    <Project Path="src/MyCondo.Shared/MyCondo.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MyCondo.Api.IntegrationTests/MyCondo.Api.IntegrationTests.csproj" />
+    <Project Path="tests/MyCondo.Application.UnitTests/MyCondo.Application.UnitTests.csproj" />
+    <Project Path="tests/MyCondo.ArchitectureTests/MyCondo.ArchitectureTests.csproj" />
+    <Project Path="tests/MyCondo.Domain.UnitTests/MyCondo.Domain.UnitTests.csproj" />
+    <Project Path="tests/MyCondo.Infrastructure.IntegrationTests/MyCondo.Infrastructure.IntegrationTests.csproj" />
+    <Project Path="tests/MyCondo.MultiTenancyTests/MyCondo.MultiTenancyTests.csproj" />
+  </Folder>
+</Solution>
