@@ -1,30 +1,30 @@
 using System.Diagnostics;
-using MediatR;
+using Mediator;
 using Microsoft.Extensions.Logging;
 
 namespace MyCondo.Application.Common.Behaviors;
 
-public sealed class PerformanceBehavior<TRequest, TResponse>(
-    ILogger<PerformanceBehavior<TRequest, TResponse>> logger
-) : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull
+public sealed class PerformanceBehavior<TMessage, TResponse>(
+    ILogger<PerformanceBehavior<TMessage, TResponse>> logger
+) : IPipelineBehavior<TMessage, TResponse>
+    where TMessage : IMessage
 {
     private const int SlowRequestThresholdMs = 500;
 
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
+    public async ValueTask<TResponse> Handle(
+        TMessage message,
+        MessageHandlerDelegate<TMessage, TResponse> next,
         CancellationToken cancellationToken)
     {
         Stopwatch sw = Stopwatch.StartNew();
-        TResponse response = await next(cancellationToken);
+        TResponse response = await next(message, cancellationToken);
         sw.Stop();
 
         if (sw.ElapsedMilliseconds > SlowRequestThresholdMs)
         {
             logger.LogWarning(
                 "Slow request {RequestName} took {ElapsedMs} ms",
-                typeof(TRequest).Name, sw.ElapsedMilliseconds);
+                typeof(TMessage).Name, sw.ElapsedMilliseconds);
         }
 
         return response;

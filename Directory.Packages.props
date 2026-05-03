@@ -10,6 +10,10 @@
     Add a package: 'dotnet add (project) package (Name)' — appends the version here automatically.
     Bump a package: edit the version below and rebuild.
     Audit: 'dotnet list package outdated' and 'dotnet list package vulnerable' should both run clean before merge.
+
+    LICENSE POSTURE: only OSS / non-commercial-license-encumbered packages are pinned here.
+    MediatR (Lucky Penny) and FluentAssertions 8.x (Xceed) were dropped 2026-05-03 in favour of
+    Mediator (martinothamar/Mediator, MIT) and AwesomeAssertions (MIT community fork of FA 7.x).
   -->
 
   <ItemGroup Label=".NET 10 / Microsoft framework">
@@ -34,8 +38,12 @@
     <PackageVersion Include="StackExchange.Redis" Version="2.12.14" />
   </ItemGroup>
 
-  <ItemGroup Label="Application — CQRS + validation">
-    <PackageVersion Include="MediatR" Version="14.1.0" />
+  <ItemGroup Label="Application — CQRS (Mediator) + validation">
+    <PackageVersion Include="Mediator.Abstractions" Version="3.0.2" />
+    <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
   </ItemGroup>
@@ -78,19 +86,12 @@
     <!-- <PackageVersion Include="AWSSDK.S3" Version="3.7.x" /> -->
   </ItemGroup>
 
-  <ItemGroup Label="Test stack">
+  <ItemGroup Label="Test stack (OSS only)">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="FluentAssertions" Version="8.9.0" />
-    <!--
-      WARNING: FluentAssertions 8.x is licensed under a paid commercial EULA (Xceed) since early 2025.
-      MyCondo is a commercial product (proposal §22) and would require a paid license per developer/CI seat.
-      ACTION: switch to AwesomeAssertions (MIT-licensed community fork of 7.x) before Phase 4 work scales up.
-              Drop-in: `<PackageVersion Include="AwesomeAssertions" Version="..." />` and find/replace `using FluentAssertions` → `using AwesomeAssertions`.
-              Tracked as a Phase 3 follow-up in docs/kickoff.md.
-    -->
+    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
     <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />

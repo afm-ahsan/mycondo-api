@@ -1,11 +1,10 @@
-using MediatR;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using MyCondo.Application.Common.Events;
 using MyCondo.Domain.Common;
 
 namespace MyCondo.Infrastructure.Persistence.Interceptors;
 
-public sealed class DispatchDomainEventsInterceptor(IPublisher publisher) : SaveChangesInterceptor
+public sealed class DispatchDomainEventsInterceptor(IDomainEventDispatcher dispatcher) : SaveChangesInterceptor
 {
     public override async ValueTask<int> SavedChangesAsync(
         SaveChangesCompletedEventData eventData,
@@ -32,10 +31,7 @@ public sealed class DispatchDomainEventsInterceptor(IPublisher publisher) : Save
 
         foreach (IDomainEvent domainEvent in events)
         {
-            // Wrap so MediatR can dispatch a Domain-pure event through its INotification pipeline.
-            Type wrapperType = typeof(DomainEventNotification<>).MakeGenericType(domainEvent.GetType());
-            object notification = Activator.CreateInstance(wrapperType, domainEvent)!;
-            await publisher.Publish(notification, cancellationToken);
+            await dispatcher.DispatchAsync(domainEvent, cancellationToken);
         }
 
         return result;

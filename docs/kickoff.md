@@ -13,14 +13,16 @@
 | 2026-05-03 | **All Phase 1 naming locked** — see "Phase 1 — Naming and Structure" section below | Repos, .NET solution + projects, frontend folders, schemas + roles, cache prefix, env-var prefix, URLs, tag format. Don't revisit casually. |
 | 2026-05-03 | **Phase 2 + Phase 3 foundation complete** — see commits `77f51ff` / `e32103b` (bootstrap) and the Phase 3 commit | Both repos pushed to GitHub. Backend: 11-project .NET 10 solution, Domain/Application/Infrastructure/Api layers, all 4 MediatR pipeline behaviors, EF Core + interceptors (audit/soft-delete/domain-event), Serilog, OTel, OpenAPI 3.1 + Scalar, JWT setup, health checks, CORS, rate limit, initial migration creating 18 schemas. Frontend: RTK store + RTK Query base + JWT-aware fetch + auto-refresh, Zod env loader, ApiError + toUserMessage, RequireAuth/RequirePermission stubs, ErrorBoundary/LoadingSpinner/EmptyState. Build + 6 tests green. Frontend build green (3.3 MB bundle, code-split deferred). |
 
-## ⚠️ Phase 3 follow-ups (license landmines)
+## ✅ License posture — OSS only (resolved 2026-05-03)
 
-Two commercial licenses were unintentionally pulled in via convention defaults; both block production shipping under our budget.
+Two commercial-license libraries were initially pulled in via convention defaults. Both replaced with MIT-licensed alternatives the same day:
 
-| Library | Issue | Action |
-|---------|-------|--------|
-| **MediatR 14.x** | Became commercial under Lucky Penny Software (~2024–2025). Build emits "no valid license key … allowed for development and testing scenarios" warning. ARP delivery is commercial (proposal §22), so production = paid license per developer. | Migrate to **`Mediator`** (martinothamar/Mediator — MIT, source-generated, near-drop-in for `IRequest`/`INotification`) or **`MassTransit.Mediator`** (free, slightly different API). Schedule before Phase 4 starts (Identity module is the first heavy MediatR consumer). |
-| **FluentAssertions 8.x** | Became commercial under Xceed (early 2025). Same paid-license-per-seat model. | Migrate to **`AwesomeAssertions`** (community fork of MIT-licensed FA 7.x; API-compatible). Drop-in: `<PackageVersion Include="AwesomeAssertions" Version="..." />` and find/replace `using FluentAssertions` → `using AwesomeAssertions`. |
+| Library replaced | Replacement | Notes |
+|------------------|-------------|-------|
+| ~~MediatR 14.x~~ (Lucky Penny Software, paid) | **`Mediator` 3.0.2** (martinothamar/Mediator, MIT) | Source-generated, ~ value-task based. API differs slightly: `IPipelineBehavior<TMessage, TResponse>` returns `ValueTask<TResponse>` and takes `MessageHandlerDelegate<TMessage, TResponse> next` (parameter order: message, next, ct). `IPublisher` → `IMediator`. Source generator dislikes open-generic notifications, so domain events bypass Mediator entirely (own `IDomainEventHandler<T>` interface + DI-resolution dispatcher). |
+| ~~FluentAssertions 8.x~~ (Xceed, paid) | **`AwesomeAssertions` 9.4** (MIT community fork of FA 7.x) | Drop-in API-compatible; only csproj refs change. |
+
+Phase 3 build now runs clean — no commercial-license warnings.
 
 ## 1. One-line description
 

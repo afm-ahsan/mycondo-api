@@ -1,25 +1,25 @@
 using FluentValidation;
 using FluentValidation.Results;
-using MediatR;
+using Mediator;
 
 namespace MyCondo.Application.Common.Behaviors;
 
-public sealed class ValidationBehavior<TRequest, TResponse>(
-    IEnumerable<IValidator<TRequest>> validators
-) : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull
+public sealed class ValidationBehavior<TMessage, TResponse>(
+    IEnumerable<IValidator<TMessage>> validators
+) : IPipelineBehavior<TMessage, TResponse>
+    where TMessage : IMessage
 {
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
+    public async ValueTask<TResponse> Handle(
+        TMessage message,
+        MessageHandlerDelegate<TMessage, TResponse> next,
         CancellationToken cancellationToken)
     {
         if (!validators.Any())
         {
-            return await next(cancellationToken);
+            return await next(message, cancellationToken);
         }
 
-        ValidationContext<TRequest> context = new(request);
+        ValidationContext<TMessage> context = new(message);
         ValidationResult[] results = await Task.WhenAll(
             validators.Select(v => v.ValidateAsync(context, cancellationToken)));
 
@@ -33,6 +33,6 @@ public sealed class ValidationBehavior<TRequest, TResponse>(
             throw new ValidationException(failures);
         }
 
-        return await next(cancellationToken);
+        return await next(message, cancellationToken);
     }
 }
