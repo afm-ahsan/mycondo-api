@@ -7,13 +7,21 @@ description: MyCondo API design standards — versioning, error contract, pagina
 
 ## Current actual state
 
-`MyCondo.Api/Endpoints/` has two files as of 2026-07-28 (Wave 1 Slice 1):
-`AuthEndpoints.cs` (`/api/v1/auth/{register,login,refresh,logout,change-password,me}`) and
-`TenantEndpoints.cs` (`/api/v1/tenants/{by-slug/{slug},"",{id}/activate,{id}/suspend}`). These are the
-reference pattern — copy their shape (route group per feature, `MapXEndpoints` extension method,
-`.AllowAnonymous()`/`.RequireAuthorization()`/`.RequirePermission(...)` on every route, `ISender`
-injected per-endpoint) for new endpoints rather than improvising. No other business-module endpoints
-exist yet — those land with their respective waves.
+`MyCondo.Api/Endpoints/` has three files as of 2026-07-28 (Wave 1 Slice 4):
+`AuthEndpoints.cs` (`/api/v1/auth/{register,login,refresh,logout,change-password,me}`),
+`TenantEndpoints.cs` (`/api/v1/tenants/{by-slug/{slug},"",{id}/activate,{id}/suspend}`), and
+`RoleEndpoints.cs` (`/api/v1/roles/{"",{id}/permissions,{id}/assignments}` +
+`/api/v1/permissions`). These are the reference pattern — copy their shape (route group per feature,
+`MapXEndpoints` extension method, `.AllowAnonymous()`/`.RequireAuthorization()`/`.RequirePermission(...)`
+on every route, `ISender` injected per-endpoint) for new endpoints rather than improvising. No other
+business-module endpoints exist yet — those land with their respective waves.
+
+The permission catalogue is seeded (47 concrete permissions, `Seed_Permission_Catalogue` migration —
+see `mycondo-docs/07-delivery/MASTER_BACKLOG.md` ID-2) and `RequirePermission` checks are therefore
+reachable in practice, not just correctly-shaped: `RegisterUserCommandHandler` grants the first user of
+each tenant a `SuperAdmin` role holding every catalogue permission, so a fresh tenant's first
+registrant can immediately call any permission-gated endpoint, including `POST /api/v1/roles` to grant
+narrower roles to everyone after them.
 
 ## Style
 
