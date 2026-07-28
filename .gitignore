@@ -1,52 +1,176 @@
-# Build output
-bin/
-obj/
+# ============================
+# .NET build output
+# ============================
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
 out/
+publish/
+[Pp]ublish/
+x64/
+x86/
+[Ww]in32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+artifacts/
+MigrationBackup/
 *.dll
 *.pdb
 *.exe
-*.user
+*.dylib
+*.so
+*.nupkg
+*.snupkg
+*.tlog
+*.binlog
+*.dbg
+project.lock.json
+project.fragment.lock.json
+healthchecksdb
 
-# Visual Studio / Rider / VS Code
+# Publish profiles
+*.azurePubxml
+*.pubxml
+*.pubxml.user
+*.publishproj
+
+# ASP.NET / EF Core scaffolding
+ScaffoldingReadMe.txt
+
+# ============================
+# Visual Studio
+# ============================
 .vs/
-.vscode/
-.idea/
 *.suo
+*.user
+*.userosscache
 *.userprefs
+*.sln.docstates
+*.sln.iml
+*.rsuser
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.e2e
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+mono_crash.*
+$tf/
+*.vspscc
+*.vssscc
+.builds
+*.scc
+_Chutzpah*
 
-# Test results
+# ============================
+# JetBrains Rider / ReSharper
+# ============================
+.idea/
+*.iml
+*.ipr
+*.iws
+cmake-build-*/
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.dotCover
+.axoCover/*
+!.axoCover/settings.json
+.mfractor/
+
+# ============================
+# VS Code
+# (kept intentionally versioned files, if any, must be explicitly re-added
+#  via a `!` rule below — none are versioned in this repo today)
+# ============================
+.vscode/
+.ionide/
+
+# ============================
+# Test results / coverage
+# ============================
 [Tt]est[Rr]esults/
+TestResults/
 *.trx
 *.coverage
 *.coveragexml
 coverage*.json
 coverage*.xml
 coverage*.info
-TestResults/
+*.lcov
 
-# Tooling
+# ============================
+# Tooling / editor caches, temp files
+# ============================
 .vshistory/
 .localhistory/
+.history/
 *.cache
 *.tmp
+*.temp
+*.bak
+*.swp
+*~
 
+# ============================
 # NuGet
-*.nupkg
-*.snupkg
+# ============================
 .nuget/
-artifacts/
+*.nuget.props
+*.nuget.targets
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
 
-# Rider
-.idea/
-*.sln.iml
+# ============================
+# Docker
+# ============================
+docker-compose.override.local.yml
+.docker/
 
-# OS
+# ============================
+# PostgreSQL / local database artifacts
+# (docker-compose uses a named volume for postgres data, so no bind-mounted
+#  data directory is expected in-repo — these guard against one appearing.
+#  Seed scripts under db/init/ are intentionally tracked and NOT ignored.)
+# ============================
+/pgdata/
+/db/data/
+*.sql.bak
+*.dump
+*.backup
+
+# ============================
+# Windows
+# ============================
 Thumbs.db
-.DS_Store
+ehthumbs.db
+Desktop.ini
 desktop.ini
+$RECYCLE.BIN/
+*.lnk
 
-# Secrets
-*.user
+# ============================
+# macOS (contributors on other OSes)
+# ============================
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ============================
+# Secrets / environment
+# ============================
 appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
@@ -54,16 +178,12 @@ appsettings.*.json
 .env.*
 !.env.example
 secrets.json
+*.pfx
+*.p12
+*.key
 
-# EF Core dump
-*.dbg
-
-# Docker
-docker-compose.override.local.yml
-
+# ============================
 # Logs
+# ============================
 logs/
 *.log
-
-# Misc
-.history/
