@@ -49,7 +49,7 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email,
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "Test User",
             phoneNumber = (string?)null,
         });

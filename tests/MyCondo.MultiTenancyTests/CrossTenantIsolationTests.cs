@@ -93,7 +93,7 @@ public class CrossTenantIsolationTests : IClassFixture<MultiTenancyPostgresFixtu
             RlsFlags row = await db.Database
                 .SqlQuery<RlsFlags>(
                     $"""
-                    SELECT relrowsecurity AS "RowSecurity", relforcerowsecurity AS "ForceRowSecurity"
+                    SELECT relrowsecurity AS row_security, relforcerowsecurity AS force_row_security
                     FROM pg_class
                     WHERE oid = ('identity.' || {table})::regclass
                     """)

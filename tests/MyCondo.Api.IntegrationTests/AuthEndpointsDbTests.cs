@@ -54,7 +54,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email = "owner@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "Test Owner",
             phoneNumber = (string?)null,
         });
@@ -66,7 +66,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email = "owner@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
         });
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         AuthTokensDto? loginTokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
@@ -103,7 +103,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email = "login-check@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "Login Check",
             phoneNumber = (string?)null,
         });
@@ -113,7 +113,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email = "login-check@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
         });
 
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -132,7 +132,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email = "refresh-check@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "Refresh Check",
             phoneNumber = (string?)null,
         });
@@ -161,7 +161,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId = Guid.NewGuid(),
             email = "nobody@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "Nobody",
             phoneNumber = (string?)null,
         });
@@ -189,7 +189,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId = tenant.Id.Value,
             email = "someone@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "Someone",
             phoneNumber = (string?)null,
         });
@@ -207,7 +207,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email = "duplicate@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "First",
             phoneNumber = (string?)null,
         };

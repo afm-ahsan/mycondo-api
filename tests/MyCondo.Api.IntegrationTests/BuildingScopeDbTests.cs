@@ -51,7 +51,7 @@ public class BuildingScopeDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email,
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
             fullName = "Test User",
             phoneNumber = (string?)null,
         });
@@ -105,7 +105,7 @@ public class BuildingScopeDbTests : IClassFixture<PostgresApiFactory>
         {
             tenantId,
             email = "staff@example.com",
-            password = "correct-horse-battery-staple",
+            password = "Correct-Horse-Battery-9",
         });
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         AuthTokensDto? freshTokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
