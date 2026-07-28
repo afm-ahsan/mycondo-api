@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Restore, build, test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore MyCondo.slnx
+
+      - name: Check for vulnerable NuGet packages
+        run: dotnet list MyCondo.slnx package --vulnerable --include-transitive | tee vulnerable.log && (! grep -q "has the following vulnerable packages" vulnerable.log)
+
+      - name: Build (warnings as errors)
+        run: dotnet build MyCondo.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test MyCondo.slnx --no-build --configuration Release --logger "trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
