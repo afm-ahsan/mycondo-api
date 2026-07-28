@@ -1,10 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Common.Settings;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.RefreshTokens;
+using MyCondo.Domain.Features.Identity.Roles;
+using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Infrastructure.Identity;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
+using MyCondo.Infrastructure.Persistence.Repositories;
 using MyCondo.Infrastructure.Time;
 using StackExchange.Redis;
 
@@ -19,6 +25,21 @@ public static class DependencyInjection
         // Domain abstractions
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IIdGenerator, GuidV7IdGenerator>();
+
+        // Identity (validated settings)
+        services.AddOptions<JwtSettings>()
+            .BindConfiguration(JwtSettings.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<Argon2Settings>()
+            .BindConfiguration(Argon2Settings.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
+        services.AddScoped<ITokenService, JwtTokenService>();
+        services.AddScoped<IUserContextResolver, UserContextResolver>();
 
         // EF Core SaveChanges interceptors
         services.AddScoped<AuditInterceptor>();
@@ -51,6 +72,11 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MyCondoDbContext>());
+
+        // Repositories
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>

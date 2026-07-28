@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<ITenantContextAccessor, TenantContextAccessor>();
+        services.AddScoped<IRequestIpAccessor, HttpRequestIpAccessor>();
 
         services.AddProblemDetails();
 

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MyCondo.Api.Authentication;
+namespace MyCondo.Application.Common.Settings;
 
 public sealed record JwtSettings
 {

@@ -61,6 +61,8 @@ dotnet_diagnostic.CA1716.severity = none      # Reserved keyword conflict (e.g. 
 dotnet_diagnostic.CA1848.severity = none      # LoggerMessage source generator — convention prefers structured logging via extension methods
 dotnet_diagnostic.CA1873.severity = none      # "Argument may be expensive when logging disabled" — same as above
 dotnet_diagnostic.CA2254.severity = none      # Logger message template should be a constant — fine when constructed from typeof().Name
+dotnet_diagnostic.CA1861.severity = none      # Prefer static readonly arrays — EF migration codegen emits inline arrays repeatedly
+dotnet_diagnostic.CA1707.severity = none      # Type names with underscores — convention uses Add_Customer_Table for migrations
 dotnet_diagnostic.CS1591.severity = suggestion
 
 # JSON / YAML / config
