@@ -31,8 +31,8 @@ doesn't like open generics for notifications).
 
 - Nullable reference types are on, warnings are errors — don't suppress with `#pragma` without a
   documented reason; fix the actual issue (see `mycondo-api/CLAUDE.md` "Always Do"/"Never Do").
-- Strongly-typed IDs (`UserId`, not raw `Guid`) — see `src/MyCondo.Domain/Users/UserId.cs` for the
-  pattern.
+- Strongly-typed IDs (`UserId`, not raw `Guid`) — see
+  `src/MyCondo.Domain/Features/Identity/Users/UserId.cs` for the pattern.
 - `IClock` instead of `DateTime.UtcNow` in domain code.
 - `Guid.CreateVersion7()` for aggregate IDs (via `IIdGenerator`/`GuidV7IdGenerator`).
 - Structured logging only — `logger.LogInformation("... {Field}", value)`, never interpolated strings.
@@ -55,3 +55,13 @@ claimed. If you add a new pipeline behavior, it needs an explicit
 silently never runs (this is exactly how `ValidationBehavior` went unregistered for an entire wave:
 nothing ever called `ISender.Send(...)` over HTTP until the first real endpoint, so invalid requests
 were reaching handlers/the database instead of failing with a 400).
+
+## Anonymous commands that touch tenant-scoped tables need explicit tenant context (bug found 2026-07-28, see ADR-013)
+
+If a command is `AllowAnonymous` (no JWT, no `ICurrentUserProvider.TenantId`) but reads or writes a
+tenant-scoped table, RLS has nothing to compare against unless the endpoint explicitly declares the
+tenant — see `postgresql-rls.md`'s "Anonymous, tenant-targeted requests" section for the pattern
+(`TenantContextAccessor`'s `HttpContext.Items` fallback, set from the command's own `TenantId`). This
+already broke Login/Register/RefreshToken once; check for it whenever you add a new anonymous
+endpoint that isn't purely reference-data (like `GetTenantBySlug`, which is safe because `tenants` has
+no RLS at all).

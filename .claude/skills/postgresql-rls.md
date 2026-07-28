@@ -47,6 +47,28 @@ into a 500 instead of a safe empty result. `NULLIF(..., '')` collapses both "nev
 Include `WITH CHECK` explicitly (don't rely on `USING` alone covering writes) — it's what rejects an
 `INSERT`/`UPDATE` for the wrong tenant with a clear RLS-violation error instead of silently succeeding.
 
+## Anonymous, tenant-targeted requests (Login, Register, RefreshToken)
+
+**RLS breaks these unless you think about tenant context explicitly — this already happened once**
+(ADR-013). These endpoints are `AllowAnonymous`: there's no JWT yet, so `ICurrentUserProvider.TenantId`
+is null, so `TenantContextConnectionInterceptor` sets the GUC to `''`. Once RLS is on, that means
+`Register`'s insert gets rejected by `WITH CHECK`, and `Login`'s query always returns zero rows —
+looking exactly like "wrong password," not an infrastructure bug.
+
+The fix already in place: `TenantContextAccessor` falls back to a value stashed in
+`HttpContext.Items[TenantContextAccessor.RequestedTenantItemKey]`, which `AuthEndpoints.cs` sets from
+the `TenantId` already present in the Login/Register/Refresh request body, before dispatching. If you
+add a new anonymous, tenant-scoped endpoint (e.g. a future public tenant-signup flow), you must do the
+same — set that item explicitly from whatever the request declares as its target tenant. Do not assume
+an anonymous request against a tenant-scoped table "just works" — trace whether RLS has anything to
+compare against before shipping it.
+
+If the request has no explicit tenant to declare (like a refresh-token lookup by hash, which is
+tenant-agnostic by nature — a random secret, not a tenant-scoped key), add the tenant as an explicit
+field on the command instead (see `RefreshTokenCommand` for the pattern) and verify it independently in
+the handler as defense-in-depth, since RLS's `USING` clause has nothing to filter that particular
+lookup by.
+
 ## Adding RLS to a new tenant-scoped table
 
 1. Confirm the table actually has `tenant_id` (add it in its own migration first if not — see
