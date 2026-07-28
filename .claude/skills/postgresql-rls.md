@@ -5,13 +5,29 @@ description: MyCondo's Row-Level Security and multi-tenancy approach — impleme
 
 # PostgreSQL RLS & Multi-Tenancy
 
-## Current actual state (2026-07-28, Wave 1 Slice 2)
+## Current actual state (2026-07-28, Wave 1 Slice 5)
 
 RLS is real, not aspirational, on 5 tables: `identity.users`, `roles`, `role_assignments`,
 `refresh_tokens`, `role_permissions` — each has `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL
 SECURITY`, and a `rls_<table>_tenant_isolation` policy (migration `Enable_Tenant_Row_Level_Security`).
-`FORCE` is mandatory here, not optional — there is only one Postgres role (`mycondo_app`) in this
-setup, and it owns the tables it creates via migrations, so plain `ENABLE` alone would not restrict it.
+
+**The connecting role matters as much as the policy — this bit us once already.** Postgres
+superusers and `BYPASSRLS` roles always bypass row security, `FORCE` or not. The original setup used
+one Postgres role (`mycondo_app`) for everything, and because it was also the container's `initdb`
+bootstrap role (`POSTGRES_USER`), it was a superuser — so RLS was silently doing nothing, anywhere,
+until the first real Testcontainers run (`MyCondo.MultiTenancyTests`, once Docker was actually
+available) caught it: cross-tenant reads leaked, and `WITH CHECK` didn't reject a wrong-tenant insert.
+See the ADR recording this in `mycondo-docs` (follow-up to ADR-009).
+
+Fixed via the two-role split `docs/kickoff.md` already named (Phase 1 naming): `mycondo_migrator`
+(DDL/owner — the container's bootstrap role, used only for `dotnet ef database update`) and
+`mycondo_app` (runtime — non-superuser, owns nothing, DML-only via `GRANT`/`ALTER DEFAULT PRIVILEGES`
+in migration `Grant_App_Role_Runtime_Privileges`). Since `mycondo_app` doesn't own these tables, RLS
+now applies to it even without `FORCE` — `FORCE` stays in the migration anyway as explicit
+defense-in-depth. **If you ever see the app connecting as a role that owns its own tables or is a
+superuser, RLS is not protecting anything, no matter what the migration history says** — verify the
+connecting role's `rolsuper`/`rolbypassrls` flags directly if in doubt, don't trust `ENABLE`/`FORCE`
+alone.
 
 **Not every tenant-related table has (or needs) `tenant_id`:** `identity.permissions` is global
 reference data (same catalogue across all tenants) — correctly has no `tenant_id`, no RLS.
@@ -84,6 +100,11 @@ lookup by.
 and constructs `MyCondoDbContext` directly with a settable `TestTenantContextAccessor` — no HTTP
 involved, this project is specifically about DB-level isolation. Covers: cross-tenant read isolation,
 `WITH CHECK` rejecting a wrong-tenant insert, and `pg_class` verification that `relrowsecurity`/
-`relforcerowsecurity` are actually set on every expected table. **These need a Docker daemon and were
-written/compile-verified but not executed** in the environment they were authored in — run them
-wherever Docker is available before trusting them.
+`relforcerowsecurity` are actually set on every expected table. Migrations run as `mycondo_migrator`
+(bootstrap role); every context the tests actually assert against (`CreateDbContext`) connects as the
+restricted `mycondo_app` role — using the bootstrap role for both, as the fixture originally did, made
+these tests pass without RLS doing anything. Executed against a real Docker daemon, all 3 passing.
+
+`MyCondo.Api.IntegrationTests`' `PostgresApiFactory` follows the same two-role pattern: migrates as
+`mycondo_migrator`, but the actual `TestServer`/HTTP pipeline (`Services`, and therefore every request
+a test sends) runs as `mycondo_app`.

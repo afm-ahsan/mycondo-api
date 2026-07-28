@@ -17,8 +17,12 @@ services:
     container_name: mycondo-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: mycondo_app
-      POSTGRES_PASSWORD: mycondo_dev
+      # This is the initdb bootstrap role — Postgres always makes it a superuser, which
+      # unconditionally bypasses Row-Level Security. It must stay DDL-only (migrations); the running
+      # API/DbMigrator connect as the restricted mycondo_app role instead, created by
+      # db/init/01_create_app_role.sql on first boot. See mycondo-docs ADR-009 and its follow-up ADR.
+      POSTGRES_USER: mycondo_migrator
+      POSTGRES_PASSWORD: mycondo_migrator_dev
       POSTGRES_DB: mycondo_dev
       # Reasonable dev defaults; production tuning happens in the AWS RDS parameter group
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -26,10 +30,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Place .sql files in ./db/init/ to seed roles, schemas, extensions on first boot
+      # Runs once, on first boot against an empty data volume — creates the restricted mycondo_app
+      # role. If you already have an existing postgres_data volume from before this change, this
+      # script will NOT run retroactively; either `docker compose down -v` (destroys local dev data)
+      # and re-up, or run db/init/01_create_app_role.sql manually against the running container.
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mycondo_app -d mycondo_dev"]
+      test: ["CMD-SHELL", "pg_isready -U mycondo_migrator -d mycondo_dev"]
       interval: 10s
       timeout: 3s
       retries: 5

@@ -84,10 +84,11 @@ Clean Architecture: Domain → Application → Infrastructure → Api. Domain ha
 ## Multi-tenancy (non-negotiable)
 
 - Every tenant-scoped table has a `tenant_id UUID NOT NULL` — implemented today in the `identity` schema tables.
-- **RLS is enabled and forced, as of 2026-07-28 (Wave 1 Slice 2).** `rls_<table>_tenant_isolation` policies enforce `tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid` (note the `NULLIF` — a direct cast raises a Postgres error when the GUC is `''`) on `users`, `roles`, `role_assignments`, `refresh_tokens`, and `role_permissions`, with RLS `ENABLED` and `FORCED`. `FORCE` is required because there's only one Postgres role (`mycondo_app`) in this setup and it owns the tables it creates. See `mycondo-api/.claude/skills/postgresql-rls.md` for the exact pattern to copy when a new tenant-scoped table needs it — RLS is per-table, not automatic.
+- **RLS is enabled and forced, as of 2026-07-28 (Wave 1 Slice 2).** `rls_<table>_tenant_isolation` policies enforce `tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid` (note the `NULLIF` — a direct cast raises a Postgres error when the GUC is `''`) on `users`, `roles`, `role_assignments`, `refresh_tokens`, and `role_permissions`, with RLS `ENABLED` and `FORCED`. See `mycondo-api/.claude/skills/postgresql-rls.md` for the exact pattern to copy when a new tenant-scoped table needs it — RLS is per-table, not automatic.
+- **The connecting role matters as much as the policy.** Postgres superusers and `BYPASSRLS` roles always bypass RLS, `FORCE` or not. The app runs as `mycondo_app` — non-superuser, non-owner (owns nothing; DML-only privileges granted via `Grant_App_Role_Runtime_Privileges`) — never as `mycondo_migrator` (the DDL/owner role, used only for `dotnet ef database update`). This split exists *because* the original single-role setup used a Postgres superuser for everything, which silently defeated RLS end-to-end until the first real Testcontainers run caught it (see the ADR recording this in `mycondo-docs`). If you ever see the app connecting with a role that owns its own tables or is a superuser, RLS is not actually protecting anything, regardless of what the migration history says.
 - `TenantContextConnectionInterceptor` sets `app.current_tenant_id` on every connection open (reads and writes alike), not just in `SaveChangesAsync` — this closes the read-path sequencing risk that `mycondo-docs/02-architecture/TARGET_ARCHITECTURE.md` §4 previously flagged as a blocker.
 - Composite indexes on tenant-scoped tables always lead with `tenant_id`.
-- `MyCondo.MultiTenancyTests` now has real cross-tenant tests (Testcontainers-backed) — written and compile-verified, but **not executed** as of this writing (no Docker daemon in the authoring environment). Run them wherever Docker is available before trusting RLS blindly.
+- `MyCondo.MultiTenancyTests` has real cross-tenant tests (Testcontainers-backed), executed against a real Docker daemon and passing against the restricted `mycondo_app` role — not just compile-verified.
 
 ## Financial integrity (non-negotiable)
 
@@ -108,14 +109,20 @@ dotnet run --project src/MyCondo.Api
 
 ### Migrations
 
+`dotnet ef database update` needs the `mycondo_migrator` (DDL/owner) role, not the `mycondo_app`
+role the app runs as — `mycondo_app` is intentionally restricted to DML and cannot `CREATE TABLE`
+(see "Multi-tenancy" below). Override the connection string just for this command:
+
 ```powershell
 dotnet ef migrations add Add_<Subject> `
   --project src/MyCondo.Infrastructure `
   --startup-project src/MyCondo.Api
 
+$env:ConnectionStrings__Default = "Host=localhost;Database=mycondo_dev;Username=mycondo_migrator;Password=mycondo_migrator_dev"
 dotnet ef database update `
   --project src/MyCondo.Infrastructure `
   --startup-project src/MyCondo.Api
+Remove-Item Env:\ConnectionStrings__Default
 ```
 
 ### Local infra

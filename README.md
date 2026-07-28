@@ -65,10 +65,15 @@ dotnet user-secrets set --project src/MyCondo.Api `
 dotnet user-secrets set --project src/MyCondo.Api `
   "ConnectionStrings:Default" "Host=localhost;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev"
 
-# Apply migrations
+# Apply migrations — as mycondo_migrator (DDL/owner role), NOT mycondo_app (restricted runtime
+# role, see appsettings.json/user-secrets above). mycondo_app can't CREATE TABLE by design, so a
+# migrator connection string must be supplied for this one command via an env-var override, which
+# takes precedence over the user-secrets value above.
+$env:ConnectionStrings__Default = "Host=localhost;Database=mycondo_dev;Username=mycondo_migrator;Password=mycondo_migrator_dev"
 dotnet ef database update `
   --project src/MyCondo.Infrastructure `
   --startup-project src/MyCondo.Api
+Remove-Item Env:\ConnectionStrings__Default
 
 # Run the API
 dotnet run --project src/MyCondo.Api
