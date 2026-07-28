@@ -7,6 +7,7 @@ using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Identity.RefreshTokens;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Tenancy;
 using MyCondo.Infrastructure.Identity;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
@@ -77,6 +78,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<ITenantRepository, TenantRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>

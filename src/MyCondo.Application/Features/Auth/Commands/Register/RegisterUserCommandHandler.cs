@@ -5,11 +5,13 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Auth.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Tenancy;
 
 namespace MyCondo.Application.Features.Auth.Commands.Register;
 
 public sealed class RegisterUserCommandHandler(
     IUserRepository users,
+    ITenantRepository tenants,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -21,6 +23,14 @@ public sealed class RegisterUserCommandHandler(
 {
     public async ValueTask<AuthTokensDto> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
     {
+        Tenant tenant = await tenants.GetByIdAsync(command.TenantId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Tenant), command.TenantId);
+
+        if (tenant.Status != TenantStatus.Active)
+        {
+            throw new ForbiddenException($"Tenant '{tenant.Slug}' is not active.");
+        }
+
         string normalizedEmail = command.Email.Trim().ToLowerInvariant();
 
         bool emailTaken = await users.EmailExistsAsync(command.TenantId, normalizedEmail, cancellationToken);

@@ -1,8 +1,11 @@
+using Microsoft.Extensions.Hosting;
 using MyCondo.Api;
+using MyCondo.Api.Endpoints;
 using MyCondo.Api.HealthChecks;
 using MyCondo.Api.Middleware;
 using MyCondo.Application;
 using MyCondo.Infrastructure;
+using MyCondo.Infrastructure.Seed;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -18,6 +21,13 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
     .AddApiServices(builder.Configuration);
+
+if (builder.Environment.IsDevelopment())
+{
+    // Local-only bootstrap so there's a real tenant to register against — see
+    // DevelopmentTenantSeeder's doc comment. Not a production provisioning mechanism.
+    builder.Services.AddHostedService<DevelopmentTenantSeeder>();
+}
 
 WebApplication app = builder.Build();
 
@@ -36,6 +46,8 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapMyCondoHealthChecks();
+app.MapAuthEndpoints();
+app.MapTenantEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>
