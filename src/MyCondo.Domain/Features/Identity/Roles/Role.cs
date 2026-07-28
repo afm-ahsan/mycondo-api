@@ -83,4 +83,26 @@ public sealed class Role : AggregateRoot<RoleId>, IAuditable, ISoftDeletable, IT
         Name = trimmed;
         Version++;
     }
+
+    /// <summary>
+    /// Soft-deletes the role (picked up by <c>RoleConfiguration</c>'s <c>DeletedAtUtc == null</c>
+    /// query filter, same convention as every other <see cref="ISoftDeletable"/> entity). System
+    /// roles — currently only <c>SuperAdmin</c> — can never be deactivated: doing so would strip every
+    /// holder's access with no equivalent role to fall back to.
+    /// </summary>
+    public void Deactivate(DateTimeOffset nowUtc, Guid? deactivatedBy)
+    {
+        if (IsSystem)
+        {
+            throw new InvalidOperationException("System roles cannot be deactivated.");
+        }
+
+        if (DeletedAtUtc is not null)
+        {
+            return;
+        }
+
+        DeletedAtUtc = nowUtc;
+        DeletedBy = deactivatedBy;
+    }
 }

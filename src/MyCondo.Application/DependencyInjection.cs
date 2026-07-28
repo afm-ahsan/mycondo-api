@@ -2,8 +2,10 @@ using System.Reflection;
 using FluentValidation;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Behaviors;
 using MyCondo.Application.Common.Events;
+using MyCondo.Application.Common.Services;
 
 namespace MyCondo.Application;
 
@@ -31,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
+
+        services.AddScoped<ISuperAdminBootstrapper, SuperAdminBootstrapper>();
 
         // Domain-event dispatch bypasses Mediator (see IDomainEventHandler comment for why).
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();

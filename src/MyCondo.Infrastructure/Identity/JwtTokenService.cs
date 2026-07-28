@@ -149,6 +149,10 @@ public sealed class JwtTokenService(
         claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
         claims.AddRange(user.Permissions.Select(p => new Claim("perm", p)));
         claims.AddRange(user.BuildingIds.Select(b => new Claim("building_ids", b.ToString())));
+        // "{buildingId}|{permission}" — see ADR-014. Kept separate from "perm" so a permission
+        // granted only for one building can never be mistaken for a tenant-wide grant.
+        claims.AddRange(user.BuildingPermissions.Select(
+            bp => new Claim("bperm", $"{bp.BuildingId}|{bp.Permission}")));
 
         SecurityTokenDescriptor descriptor = new()
         {

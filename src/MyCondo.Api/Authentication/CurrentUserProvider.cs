@@ -8,6 +8,7 @@ public sealed class CurrentUserProvider(IHttpContextAccessor http) : ICurrentUse
     private const string TenantClaim = "tenant_id";
     private const string PermissionClaim = "perm";
     private const string BuildingClaim = "building_ids";
+    private const string BuildingPermissionClaim = "bperm";
 
     private ClaimsPrincipal? Principal => http.HttpContext?.User;
 
@@ -38,6 +39,25 @@ public sealed class CurrentUserProvider(IHttpContextAccessor http) : ICurrentUse
         Principal?.Claims.Any(c =>
             string.Equals(c.Type, PermissionClaim, StringComparison.Ordinal)
             && string.Equals(c.Value, permission, StringComparison.Ordinal)) ?? false;
+
+    public bool HasPermissionForBuilding(string permission, Guid? buildingId)
+    {
+        if (HasPermission(permission))
+        {
+            // A tenant-wide grant applies everywhere, including this building.
+            return true;
+        }
+
+        if (buildingId is null)
+        {
+            return false;
+        }
+
+        string expected = $"{buildingId.Value}|{permission}";
+        return Principal?.Claims.Any(c =>
+            string.Equals(c.Type, BuildingPermissionClaim, StringComparison.Ordinal)
+            && string.Equals(c.Value, expected, StringComparison.Ordinal)) ?? false;
+    }
 
     public IReadOnlyList<Guid> BuildingIds =>
         Principal?.FindAll(BuildingClaim)
