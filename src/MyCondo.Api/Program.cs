@@ -48,6 +48,7 @@ app.UseRateLimiter();
 app.MapMyCondoHealthChecks();
 app.MapAuthEndpoints();
 app.MapTenantEndpoints();
+app.MapRoleEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>
