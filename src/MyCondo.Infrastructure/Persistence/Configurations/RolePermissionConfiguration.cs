@@ -14,6 +14,7 @@ public sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RoleP
 
         builder.HasKey(x => new { x.RoleId, x.PermissionId }).HasName("pk_role_permissions");
 
+        builder.Property(x => x.TenantId).IsRequired();
         builder.Property(x => x.RoleId)
             .HasConversion(id => id.Value, value => new RoleId(value));
         builder.Property(x => x.PermissionId)
@@ -22,6 +23,8 @@ public sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RoleP
         builder.Property(x => x.GrantedAtUtc).IsRequired();
         builder.Property(x => x.GrantedBy);
 
+        // Tenant-scoped tables lead composite indexes with tenant_id per convention.
+        builder.HasIndex(x => x.TenantId).HasDatabaseName("ix_role_permissions_tenant_id");
         builder.HasIndex(x => x.PermissionId).HasDatabaseName("ix_role_permissions_permission_id");
     }
 }

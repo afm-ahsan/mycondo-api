@@ -42,10 +42,11 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IUserContextResolver, UserContextResolver>();
 
-        // EF Core SaveChanges interceptors
+        // EF Core interceptors
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<SoftDeleteInterceptor>();
         services.AddScoped<DispatchDomainEventsInterceptor>();
+        services.AddScoped<TenantContextConnectionInterceptor>();
 
         // DbContext
         services.AddDbContext<MyCondoDbContext>((sp, options) =>
@@ -61,7 +62,8 @@ public static class DependencyInjection
                 .AddInterceptors(
                     sp.GetRequiredService<AuditInterceptor>(),
                     sp.GetRequiredService<SoftDeleteInterceptor>(),
-                    sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+                    sp.GetRequiredService<DispatchDomainEventsInterceptor>(),
+                    sp.GetRequiredService<TenantContextConnectionInterceptor>());
 
             if (string.Equals(
                     Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),

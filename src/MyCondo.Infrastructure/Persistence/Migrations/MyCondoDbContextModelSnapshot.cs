@@ -193,11 +193,18 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("granted_by");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("RoleId", "PermissionId")
                         .HasName("pk_role_permissions");
 
                     b.HasIndex("PermissionId")
                         .HasDatabaseName("ix_role_permissions_permission_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_role_permissions_tenant_id");
 
                     b.ToTable("role_permissions", "identity");
                 });
