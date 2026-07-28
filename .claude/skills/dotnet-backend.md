@@ -40,9 +40,18 @@ doesn't like open generics for notifications).
 - Never inline `modelBuilder.Entity<T>()` — use `IEntityTypeConfiguration<T>` (see
   `src/MyCondo.Infrastructure/Persistence/Configurations/`).
 
-## Known gap (as of 2026-07-28)
+## Known gap (fixed 2026-07-28)
 
-Commands under `Features/Auth/Commands/{Login,Register,RefreshToken,Logout,ChangePassword}` are fully
-implemented but have **no HTTP endpoint** mapping them yet — `MyCondo.Api` has no `Endpoints/` or
-`Controllers/` folder. If your task is to expose auth over HTTP, that's the actual next step, not a
-pre-existing feature to just "hook up" to something that already exists.
+Commands under `Features/Auth/Commands/{Login,Register,RefreshToken,Logout,ChangePassword}` were
+implemented but had no HTTP endpoint — fixed in Wave 1 Slice 1, see `api-contracts.md` for the
+current `MyCondo.Api/Endpoints/` shape.
+
+## Pipeline behaviors — register them explicitly (bug found 2026-07-28, see ADR-012)
+
+`Mediator`'s source generator does **not** auto-register open-generic `IPipelineBehavior<,>`
+implementations, despite what an earlier comment in `MyCondo.Application/DependencyInjection.cs`
+claimed. If you add a new pipeline behavior, it needs an explicit
+`services.AddScoped(typeof(IPipelineBehavior<,>), typeof(YourBehavior<,>))` call there — otherwise it
+silently never runs (this is exactly how `ValidationBehavior` went unregistered for an entire wave:
+nothing ever called `ISender.Send(...)` over HTTP until the first real endpoint, so invalid requests
+were reaching handlers/the database instead of failing with a 400).

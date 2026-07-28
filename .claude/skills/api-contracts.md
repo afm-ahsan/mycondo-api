@@ -7,11 +7,13 @@ description: MyCondo API design standards — versioning, error contract, pagina
 
 ## Current actual state
 
-`MyCondo.Api` exposes only health checks and the OpenAPI/Scalar UI today — **no business endpoints
-exist yet**, including for the fully-implemented Auth commands (Login/Register/RefreshToken/Logout).
-There is no `Endpoints/` or `Controllers/` folder and no `/api/v1` version prefix in use anywhere yet.
-When you add the first real endpoint, you are establishing the pattern other endpoints will copy —
-follow the rules below exactly rather than improvising.
+`MyCondo.Api/Endpoints/` has two files as of 2026-07-28 (Wave 1 Slice 1):
+`AuthEndpoints.cs` (`/api/v1/auth/{register,login,refresh,logout,change-password,me}`) and
+`TenantEndpoints.cs` (`/api/v1/tenants/{by-slug/{slug},"",{id}/activate,{id}/suspend}`). These are the
+reference pattern — copy their shape (route group per feature, `MapXEndpoints` extension method,
+`.AllowAnonymous()`/`.RequireAuthorization()`/`.RequirePermission(...)` on every route, `ISender`
+injected per-endpoint) for new endpoints rather than improvising. No other business-module endpoints
+exist yet — those land with their respective waves.
 
 ## Style
 
@@ -27,9 +29,12 @@ POST   /api/v1/payments/{id}/reverse
 
 ## Every endpoint must
 
-- Declare `[RequirePermission("<module>.<resource>.<action>")]` or explicitly `[AllowAnonymous]` —
-  never leave it implicit. (The `[RequirePermission]` mechanism doesn't exist yet — building it is
-  part of the same Wave 1 work that wires the first endpoints; don't ship an endpoint without it.)
+- Declare `.RequirePermission("<module>.<resource>.<action>")` (see
+  `MyCondo.Api/Authorization/EndpointRequirePermissionExtensions.cs` — composes `RequireAuthorization()`
+  + a `PermissionEndpointFilter`) or explicitly `.AllowAnonymous()`/`.RequireAuthorization()` (plain
+  authentication, no specific permission — e.g. acting on your own account) — never leave it implicit.
+  Permission checks currently read JWT `perm` claims, not a server-side/Redis lookup (ADR-011) —
+  that's deliberate, not a shortcut to fix.
 - Bind via a request DTO, dispatch via `Mediator`, return a response DTO — no `DbContext` access, no
   business logic in the endpoint delegate/controller action itself.
 - Return Problem Details on error, with a machine-readable `code` field (see the error contract

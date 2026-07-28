@@ -10,13 +10,13 @@ description: Security checklist specific to MyCondo's actual current gaps — un
 - No RLS policies exist yet — see `postgresql-rls.md`. Tenant isolation today is whatever application
   code happens to filter by; verify explicitly for any new query, don't assume the database protects
   you.
-- No `[RequirePermission]` enforcement mechanism exists yet — any new endpoint is unauthenticated in
-  practice unless you build the check yourself for that endpoint. Don't ship an endpoint assuming a
-  framework-level gate exists.
+- `RequirePermission(...)` enforcement **does exist** (`MyCondo.Api/Authorization/`, ADR-011) — use it
+  on every new endpoint. It currently reads permission claims embedded in the JWT at login/refresh
+  time, not a per-request server-side lookup; that's a documented, deliberate scope decision (ID-4),
+  not a shortcut. The permission *catalogue* isn't seeded yet (ID-2) — `tenant.manage`-gated endpoints
+  exist but no user can hold that permission yet.
 - The Auth/Identity feature (JWT issuance, Argon2id hashing, refresh-token rotation) is implemented
-  but was **uncommitted** to git as of Wave 0 (ADR-008) — if you're picking this work up, confirm with
-  the repo owner whether it has since been committed/reviewed before building on top of it as if it
-  were reviewed, released code.
+  and committed (ADR-008 resolved) — safe to build on top of.
 
 ## Dependency hygiene
 
