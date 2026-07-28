@@ -24,32 +24,40 @@ public static class AuthEndpoints
             {
                 http.Items[TenantContextAccessor.RequestedTenantItemKey] = command.TenantId;
                 AuthTokensDto result = await sender.Send(command, ct);
-                return Results.Ok(result);
+                RefreshTokenCookie.Append(http, result.RefreshToken, result.RefreshTokenExpiresAtUtc);
+                return Results.Ok(AuthResponse.From(result));
             })
             .AllowAnonymous()
-            .Produces<AuthTokensDto>(StatusCodes.Status200OK);
+            .Produces<AuthResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/login", async (LoginCommand command, ISender sender, HttpContext http, CancellationToken ct) =>
             {
                 http.Items[TenantContextAccessor.RequestedTenantItemKey] = command.TenantId;
                 AuthTokensDto result = await sender.Send(command, ct);
-                return Results.Ok(result);
+                RefreshTokenCookie.Append(http, result.RefreshToken, result.RefreshTokenExpiresAtUtc);
+                return Results.Ok(AuthResponse.From(result));
             })
             .AllowAnonymous()
-            .Produces<AuthTokensDto>(StatusCodes.Status200OK);
+            .Produces<AuthResponse>(StatusCodes.Status200OK);
 
-        group.MapPost("/refresh", async (RefreshTokenCommand command, ISender sender, HttpContext http, CancellationToken ct) =>
+        // The refresh token itself comes from the HttpOnly cookie, not the body — RefreshRequest only
+        // carries TenantId (still needed pre-auth for RLS, same reasoning as Register/Login above).
+        group.MapPost("/refresh", async (RefreshRequest request, ISender sender, HttpContext http, CancellationToken ct) =>
             {
-                http.Items[TenantContextAccessor.RequestedTenantItemKey] = command.TenantId;
-                AuthTokensDto result = await sender.Send(command, ct);
-                return Results.Ok(result);
+                http.Items[TenantContextAccessor.RequestedTenantItemKey] = request.TenantId;
+                string token = RefreshTokenCookie.Read(http) ?? string.Empty;
+                AuthTokensDto result = await sender.Send(new RefreshTokenCommand(request.TenantId, token), ct);
+                RefreshTokenCookie.Append(http, result.RefreshToken, result.RefreshTokenExpiresAtUtc);
+                return Results.Ok(AuthResponse.From(result));
             })
             .AllowAnonymous()
-            .Produces<AuthTokensDto>(StatusCodes.Status200OK);
+            .Produces<AuthResponse>(StatusCodes.Status200OK);
 
-        group.MapPost("/logout", async (LogoutCommand command, ISender sender, CancellationToken ct) =>
+        group.MapPost("/logout", async (ISender sender, HttpContext http, CancellationToken ct) =>
             {
-                await sender.Send(command, ct);
+                string token = RefreshTokenCookie.Read(http) ?? string.Empty;
+                await sender.Send(new LogoutCommand(token), ct);
+                RefreshTokenCookie.Clear(http);
                 return Results.NoContent();
             })
             .RequireAuthorization()
@@ -74,3 +82,18 @@ public static class AuthEndpoints
         return app;
     }
 }
+
+/// <summary>
+/// The public wire shape of Register/Login/Refresh — everything AuthTokensDto carries except the
+/// refresh token, which never leaves the server as a JSON field (see RefreshTokenCookie).
+/// </summary>
+public sealed record AuthResponse(
+    string AccessToken,
+    DateTimeOffset AccessTokenExpiresAtUtc,
+    AuthenticatedUserDto User)
+{
+    public static AuthResponse From(AuthTokensDto tokens) =>
+        new(tokens.AccessToken, tokens.AccessTokenExpiresAtUtc, tokens.User);
+}
+
+public sealed record RefreshRequest(Guid TenantId);

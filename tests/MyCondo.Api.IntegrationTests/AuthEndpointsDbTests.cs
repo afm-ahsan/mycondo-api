@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using MyCondo.Api.Endpoints;
 using MyCondo.Application.Features.Auth.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Tenancy;
@@ -59,7 +60,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
             phoneNumber = (string?)null,
         });
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        AuthTokensDto? registerTokens = await registerResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+        AuthResponse? registerTokens = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
         registerTokens.Should().NotBeNull();
 
         HttpResponseMessage loginResponse = await client.PostAsJsonAsync("/api/v1/auth/login", new
@@ -69,7 +70,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
             password = "Correct-Horse-Battery-9",
         });
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        AuthTokensDto? loginTokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+        AuthResponse? loginTokens = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
         loginTokens.Should().NotBeNull();
 
         using HttpRequestMessage meRequest = new(HttpMethod.Get, "/api/v1/auth/me");
@@ -79,10 +80,9 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         UserProfileDto? profile = await meResponse.Content.ReadFromJsonAsync<UserProfileDto>(JsonOptions);
         profile!.Email.Should().Be("owner@example.com");
 
-        using HttpRequestMessage logoutRequest = new(HttpMethod.Post, "/api/v1/auth/logout")
-        {
-            Content = JsonContent.Create(new { refreshToken = loginTokens.RefreshToken }),
-        };
+        // No refreshToken in the body — the mycondo_rt cookie set by Register/Login is carried
+        // automatically by this HttpClient instance (WebApplicationFactory defaults HandleCookies=true).
+        using HttpRequestMessage logoutRequest = new(HttpMethod.Post, "/api/v1/auth/logout");
         logoutRequest.Headers.Authorization = new("Bearer", loginTokens.AccessToken);
         HttpResponseMessage logoutResponse = await client.SendAsync(logoutRequest);
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -117,7 +117,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         });
 
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        AuthTokensDto? tokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+        AuthResponse? tokens = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
         tokens.Should().NotBeNull();
         tokens!.AccessToken.Should().NotBeNullOrWhiteSpace();
     }
@@ -137,19 +137,20 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
             phoneNumber = (string?)null,
         });
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        AuthTokensDto? originalTokens = await registerResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+        AuthResponse? originalTokens = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
+        registerResponse.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? originalSetCookie).Should().BeTrue();
+        originalSetCookie!.Should().Contain(c => c.StartsWith("mycondo_rt="));
 
-        HttpResponseMessage refreshResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
-        {
-            tenantId,
-            refreshToken = originalTokens!.RefreshToken,
-        });
+        // No refreshToken in the body — the mycondo_rt cookie set by Register above is carried
+        // automatically by this HttpClient instance.
+        HttpResponseMessage refreshResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { tenantId });
 
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        AuthTokensDto? freshTokens = await refreshResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+        AuthResponse? freshTokens = await refreshResponse.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
         freshTokens.Should().NotBeNull();
-        freshTokens!.AccessToken.Should().NotBe(originalTokens.AccessToken);
-        freshTokens.RefreshToken.Should().NotBe(originalTokens.RefreshToken);
+        freshTokens!.AccessToken.Should().NotBe(originalTokens!.AccessToken);
+        refreshResponse.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? refreshSetCookie).Should().BeTrue();
+        refreshSetCookie!.Should().Contain(c => c.StartsWith("mycondo_rt="));
     }
 
     [Fact]
