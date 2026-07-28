@@ -1,6 +1,8 @@
 using System.Reflection;
 using FluentValidation;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using MyCondo.Application.Common.Behaviors;
 using MyCondo.Application.Common.Events;
 
 namespace MyCondo.Application;
@@ -11,13 +13,22 @@ public static class DependencyInjection
     {
         Assembly assembly = typeof(DependencyInjection).Assembly;
 
-        // Mediator's source generator emits AddMediator(...) at compile time and registers all
-        // request handlers and pipeline behaviors found in the same compilation. Lifetime is
-        // Scoped so handlers can resolve scoped dependencies like the DbContext.
+        // Mediator's source generator registers request/command/query handlers automatically, but
+        // NOT pipeline behaviors — those need explicit registration (open generics aren't picked up
+        // implicitly). Order is registration order = execution order, outermost first: unhandled
+        // exceptions wrap everything so they can observe/log any failure; logging brackets each
+        // request; performance times validation+handler; validation runs immediately before the
+        // handler. Scoped to match handler lifetime and because ValidationBehavior depends on
+        // scoped IValidator<T> registrations.
         services.AddMediator(opts =>
         {
             opts.ServiceLifetime = ServiceLifetime.Scoped;
         });
+
+        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(UnhandledExceptionBehavior<,>));
+        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
+        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
