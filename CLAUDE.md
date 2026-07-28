@@ -6,6 +6,12 @@ MyCondo is a multi-tenant SaaS building automation and property management platf
 
 The companion frontend repo is at https://github.com/afm-ahsan/mycondo-web.
 
+**Governance baseline:** see `../mycondo-docs/02-architecture/CURRENT_STATE_ASSESSMENT.md`,
+`TARGET_ARCHITECTURE.md`, and `Architecture_Decision_Register.md` (established 2026-07-28, Wave 0)
+for the current verified state of this repo, open architecture decisions, and the delivery backlog.
+Several items below reflect the *target* state, not the current one — each is annotated where that's
+the case.
+
 ## Tech Stack
 
 - **Runtime**: .NET 10 LTS · C# 14 · ASP.NET Core 10 (Minimal APIs)
@@ -77,11 +83,11 @@ Clean Architecture: Domain → Application → Infrastructure → Api. Domain ha
 
 ## Multi-tenancy (non-negotiable)
 
-- Every tenant-scoped table has a `tenant_id UUID NOT NULL` and an RLS policy `rls_<table>_tenant_isolation` enforcing `tenant_id = current_setting('app.current_tenant_id')::uuid`.
-- RLS is `ENABLED` and `FORCED`. Bypass is impossible from application code.
-- Tenant context is set per DB connection from the JWT claim by the `MyCondoDbContext`.
+- Every tenant-scoped table has a `tenant_id UUID NOT NULL` — implemented today in the `identity` schema tables.
+- **Target state (not yet implemented as of 2026-07-28):** an RLS policy `rls_<table>_tenant_isolation` enforcing `tenant_id = current_setting('app.current_tenant_id')::uuid` on every tenant-scoped table, with RLS `ENABLED` and `FORCED` so bypass is impossible from application code. No migration currently contains `CREATE POLICY` or `ENABLE ROW LEVEL SECURITY` — only the `tenant_id` column convention and the session-variable setter below exist so far. Do not assume RLS protection is active until this line is updated again.
+- `MyCondoDbContext.SaveChangesAsync` sets `app.current_tenant_id` via `SET LOCAL` from `ITenantContextAccessor` — this covers writes. Before RLS is turned on, the same context must also be guaranteed to be set on every **read** path (see `mycondo-docs/02-architecture/TARGET_ARCHITECTURE.md` §4 for the sequencing risk: enabling `FORCE ROW LEVEL SECURITY` before every read path sets the session variable will silently return zero rows instead of failing loudly).
 - Composite indexes on tenant-scoped tables always lead with `tenant_id`.
-- `MyCondo.MultiTenancyTests` runs cross-tenant access attempts and they MUST fail. CI gate.
+- `MyCondo.MultiTenancyTests` is scaffolded but currently contains only the placeholder test — it does not yet run cross-tenant access attempts. Building this out is Wave 1 scope (`mycondo-docs/07-delivery/MASTER_BACKLOG.md`, MT-4).
 
 ## Financial integrity (non-negotiable)
 
