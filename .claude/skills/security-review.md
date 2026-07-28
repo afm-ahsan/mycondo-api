@@ -7,9 +7,11 @@ description: Security checklist specific to MyCondo's actual current gaps — un
 
 ## Known gaps as of 2026-07-28 (don't assume these are handled)
 
-- No RLS policies exist yet — see `postgresql-rls.md`. Tenant isolation today is whatever application
-  code happens to filter by; verify explicitly for any new query, don't assume the database protects
-  you.
+- RLS **is enabled and forced** on the 5 tenant-scoped identity tables — see `postgresql-rls.md` for
+  the mechanism and the exact policy shape to copy for any new tenant-scoped table you add. Don't
+  assume a *new* table is protected just because RLS exists elsewhere — you must add its `tenant_id`
+  column, its own `rls_<table>_tenant_isolation` policy, and a cross-tenant test yourself; RLS is
+  per-table, not automatic.
 - `RequirePermission(...)` enforcement **does exist** (`MyCondo.Api/Authorization/`, ADR-011) — use it
   on every new endpoint. It currently reads permission claims embedded in the JWT at login/refresh
   time, not a per-request server-side lookup; that's a documented, deliberate scope decision (ID-4),
