@@ -89,6 +89,70 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
     }
 
     [Fact]
+    public async Task Login_With_Correct_Credentials_Succeeds()
+    {
+        // Standalone regression test for the bug fixed in this slice: Login is AllowAnonymous, so
+        // there's no JWT tenant claim yet — before the TenantContextAccessor fallback, RLS's USING
+        // clause always evaluated to NULL for anonymous connections, so this query returned zero rows
+        // regardless of whether the credentials were correct. Kept separate from the happy-path test
+        // above so this specific regression is identifiable on its own, not buried in a longer flow.
+        Guid tenantId = await SeedActiveTenantAsync("login-regression");
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage registerResponse = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            tenantId,
+            email = "login-check@example.com",
+            password = "correct-horse-battery-staple",
+            fullName = "Login Check",
+            phoneNumber = (string?)null,
+        });
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HttpResponseMessage loginResponse = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            tenantId,
+            email = "login-check@example.com",
+            password = "correct-horse-battery-staple",
+        });
+
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        AuthTokensDto? tokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+        tokens.Should().NotBeNull();
+        tokens!.AccessToken.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Refresh_With_Valid_Token_Issues_New_Token_Pair()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("refresh-round-trip");
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage registerResponse = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            tenantId,
+            email = "refresh-check@example.com",
+            password = "correct-horse-battery-staple",
+            fullName = "Refresh Check",
+            phoneNumber = (string?)null,
+        });
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        AuthTokensDto? originalTokens = await registerResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+
+        HttpResponseMessage refreshResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        {
+            tenantId,
+            refreshToken = originalTokens!.RefreshToken,
+        });
+
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        AuthTokensDto? freshTokens = await refreshResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+        freshTokens.Should().NotBeNull();
+        freshTokens!.AccessToken.Should().NotBe(originalTokens.AccessToken);
+        freshTokens.RefreshToken.Should().NotBe(originalTokens.RefreshToken);
+    }
+
+    [Fact]
     public async Task Register_With_Unknown_Tenant_Returns_404()
     {
         using HttpClient client = _factory.CreateClient();

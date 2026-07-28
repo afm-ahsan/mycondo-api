@@ -56,6 +56,17 @@ public class AuthEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Refresh_With_Missing_TenantId_Returns_400()
+    {
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/auth/refresh", new { refreshToken = "whatever" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Provision_Tenant_Without_Token_Returns_401()
     {
         using HttpClient client = _factory.CreateClient();
