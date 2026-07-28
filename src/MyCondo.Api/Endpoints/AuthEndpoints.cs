@@ -26,7 +26,8 @@ public static class AuthEndpoints
                 AuthTokensDto result = await sender.Send(command, ct);
                 return Results.Ok(result);
             })
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .Produces<AuthTokensDto>(StatusCodes.Status200OK);
 
         group.MapPost("/login", async (LoginCommand command, ISender sender, HttpContext http, CancellationToken ct) =>
             {
@@ -34,7 +35,8 @@ public static class AuthEndpoints
                 AuthTokensDto result = await sender.Send(command, ct);
                 return Results.Ok(result);
             })
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .Produces<AuthTokensDto>(StatusCodes.Status200OK);
 
         group.MapPost("/refresh", async (RefreshTokenCommand command, ISender sender, HttpContext http, CancellationToken ct) =>
             {
@@ -42,28 +44,32 @@ public static class AuthEndpoints
                 AuthTokensDto result = await sender.Send(command, ct);
                 return Results.Ok(result);
             })
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .Produces<AuthTokensDto>(StatusCodes.Status200OK);
 
         group.MapPost("/logout", async (LogoutCommand command, ISender sender, CancellationToken ct) =>
             {
                 await sender.Send(command, ct);
                 return Results.NoContent();
             })
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status204NoContent);
 
         group.MapPost("/change-password", async (ChangePasswordCommand command, ISender sender, CancellationToken ct) =>
             {
                 await sender.Send(command, ct);
                 return Results.NoContent();
             })
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status204NoContent);
 
         group.MapGet("/me", async (ISender sender, CancellationToken ct) =>
             {
                 UserProfileDto profile = await sender.Send(new GetMyProfileQuery(), ct);
                 return Results.Ok(profile);
             })
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .Produces<UserProfileDto>(StatusCodes.Status200OK);
 
         return app;
     }

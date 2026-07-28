@@ -19,7 +19,8 @@ public static class TenantEndpoints
                 TenantSummaryDto result = await sender.Send(new GetTenantBySlugQuery(slug), ct);
                 return Results.Ok(result);
             })
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .Produces<TenantSummaryDto>(StatusCodes.Status200OK);
 
         // Gated by tenant.manage. As of this slice, no user can hold that permission yet — the
         // permission catalogue hasn't been seeded (MASTER_BACKLOG.md ID-2). This endpoint establishes
@@ -30,21 +31,24 @@ public static class TenantEndpoints
                 ProvisionTenantResult result = await sender.Send(command, ct);
                 return Results.Ok(result);
             })
-            .RequirePermission("tenant.manage");
+            .RequirePermission("tenant.manage")
+            .Produces<ProvisionTenantResult>(StatusCodes.Status200OK);
 
         group.MapPost("/{id:guid}/activate", async (Guid id, ISender sender, CancellationToken ct) =>
             {
                 await sender.Send(new ActivateTenantCommand(id), ct);
                 return Results.NoContent();
             })
-            .RequirePermission("tenant.manage");
+            .RequirePermission("tenant.manage")
+            .Produces(StatusCodes.Status204NoContent);
 
         group.MapPost("/{id:guid}/suspend", async (Guid id, ISender sender, CancellationToken ct) =>
             {
                 await sender.Send(new SuspendTenantCommand(id), ct);
                 return Results.NoContent();
             })
-            .RequirePermission("tenant.manage");
+            .RequirePermission("tenant.manage")
+            .Produces(StatusCodes.Status204NoContent);
 
         return app;
     }
