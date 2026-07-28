@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Infrastructure.Persistence;
+using MyCondo.Infrastructure.Persistence.Interceptors;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -87,6 +89,33 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
         {
             await migrationContext.Database.MigrateAsync();
         }
+    }
+
+    /// <summary>
+    /// A <see cref="MyCondoDbContext"/> connected as the restricted <c>mycondo_app</c> role (same as
+    /// the app-under-test) with a fixed tenant context — for tests that need to verify RLS-protected
+    /// state directly (e.g. row counts) rather than through an HTTP round-trip. A DbContext resolved
+    /// from <see cref="Services"/> outside a real HTTP request has no JWT/HttpContext for the real
+    /// <c>TenantContextAccessor</c> to read, so it would see an empty tenant context and RLS would
+    /// correctly hide every row — this exists to give such tests an explicit tenant to act as instead.
+    /// </summary>
+    public MyCondoDbContext CreateDbContextForTenant(Guid tenantId)
+    {
+        FixedTenantContextAccessor tenantAccessor = new(tenantId);
+
+        DbContextOptions<MyCondoDbContext> options = new DbContextOptionsBuilder<MyCondoDbContext>()
+            .UseNpgsql(_appConnectionString, npg =>
+                npg.MigrationsHistoryTable("__ef_migrations_history", schema: "public"))
+            .UseSnakeCaseNamingConvention()
+            .AddInterceptors(new TenantContextConnectionInterceptor(tenantAccessor))
+            .Options;
+
+        return new MyCondoDbContext(options);
+    }
+
+    private sealed class FixedTenantContextAccessor(Guid tenantId) : ITenantContextAccessor
+    {
+        public Guid? CurrentTenantId => tenantId;
     }
 
     async Task IAsyncLifetime.DisposeAsync()

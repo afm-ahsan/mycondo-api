@@ -2,12 +2,16 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MyCondo.Application.Features.Auth.DTOs;
 using MyCondo.Application.Features.Roles.Queries.GetPermissionCatalogue;
 using MyCondo.Application.Features.Roles.Queries.GetRolesForTenant;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.RolePermissions;
+using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Tenancy;
+using MyCondo.Infrastructure.Persistence;
 
 namespace MyCondo.Api.IntegrationTests;
 
@@ -234,6 +238,37 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
             client, HttpMethod.Post, $"/api/v1/roles/{roleId}/assignments", ownerTokens.AccessToken,
             new { userId = memberUserId, buildingId = (Guid?)null });
         reassignAfterRevoke.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task First_User_Registration_Seeds_The_Default_Role_Catalogue()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("default-role-catalogue");
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto tokens = await RegisterAsync(client, tenantId, "owner@example.com");
+
+        HttpResponseMessage listResponse = await SendAuthedAsync(
+            client, HttpMethod.Get, "/api/v1/roles", tokens.AccessToken);
+        List<RoleSummaryDto>? roleList = await listResponse.Content.ReadFromJsonAsync<List<RoleSummaryDto>>(JsonOptions);
+
+        roleList.Should().NotBeNull();
+        roleList!.Select(r => r.Name).Should().BeEquivalentTo(
+        [
+            "SuperAdmin", "BuildingAdmin", "Treasurer", "Secretary", "SecurityHead", "Owner", "Renter", "Auditor",
+        ]);
+        roleList.Should().OnlyContain(r => r.Name == "SuperAdmin" || !r.IsSystem);
+
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
+
+        async Task<int> GrantCountAsync(string roleName)
+        {
+            RoleId roleId = new(roleList.Single(r => r.Name == roleName).RoleId);
+            return await db.Set<RolePermission>().CountAsync(rp => rp.RoleId == roleId);
+        }
+
+        (await GrantCountAsync("SecurityHead")).Should().Be(1);
+        (await GrantCountAsync("Treasurer")).Should().Be(11);
+        (await GrantCountAsync("Auditor")).Should().Be(18);
     }
 
     private static Guid ParseUserIdFromAccessToken(string accessToken)

@@ -13,6 +13,7 @@ public sealed class RegisterUserCommandHandler(
     IUserRepository users,
     ITenantRepository tenants,
     ISuperAdminBootstrapper superAdminBootstrapper,
+    IDefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -64,6 +65,10 @@ public sealed class RegisterUserCommandHandler(
             // SaveChangesAsync so the issued JWT's `perm` claims (built in
             // userContextResolver.ResolveAsync below) immediately reflect the grant.
             await superAdminBootstrapper.BootstrapAsync(command.TenantId, user, nowUtc, cancellationToken);
+
+            // Also seed the tenant's default custom roles (ROLE_CATALOGUE_PROPOSAL.md) so the new
+            // SuperAdmin has something sensible to hand out immediately — nobody is auto-assigned.
+            await defaultRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

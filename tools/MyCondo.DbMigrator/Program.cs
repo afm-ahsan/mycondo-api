@@ -114,6 +114,9 @@ public static class Program
         ISuperAdminBootstrapper bootstrapper = sp.GetRequiredService<ISuperAdminBootstrapper>();
         await bootstrapper.BootstrapAsync(tenant.Id.Value, admin, nowUtc, CancellationToken.None);
 
+        IDefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder = sp.GetRequiredService<IDefaultRoleCatalogueSeeder>();
+        await defaultRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, CancellationToken.None);
+
         IUnitOfWork unitOfWork = sp.GetRequiredService<IUnitOfWork>();
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
