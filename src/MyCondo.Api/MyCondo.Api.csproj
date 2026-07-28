@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\MyCondo.Infrastructure\MyCondo.Infrastructure.csproj" />
@@ -30,6 +30,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>159d7408-c112-4027-8d69-a15b2fcb0931</UserSecretsId>
   </PropertyGroup>
 
 </Project>
