@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
