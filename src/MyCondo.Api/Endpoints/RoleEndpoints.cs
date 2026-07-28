@@ -2,7 +2,10 @@ using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Features.Roles.Commands.AssignRoleToUser;
 using MyCondo.Application.Features.Roles.Commands.CreateRole;
+using MyCondo.Application.Features.Roles.Commands.DeactivateRole;
 using MyCondo.Application.Features.Roles.Commands.GrantPermissionToRole;
+using MyCondo.Application.Features.Roles.Commands.RemovePermissionFromRole;
+using MyCondo.Application.Features.Roles.Commands.RevokeRoleFromUser;
 using MyCondo.Application.Features.Roles.Queries.GetPermissionCatalogue;
 using MyCondo.Application.Features.Roles.Queries.GetRolesForTenant;
 
@@ -41,6 +44,27 @@ public static class RoleEndpoints
                 return Results.Ok(result);
             })
             .RequirePermission("role.view");
+
+        roles.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new DeactivateRoleCommand(id), ct);
+                return Results.NoContent();
+            })
+            .RequirePermission("role.manage");
+
+        roles.MapDelete("/{id:guid}/permissions/{permissionId:guid}", async (Guid id, Guid permissionId, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new RemovePermissionFromRoleCommand(id, permissionId), ct);
+                return Results.NoContent();
+            })
+            .RequirePermission("role.manage");
+
+        roles.MapDelete("/{id:guid}/assignments/{userId:guid}", async (Guid id, Guid userId, Guid? buildingId, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new RevokeRoleFromUserCommand(id, userId, buildingId), ct);
+                return Results.NoContent();
+            })
+            .RequirePermission("role.manage");
 
         app.MapGet("/api/v1/permissions", async (ISender sender, CancellationToken ct) =>
             {

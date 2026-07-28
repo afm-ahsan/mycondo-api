@@ -52,6 +52,38 @@ public class RoleEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Deactivate_Role_Without_Token_Returns_401()
+    {
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage response = await client.DeleteAsync($"/api/v1/roles/{Guid.NewGuid()}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Remove_Permission_From_Role_Without_Token_Returns_401()
+    {
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage response = await client.DeleteAsync(
+            $"/api/v1/roles/{Guid.NewGuid()}/permissions/{Guid.NewGuid()}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Revoke_Role_From_User_Without_Token_Returns_401()
+    {
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage response = await client.DeleteAsync(
+            $"/api/v1/roles/{Guid.NewGuid()}/assignments/{Guid.NewGuid()}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task Get_Roles_Without_Token_Returns_401()
     {
         using HttpClient client = _factory.CreateClient();

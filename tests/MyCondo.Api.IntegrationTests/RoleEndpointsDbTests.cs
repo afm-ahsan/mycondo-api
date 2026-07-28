@@ -129,4 +129,120 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
         permissions.Should().Contain(p => p.Name == "role.manage");
         permissions.Should().Contain(p => p.Name == "permission.view");
     }
+
+    private static async Task<HttpResponseMessage> SendAuthedAsync(
+        HttpClient client, HttpMethod method, string url, string accessToken, object? body = null)
+    {
+        using HttpRequestMessage request = new(method, url)
+        {
+            Content = body is null ? null : JsonContent.Create(body),
+        };
+        request.Headers.Authorization = new("Bearer", accessToken);
+        return await client.SendAsync(request);
+    }
+
+    [Fact]
+    public async Task Deactivate_Role_Removes_It_From_The_Role_List()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("deactivate-role");
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto tokens = await RegisterAsync(client, tenantId, "owner@example.com");
+
+        HttpResponseMessage createResponse = await SendAuthedAsync(
+            client, HttpMethod.Post, "/api/v1/roles", tokens.AccessToken,
+            new { name = "Temp Role", description = "To be deactivated" });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Guid roleId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("roleId").GetGuid();
+
+        HttpResponseMessage deactivateResponse = await SendAuthedAsync(
+            client, HttpMethod.Delete, $"/api/v1/roles/{roleId}", tokens.AccessToken);
+        deactivateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        HttpResponseMessage listResponse = await SendAuthedAsync(
+            client, HttpMethod.Get, "/api/v1/roles", tokens.AccessToken);
+        List<RoleSummaryDto>? roles = await listResponse.Content.ReadFromJsonAsync<List<RoleSummaryDto>>(JsonOptions);
+        roles.Should().NotContain(r => r.RoleId == roleId);
+    }
+
+    [Fact]
+    public async Task Remove_Permission_From_Role_Allows_Re_Granting_It()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("remove-permission");
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto tokens = await RegisterAsync(client, tenantId, "owner@example.com");
+
+        HttpResponseMessage createResponse = await SendAuthedAsync(
+            client, HttpMethod.Post, "/api/v1/roles", tokens.AccessToken,
+            new { name = "Permission Test Role", description = "" });
+        Guid roleId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("roleId").GetGuid();
+
+        HttpResponseMessage catalogueResponse = await SendAuthedAsync(
+            client, HttpMethod.Get, "/api/v1/permissions", tokens.AccessToken);
+        List<PermissionDto>? catalogue = await catalogueResponse.Content.ReadFromJsonAsync<List<PermissionDto>>(JsonOptions);
+        Guid permissionId = catalogue!.First(p => p.Name == "complaint.view").Id;
+
+        HttpResponseMessage grantResponse = await SendAuthedAsync(
+            client, HttpMethod.Post, $"/api/v1/roles/{roleId}/permissions", tokens.AccessToken,
+            new { permissionId });
+        grantResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        HttpResponseMessage regrantConflict = await SendAuthedAsync(
+            client, HttpMethod.Post, $"/api/v1/roles/{roleId}/permissions", tokens.AccessToken,
+            new { permissionId });
+        regrantConflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        HttpResponseMessage removeResponse = await SendAuthedAsync(
+            client, HttpMethod.Delete, $"/api/v1/roles/{roleId}/permissions/{permissionId}", tokens.AccessToken);
+        removeResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        HttpResponseMessage regrantAfterRemove = await SendAuthedAsync(
+            client, HttpMethod.Post, $"/api/v1/roles/{roleId}/permissions", tokens.AccessToken,
+            new { permissionId });
+        regrantAfterRemove.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Revoke_Role_From_User_Allows_Re_Assigning_It()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("revoke-assignment");
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto ownerTokens = await RegisterAsync(client, tenantId, "owner@example.com");
+        AuthTokensDto memberTokens = await RegisterAsync(client, tenantId, "member@example.com");
+
+        HttpResponseMessage createResponse = await SendAuthedAsync(
+            client, HttpMethod.Post, "/api/v1/roles", ownerTokens.AccessToken,
+            new { name = "Assignment Test Role", description = "" });
+        Guid roleId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("roleId").GetGuid();
+
+        Guid memberUserId = ParseUserIdFromAccessToken(memberTokens.AccessToken);
+
+        HttpResponseMessage assignResponse = await SendAuthedAsync(
+            client, HttpMethod.Post, $"/api/v1/roles/{roleId}/assignments", ownerTokens.AccessToken,
+            new { userId = memberUserId, buildingId = (Guid?)null });
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        HttpResponseMessage reassignConflict = await SendAuthedAsync(
+            client, HttpMethod.Post, $"/api/v1/roles/{roleId}/assignments", ownerTokens.AccessToken,
+            new { userId = memberUserId, buildingId = (Guid?)null });
+        reassignConflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        HttpResponseMessage revokeResponse = await SendAuthedAsync(
+            client, HttpMethod.Delete, $"/api/v1/roles/{roleId}/assignments/{memberUserId}", ownerTokens.AccessToken);
+        revokeResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        HttpResponseMessage reassignAfterRevoke = await SendAuthedAsync(
+            client, HttpMethod.Post, $"/api/v1/roles/{roleId}/assignments", ownerTokens.AccessToken,
+            new { userId = memberUserId, buildingId = (Guid?)null });
+        reassignAfterRevoke.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    private static Guid ParseUserIdFromAccessToken(string accessToken)
+    {
+        string payload = accessToken.Split('.')[1];
+        string padded = payload.Replace('-', '+').Replace('_', '/');
+        padded = padded.PadRight(padded.Length + ((4 - (padded.Length % 4)) % 4), '=');
+        byte[] json = Convert.FromBase64String(padded);
+        using JsonDocument document = JsonDocument.Parse(json);
+        return Guid.Parse(document.RootElement.GetProperty("sub").GetString()!);
+    }
 }

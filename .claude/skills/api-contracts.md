@@ -7,11 +7,15 @@ description: MyCondo API design standards — versioning, error contract, pagina
 
 ## Current actual state
 
-`MyCondo.Api/Endpoints/` has three files as of 2026-07-28 (Wave 1 Slice 4):
+`MyCondo.Api/Endpoints/` has three files as of 2026-07-28 (Wave 1 Slice 5):
 `AuthEndpoints.cs` (`/api/v1/auth/{register,login,refresh,logout,change-password,me}`),
 `TenantEndpoints.cs` (`/api/v1/tenants/{by-slug/{slug},"",{id}/activate,{id}/suspend}`), and
-`RoleEndpoints.cs` (`/api/v1/roles/{"",{id}/permissions,{id}/assignments}` +
-`/api/v1/permissions`). These are the reference pattern — copy their shape (route group per feature,
+`RoleEndpoints.cs` (`/api/v1/roles/{"",{id},{id}/permissions,{id}/permissions/{permissionId},
+{id}/assignments,{id}/assignments/{userId}}` + `/api/v1/permissions`). `DELETE` is used for the three
+"undo" operations (deactivate a role, remove a granted permission, revoke an assignment) — all
+soft/relational removals, not hard deletes of history. `DELETE .../assignments/{userId}` takes an
+optional `?buildingId=` query param mirroring `AssignRoleToUserCommand`'s scope. These are the
+reference pattern — copy their shape (route group per feature,
 `MapXEndpoints` extension method, `.AllowAnonymous()`/`.RequireAuthorization()`/`.RequirePermission(...)`
 on every route, `ISender` injected per-endpoint) for new endpoints rather than improvising. No other
 business-module endpoints exist yet — those land with their respective waves.
