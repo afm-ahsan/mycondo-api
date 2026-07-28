@@ -14,10 +14,12 @@ public interface ITokenService
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Validates a refresh token (looks up by hash, checks not expired/revoked), revokes the old
-    /// one, issues a fresh access + refresh pair. Returns null if validation fails.
+    /// Validates a refresh token (looks up by hash, checks not expired/revoked, and — as
+    /// defense-in-depth alongside RLS — that it belongs to <paramref name="tenantId"/>), revokes the
+    /// old one, issues a fresh access + refresh pair. Returns null if validation fails.
     /// </summary>
     Task<AuthTokensDto?> RotateAsync(
+        Guid tenantId,
         string refreshToken,
         string ipAddress,
         CancellationToken cancellationToken);

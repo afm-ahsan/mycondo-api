@@ -15,7 +15,7 @@ public sealed class RefreshTokenCommandHandler(
     public async ValueTask<AuthTokensDto> Handle(RefreshTokenCommand command, CancellationToken cancellationToken)
     {
         AuthTokensDto? tokens = await tokenService.RotateAsync(
-            command.RefreshToken, ipAccessor.IpAddress, cancellationToken);
+            command.TenantId, command.RefreshToken, ipAccessor.IpAddress, cancellationToken);
 
         if (tokens is null)
         {

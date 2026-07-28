@@ -60,6 +60,7 @@ public sealed class JwtTokenService(
     }
 
     public async Task<AuthTokensDto?> RotateAsync(
+        Guid tenantId,
         string refreshToken,
         string ipAddress,
         CancellationToken cancellationToken)
@@ -75,6 +76,17 @@ public sealed class JwtTokenService(
         if (existing is null)
         {
             logger.LogInformation("Refresh-token rotation: token not found");
+            return null;
+        }
+
+        // Defense-in-depth alongside RLS (which the token lookup above isn't scoped by — the token
+        // hash is a globally unique secret, not a tenant-scoped lookup key): reject if the caller's
+        // declared tenant doesn't match the token's actual tenant.
+        if (existing.TenantId != tenantId)
+        {
+            logger.LogWarning(
+                "Refresh-token rotation: token {TokenId} tenant mismatch (expected {ExpectedTenantId})",
+                existing.Id, tenantId);
             return null;
         }
 
