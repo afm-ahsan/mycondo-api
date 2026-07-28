@@ -16,5 +16,8 @@ public sealed class UserRepository(MyCondoDbContext db) : IUserRepository
         db.Set<User>()
           .AnyAsync(u => u.TenantId == tenantId && u.Email == email, cancellationToken);
 
+    public Task<bool> AnyForTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
+        db.Set<User>().AnyAsync(u => u.TenantId == tenantId, cancellationToken);
+
     public void Add(User user) => db.Set<User>().Add(user);
 }

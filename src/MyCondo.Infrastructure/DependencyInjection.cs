@@ -4,7 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Settings;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RefreshTokens;
+using MyCondo.Domain.Features.Identity.RoleAssignments;
+using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Tenancy;
@@ -81,6 +84,9 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<IPermissionRepository, PermissionRepository>();
+        services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+        services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>
