@@ -15,6 +15,9 @@ public sealed class RolePermissionRepository(MyCondoDbContext db) : IRolePermiss
         db.Set<RolePermission>()
           .FirstOrDefaultAsync(rp => rp.RoleId == roleId && rp.PermissionId == permissionId, cancellationToken);
 
+    public Task<List<RolePermission>> GetForRoleAsync(RoleId roleId, CancellationToken cancellationToken) =>
+        db.Set<RolePermission>().Where(rp => rp.RoleId == roleId).ToListAsync(cancellationToken);
+
     public void Add(RolePermission rolePermission) => db.Set<RolePermission>().Add(rolePermission);
 
     public void Remove(RolePermission rolePermission) => db.Set<RolePermission>().Remove(rolePermission);

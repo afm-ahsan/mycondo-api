@@ -19,5 +19,8 @@ public sealed class UserRepository(MyCondoDbContext db) : IUserRepository
     public Task<bool> AnyForTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
         db.Set<User>().AnyAsync(u => u.TenantId == tenantId, cancellationToken);
 
+    public Task<List<User>> GetAllForTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
+        db.Set<User>().Where(u => u.TenantId == tenantId).OrderBy(u => u.Email).ToListAsync(cancellationToken);
+
     public void Add(User user) => db.Set<User>().Add(user);
 }

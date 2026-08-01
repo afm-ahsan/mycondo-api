@@ -7,18 +7,26 @@ description: MyCondo API design standards — versioning, error contract, pagina
 
 ## Current actual state
 
-`MyCondo.Api/Endpoints/` has three files as of 2026-07-28 (Wave 1 Slice 5):
+`MyCondo.Api/Endpoints/` has four files as of 2026-08-01 (Wave 1 Frontend Slice 2):
 `AuthEndpoints.cs` (`/api/v1/auth/{register,login,refresh,logout,change-password,me}`),
-`TenantEndpoints.cs` (`/api/v1/tenants/{by-slug/{slug},"",{id}/activate,{id}/suspend}`), and
+`TenantEndpoints.cs` (`/api/v1/tenants/{by-slug/{slug},"",{id}/activate,{id}/suspend}`),
 `RoleEndpoints.cs` (`/api/v1/roles/{"",{id},{id}/permissions,{id}/permissions/{permissionId},
-{id}/assignments,{id}/assignments/{userId}}` + `/api/v1/permissions`). `DELETE` is used for the three
+{id}/assignments,{id}/assignments/{userId}}` + `/api/v1/permissions`), and
+`UserEndpoints.cs` (`/api/v1/users/{"",{id}/disable}`). `DELETE` is used for the three
 "undo" operations (deactivate a role, remove a granted permission, revoke an assignment) — all
 soft/relational removals, not hard deletes of history. `DELETE .../assignments/{userId}` takes an
-optional `?buildingId=` query param mirroring `AssignRoleToUserCommand`'s scope. These are the
+optional `?buildingId=` query param mirroring `AssignRoleToUserCommand`'s scope. Note the read/write
+asymmetry this exposed: every mutation endpoint (`GrantPermissionToRole`, `AssignRoleToUser`, etc.) had
+existed for slices before a matching *read* endpoint did — `GET /api/v1/roles/{id}/permissions` and
+`GET /api/v1/roles/{id}/assignments` only landed in Frontend Slice 2, once a UI actually needed to know
+current state rather than just fire-and-forget writes. When adding a new mutation, add its read-back
+query in the same slice unless there's a specific reason not to. These are the
 reference pattern — copy their shape (route group per feature,
 `MapXEndpoints` extension method, `.AllowAnonymous()`/`.RequireAuthorization()`/`.RequirePermission(...)`
-on every route, `ISender` injected per-endpoint) for new endpoints rather than improvising. No other
-business-module endpoints exist yet — those land with their respective waves.
+on every route, `ISender` injected per-endpoint, `.Produces<T>()`/`.Produces(status)` declared on every
+route so OpenAPI codegen emits real types instead of `unknown` — found the hard way in Frontend Slice 1)
+for new endpoints rather than improvising. No other business-module endpoints exist yet — those land
+with their respective waves.
 
 The permission catalogue is seeded (47 concrete permissions, `Seed_Permission_Catalogue` migration —
 see `mycondo-docs/07-delivery/MASTER_BACKLOG.md` ID-2) and `RequirePermission` checks are therefore

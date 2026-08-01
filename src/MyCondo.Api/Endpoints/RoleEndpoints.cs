@@ -7,6 +7,8 @@ using MyCondo.Application.Features.Roles.Commands.GrantPermissionToRole;
 using MyCondo.Application.Features.Roles.Commands.RemovePermissionFromRole;
 using MyCondo.Application.Features.Roles.Commands.RevokeRoleFromUser;
 using MyCondo.Application.Features.Roles.Queries.GetPermissionCatalogue;
+using MyCondo.Application.Features.Roles.Queries.GetRoleAssignments;
+using MyCondo.Application.Features.Roles.Queries.GetRolePermissions;
 using MyCondo.Application.Features.Roles.Queries.GetRolesForTenant;
 
 namespace MyCondo.Api.Endpoints;
@@ -72,6 +74,22 @@ public static class RoleEndpoints
             })
             .RequirePermission("role.manage")
             .Produces(StatusCodes.Status204NoContent);
+
+        roles.MapGet("/{id:guid}/permissions", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                List<PermissionDto> result = await sender.Send(new GetRolePermissionsQuery(id), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("role.view")
+            .Produces<List<PermissionDto>>(StatusCodes.Status200OK);
+
+        roles.MapGet("/{id:guid}/assignments", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                List<RoleAssignmentDto> result = await sender.Send(new GetRoleAssignmentsQuery(id), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("role.view")
+            .Produces<List<RoleAssignmentDto>>(StatusCodes.Status200OK);
 
         app.MapGet("/api/v1/permissions", async (ISender sender, CancellationToken ct) =>
             {

@@ -23,6 +23,8 @@ public interface IRoleAssignmentRepository
     /// used to guard against revoking a tenant's last holder of a system role.</summary>
     Task<int> CountTenantWideHoldersAsync(Guid tenantId, RoleId roleId, CancellationToken cancellationToken);
 
+    Task<List<RoleAssignment>> GetForRoleAsync(Guid tenantId, RoleId roleId, CancellationToken cancellationToken);
+
     void Add(RoleAssignment roleAssignment);
     void Remove(RoleAssignment roleAssignment);
 }

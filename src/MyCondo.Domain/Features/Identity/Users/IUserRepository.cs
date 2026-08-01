@@ -10,5 +10,7 @@ public interface IUserRepository
     /// RegisterUserCommandHandler.</summary>
     Task<bool> AnyForTenantAsync(Guid tenantId, CancellationToken cancellationToken);
 
+    Task<List<User>> GetAllForTenantAsync(Guid tenantId, CancellationToken cancellationToken);
+
     void Add(User user);
 }
