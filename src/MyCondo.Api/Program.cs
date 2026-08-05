@@ -60,6 +60,7 @@ app.MapDomesticWorkerEndpoints();
 app.MapServiceProviderEndpoints();
 app.MapStaffAttendanceEndpoints();
 app.MapSebaVisitorEndpoints();
+app.MapParcelEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>

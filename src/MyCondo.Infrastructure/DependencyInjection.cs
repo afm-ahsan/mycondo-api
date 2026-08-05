@@ -22,6 +22,8 @@ using MyCondo.Domain.Features.Security.AccessSessions;
 using MyCondo.Domain.Features.Security.DomesticWorkerAssignments;
 using MyCondo.Domain.Features.Security.DomesticWorkers;
 using MyCondo.Domain.Features.Security.Guests;
+using MyCondo.Domain.Features.Security.ParcelCustodyEvents;
+using MyCondo.Domain.Features.Security.Parcels;
 using MyCondo.Domain.Features.Security.SebaVisits;
 using MyCondo.Domain.Features.Security.ServiceProviderAssignments;
 using MyCondo.Domain.Features.Security.ServiceProviders;
@@ -117,6 +119,8 @@ public static class DependencyInjection
         services.AddScoped<IStaffMemberRepository, StaffMemberRepository>();
         services.AddScoped<IAttendanceRecordRepository, AttendanceRecordRepository>();
         services.AddScoped<ISebaVisitDetailRepository, SebaVisitDetailRepository>();
+        services.AddScoped<IParcelRepository, ParcelRepository>();
+        services.AddScoped<IParcelCustodyEventRepository, ParcelCustodyEventRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>
