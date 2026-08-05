@@ -11,6 +11,21 @@ using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Tenancy;
+using MyCondo.Domain.Features.Attachments;
+using MyCondo.Domain.Features.Property.Buildings;
+using MyCondo.Domain.Features.Property.Flats;
+using MyCondo.Domain.Features.Property.Gates;
+using MyCondo.Domain.Features.Residents;
+using MyCondo.Domain.Features.Payroll.AttendanceRecords;
+using MyCondo.Domain.Features.Payroll.StaffMembers;
+using MyCondo.Domain.Features.Security.AccessSessions;
+using MyCondo.Domain.Features.Security.DomesticWorkerAssignments;
+using MyCondo.Domain.Features.Security.DomesticWorkers;
+using MyCondo.Domain.Features.Security.Guests;
+using MyCondo.Domain.Features.Security.SebaVisits;
+using MyCondo.Domain.Features.Security.ServiceProviderAssignments;
+using MyCondo.Domain.Features.Security.ServiceProviders;
+using MyCondo.Domain.Features.Security.Vehicles;
 using MyCondo.Infrastructure.Identity;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
@@ -87,6 +102,21 @@ public static class DependencyInjection
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
+        services.AddScoped<IBuildingRepository, BuildingRepository>();
+        services.AddScoped<IFlatRepository, FlatRepository>();
+        services.AddScoped<IGateRepository, GateRepository>();
+        services.AddScoped<IResidentRepository, ResidentRepository>();
+        services.AddScoped<IAttachmentRepository, AttachmentRepository>();
+        services.AddScoped<IGuestProfileRepository, GuestProfileRepository>();
+        services.AddScoped<IVehicleRepository, VehicleRepository>();
+        services.AddScoped<IAccessSessionRepository, AccessSessionRepository>();
+        services.AddScoped<IDomesticWorkerProfileRepository, DomesticWorkerProfileRepository>();
+        services.AddScoped<IDomesticWorkerAssignmentRepository, DomesticWorkerAssignmentRepository>();
+        services.AddScoped<IServiceProviderProfileRepository, ServiceProviderProfileRepository>();
+        services.AddScoped<IServiceProviderAssignmentRepository, ServiceProviderAssignmentRepository>();
+        services.AddScoped<IStaffMemberRepository, StaffMemberRepository>();
+        services.AddScoped<IAttendanceRecordRepository, AttendanceRecordRepository>();
+        services.AddScoped<ISebaVisitDetailRepository, SebaVisitDetailRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>

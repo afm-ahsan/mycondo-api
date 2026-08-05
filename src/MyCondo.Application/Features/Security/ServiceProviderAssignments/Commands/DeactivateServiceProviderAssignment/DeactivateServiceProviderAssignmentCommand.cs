@@ -1,0 +1,5 @@
+using Mediator;
+
+namespace MyCondo.Application.Features.Security.ServiceProviderAssignments.Commands.DeactivateServiceProviderAssignment;
+
+public sealed record DeactivateServiceProviderAssignmentCommand(Guid ServiceProviderAssignmentId) : IRequest;

@@ -50,6 +50,16 @@ app.MapAuthEndpoints();
 app.MapTenantEndpoints();
 app.MapRoleEndpoints();
 app.MapUserEndpoints();
+app.MapPropertyEndpoints();
+app.MapResidentEndpoints();
+app.MapAttachmentEndpoints();
+app.MapGuestEndpoints();
+app.MapVehicleEndpoints();
+app.MapAccessSessionEndpoints();
+app.MapDomesticWorkerEndpoints();
+app.MapServiceProviderEndpoints();
+app.MapStaffAttendanceEndpoints();
+app.MapSebaVisitorEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>
