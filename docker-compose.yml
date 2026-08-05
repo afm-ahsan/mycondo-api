@@ -90,7 +90,7 @@ services:
   #     redis:
   #       condition: service_healthy
   #   ports:
-  #     - "5000:8080"
+  #     - "5219:8080"  # host-side port per docs/local-development-ports.md; container stays plain HTTP
   #   healthcheck:
   #     test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/live"]
   #     interval: 30s

@@ -28,9 +28,11 @@ public static class RefreshTokenCookie
         {
             HttpOnly = true,
             // Matches the incoming request's scheme — a hardcoded `Secure = true` would silently drop
-            // the cookie on plain HTTP local dev (the API runs on http://localhost:5000, not https).
+            // the cookie if the API is ever hit over plain HTTP local dev (it runs HTTPS-primary on
+            // https://localhost:7219, with an http://localhost:5219 fallback — see
+            // docs/local-development-ports.md).
             Secure = http.Request.IsHttps,
-            // The frontend (:5173) and backend (:5000) are different origins but the same site
+            // The frontend (:4219) and backend (:7219/:5219) are different origins but the same site
             // (both "localhost") — SameSite=Strict still allows the cookie on same-site fetch/XHR,
             // it only blocks genuinely cross-site requests.
             SameSite = SameSiteMode.Strict,

@@ -75,14 +75,18 @@ dotnet ef database update `
   --startup-project src/MyCondo.Api
 Remove-Item Env:\ConnectionStrings__Default
 
+# Optional but recommended: check reserved ports are free before starting (see
+# docs/local-development-ports.md for the full multi-project port registry)
+pwsh scripts/check-ports.ps1
+
 # Run the API
 dotnet run --project src/MyCondo.Api
-# → API on http://localhost:5000
-# → OpenAPI 3.1 spec at http://localhost:5000/openapi/v1.json
-# → Scalar UI at http://localhost:5000/scalar
+# → API on https://localhost:7219 (HTTP fallback: http://localhost:5219)
+# → OpenAPI 3.1 spec at https://localhost:7219/openapi/v1.json
+# → Scalar UI at https://localhost:7219/scalar
 ```
 
-The companion frontend (`mycondo-web`) reads `VITE_MYCONDO_API_BASE_URL=http://localhost:5000`.
+The companion frontend (`mycondo-web`) reads `VITE_MYCONDO_API_BASE_URL=https://localhost:7219`.
 
 ### Default credentials (seeded for dev)
 
@@ -105,6 +109,7 @@ dotnet format
 ## Project Documentation
 
 - **Conventions**: `docs/conventions/` — opinionated rules; AI tools and humans must read before editing
+- **Local ports**: `docs/local-development-ports.md` — the reserved port range for this and sibling local projects
 - **Architecture**: `docs/architecture/` (TODO)
 - **ADRs**: `docs/decisions/` (TODO)
 - **Runbooks**: `docs/runbooks/` (TODO)

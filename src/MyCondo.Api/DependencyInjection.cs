@@ -34,7 +34,7 @@ public static class DependencyInjection
         services.AddCors(options =>
         {
             string[] origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? ["http://localhost:5173"];
+                ?? ["http://localhost:4219"];
 
             options.AddPolicy("DefaultCors", builder =>
             {

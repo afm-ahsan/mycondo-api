@@ -276,7 +276,7 @@ These decisions are locked. Changing any of them later requires deliberate renam
 | Migration runner | `mycondo-api/tools/MyCondo.DbMigrator/` standalone runner | |
 | Container image (api) | `ghcr.io/mycondo/api:<semver>` | |
 | Container image (jobs) | `ghcr.io/mycondo/jobs:<semver>` | |
-| docker-compose.yml | Lives in `mycondo-api/` (it's the local-infra owner — postgres, redis, mailhog, etc.) | Frontend dev points at it via `VITE_MYCONDO_API_BASE_URL=http://localhost:5000` |
+| docker-compose.yml | Lives in `mycondo-api/` (it's the local-infra owner — postgres, redis, mailhog, etc.) | Frontend dev points at it via `VITE_MYCONDO_API_BASE_URL=https://localhost:7219` (updated 2026-08-05: local dev ports reassigned to the 4219/7219/5219 range as part of a workspace-wide multi-project port registry — see `docs/local-development-ports.md`; a deliberate, requested revisit of this otherwise-locked naming, not a casual change) |
 
 ### Frontend
 

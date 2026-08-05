@@ -105,6 +105,7 @@ dotnet restore
 dotnet build
 dotnet test
 dotnet run --project src/MyCondo.Api
+# → https://localhost:7219 (HTTP fallback http://localhost:5219) — see docs/local-development-ports.md
 ```
 
 ### Migrations
