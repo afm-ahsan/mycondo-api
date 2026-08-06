@@ -130,12 +130,17 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         List<PermissionDto>? permissions = await response.Content.ReadFromJsonAsync<List<PermissionDto>>(JsonOptions);
         // 47 in the original catalogue + 13 (security) + 19 (domestic worker/service provider/staff
-        // attendance/seba visitor) + 7 (parcel) + 5 (payments) + 5 (billing) = 96. Was hardcoded to the
-        // stale original 47 — never caught because these tests are Docker-gated and hadn't run.
-        permissions.Should().HaveCount(96);
+        // attendance/seba visitor) + 7 (parcel) + 2 (payments — payment.view/record/reverse already
+        // existed in the original catalogue, so only residentaccount.view/manage are new) + 3
+        // (billing — billing.rule.view/manage already existed in the original catalogue, so only
+        // billing.invoice.view/generate/void are new) + 8 (utility) = 99. The original catalogue
+        // overlap was a genuine duplicate-seed bug, only caught once migrations were first run
+        // against a real Postgres instance — see Seed_Payments_Permissions/Seed_Billing_Permissions.
+        permissions.Should().HaveCount(99);
         permissions.Should().Contain(p => p.Name == "role.manage");
         permissions.Should().Contain(p => p.Name == "permission.view");
         permissions.Should().Contain(p => p.Name == "billing.invoice.generate");
+        permissions.Should().Contain(p => p.Name == "utility.reading.correct");
     }
 
     private static async Task<HttpResponseMessage> SendAuthedAsync(
