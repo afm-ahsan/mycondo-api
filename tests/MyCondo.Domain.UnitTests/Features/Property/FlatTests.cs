@@ -52,4 +52,38 @@ public class FlatTests
 
         flat.DeletedAtUtc.Should().Be(Now.AddDays(1));
     }
+
+    [Fact]
+    public void SetAreaSqFt_Sets_Value_And_Increments_Version()
+    {
+        Flat flat = Flat.Create(TenantId, BuildingId, "A-501", null, FlatType.Residential, Now);
+
+        flat.SetAreaSqFt(1250.5m);
+
+        flat.AreaSqFt.Should().Be(1250.5m);
+        flat.Version.Should().Be(2);
+    }
+
+    [Fact]
+    public void SetAreaSqFt_Allows_Clearing_To_Null()
+    {
+        Flat flat = Flat.Create(TenantId, BuildingId, "A-501", null, FlatType.Residential, Now);
+        flat.SetAreaSqFt(1250.5m);
+
+        flat.SetAreaSqFt(null);
+
+        flat.AreaSqFt.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-10)]
+    public void SetAreaSqFt_Throws_When_Not_Positive(decimal areaSqFt)
+    {
+        Flat flat = Flat.Create(TenantId, BuildingId, "A-501", null, FlatType.Residential, Now);
+
+        Action act = () => flat.SetAreaSqFt(areaSqFt);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
 }

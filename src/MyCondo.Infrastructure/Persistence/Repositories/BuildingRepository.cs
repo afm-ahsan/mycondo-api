@@ -12,6 +12,9 @@ public sealed class BuildingRepository(MyCondoDbContext db) : IBuildingRepositor
     public Task<Building?> GetByNameAsync(Guid tenantId, string name, CancellationToken cancellationToken) =>
         db.Set<Building>().FirstOrDefaultAsync(b => b.TenantId == tenantId && b.Name == name, cancellationToken);
 
+    public Task<Building?> GetByCodeAsync(Guid tenantId, string code, CancellationToken cancellationToken) =>
+        db.Set<Building>().FirstOrDefaultAsync(b => b.TenantId == tenantId && b.Code == code, cancellationToken);
+
     public async Task<PagedResult<Building>> SearchAsync(
         Guid tenantId,
         string? search,

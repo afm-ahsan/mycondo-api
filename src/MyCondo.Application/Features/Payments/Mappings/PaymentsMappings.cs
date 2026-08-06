@@ -1,5 +1,6 @@
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Domain.Features.Payments.Ledger;
+using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
 using MyCondo.Domain.Features.Payments.ResidentAccounts;
 
@@ -14,8 +15,12 @@ internal static class PaymentsMappings
         entry.Id.Value, entry.PostingId.Value, entry.AccountType.ToString(), entry.FlatId?.Value,
         entry.Direction.ToString(), entry.Amount, entry.BusinessDate, entry.Description, entry.CreatedAtUtc);
 
-    public static PaymentDto ToDto(this Payment payment) => new(
+    public static PaymentAllocationDto ToDto(this PaymentAllocation allocation) => new(
+        allocation.Id.Value, allocation.InvoiceId.Value, allocation.AllocatedAmount, allocation.AllocatedAtUtc);
+
+    public static PaymentDto ToDto(this Payment payment, IReadOnlyList<PaymentAllocation>? allocations = null) => new(
         payment.Id.Value, payment.FlatId.Value, payment.Amount, payment.PaymentMethod.ToString(),
         payment.ReferenceNumber, payment.BusinessDate, payment.ReceivedBy, payment.Status.ToString(),
-        payment.LedgerPostingId.Value, payment.ReversedAtUtc, payment.ReversedBy, payment.ReversalReason);
+        payment.LedgerPostingId.Value, payment.ReversedAtUtc, payment.ReversedBy, payment.ReversalReason,
+        (allocations ?? []).Select(a => a.ToDto()).ToList());
 }

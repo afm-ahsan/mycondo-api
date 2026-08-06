@@ -16,6 +16,7 @@ public sealed class Flat : AggregateRoot<FlatId>, IAuditable, ISoftDeletable, IT
     public string FlatNumber { get; private set; }
     public int? FloorNumber { get; private set; }
     public FlatType FlatType { get; private set; }
+    public decimal? AreaSqFt { get; private set; }
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -73,6 +74,22 @@ public sealed class Flat : AggregateRoot<FlatId>, IAuditable, ISoftDeletable, IT
         FlatNumber = flatNumber.Trim();
         FloorNumber = floorNumber;
         FlatType = flatType;
+        Version++;
+    }
+
+    /// <summary>
+    /// Required for a <c>PerSquareFoot</c> service-charge rule to bill this flat — see
+    /// <c>Features.Payments.Billing</c>'s batch generation, which skips (never zero-fills) a flat
+    /// with no area on record rather than risk an incorrect invoice.
+    /// </summary>
+    public void SetAreaSqFt(decimal? areaSqFt)
+    {
+        if (areaSqFt is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(areaSqFt), "AreaSqFt must be positive when provided.");
+        }
+
+        AreaSqFt = areaSqFt;
         Version++;
     }
 

@@ -5,6 +5,7 @@ using MyCondo.Application.Features.Property.Buildings.DTOs;
 using MyCondo.Application.Features.Property.Buildings.Queries.GetBuildingById;
 using MyCondo.Application.Features.Property.Buildings.Queries.GetBuildingsForTenant;
 using MyCondo.Application.Features.Property.Flats.Commands.CreateFlat;
+using MyCondo.Application.Features.Property.Flats.Commands.UpdateFlatArea;
 using MyCondo.Application.Features.Property.Flats.DTOs;
 using MyCondo.Application.Features.Property.Flats.Queries.GetFlatsForBuilding;
 using MyCondo.Application.Features.Property.Gates.Commands.CreateGate;
@@ -63,6 +64,14 @@ public static class PropertyEndpoints
             .RequirePermission("property.view")
             .Produces<PagedResult<FlatDto>>(StatusCodes.Status200OK);
 
+        buildings.MapPatch("/{buildingId:guid}/flats/{flatId:guid}/area", async (Guid buildingId, Guid flatId, UpdateFlatAreaRequest body, ISender sender, CancellationToken ct) =>
+            {
+                FlatDto result = await sender.Send(new UpdateFlatAreaCommand(flatId, body.AreaSqFt), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("property.update")
+            .Produces<FlatDto>(StatusCodes.Status200OK);
+
         buildings.MapPost("/{buildingId:guid}/gates", async (Guid buildingId, CreateGateRequest body, ISender sender, CancellationToken ct) =>
             {
                 GateDto result = await sender.Send(new CreateGateCommand(buildingId, body.Name), ct);
@@ -84,5 +93,7 @@ public static class PropertyEndpoints
 }
 
 public sealed record CreateFlatRequest(string FlatNumber, int? FloorNumber, string FlatType);
+
+public sealed record UpdateFlatAreaRequest(decimal? AreaSqFt);
 
 public sealed record CreateGateRequest(string Name);

@@ -6,6 +6,7 @@ public sealed class Building : AggregateRoot<BuildingId>, IAuditable, ISoftDelet
 {
     public Guid TenantId { get; private set; }
     public string Name { get; private set; }
+    public string Code { get; private set; }
     public string? Address { get; private set; }
     public int Version { get; private set; }
 
@@ -20,34 +21,48 @@ public sealed class Building : AggregateRoot<BuildingId>, IAuditable, ISoftDelet
     private Building()
     {
         Name = null!;
+        Code = null!;
     }
 
-    private Building(BuildingId id, Guid tenantId, string name, string? address, DateTimeOffset nowUtc)
+    private Building(
+        BuildingId id, Guid tenantId, string name, string code, string? address, DateTimeOffset nowUtc)
         : base(id)
     {
         TenantId = tenantId;
         Name = name;
+        Code = code;
         Address = address;
         Version = 1;
         CreatedAtUtc = nowUtc;
     }
 
-    public static Building Create(Guid tenantId, string name, string? address, DateTimeOffset nowUtc)
+    /// <summary>
+    /// <paramref name="code"/> is a short, tenant-unique identifier (e.g. "AISHA") used verbatim in
+    /// generated invoice numbers (<c>INV-{code}-{yyyy}-{seq}</c> — see <c>Features.Payments.Billing</c>).
+    /// Normalized to uppercase. Mutable via <see cref="UpdateDetails"/> like <see cref="Name"/> — this
+    /// is safe for invoice numbering because each <c>Invoice.InvoiceNumber</c> is generated once and
+    /// stored as a plain string, never recomputed from the current <see cref="Code"/>, so a later code
+    /// change cannot retroactively alter an already-issued invoice number.
+    /// </summary>
+    public static Building Create(Guid tenantId, string name, string code, string? address, DateTimeOffset nowUtc)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
         if (tenantId == Guid.Empty)
         {
             throw new ArgumentException("TenantId is required.", nameof(tenantId));
         }
 
-        return new Building(BuildingId.New(), tenantId, name.Trim(), address?.Trim(), nowUtc);
+        return new Building(BuildingId.New(), tenantId, name.Trim(), code.Trim().ToUpperInvariant(), address?.Trim(), nowUtc);
     }
 
-    public void UpdateDetails(string name, string? address)
+    public void UpdateDetails(string name, string code, string? address)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
         Name = name.Trim();
+        Code = code.Trim().ToUpperInvariant();
         Address = address?.Trim();
         Version++;
     }

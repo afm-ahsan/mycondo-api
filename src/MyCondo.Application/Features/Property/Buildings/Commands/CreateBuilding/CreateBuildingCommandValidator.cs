@@ -7,6 +7,7 @@ public sealed class CreateBuildingCommandValidator : AbstractValidator<CreateBui
     public CreateBuildingCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Code).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Address).MaximumLength(400);
     }
 }

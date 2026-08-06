@@ -29,13 +29,13 @@ public class PropertyResidentsCrossTenantIsolationTests : IClassFixture<MultiTen
 
         await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
         {
-            dbA.Set<Building>().Add(Building.Create(tenantA, "Tower A", null, DateTimeOffset.UtcNow));
+            dbA.Set<Building>().Add(Building.Create(tenantA, "Tower A", "TWRA", null, DateTimeOffset.UtcNow));
             await dbA.SaveChangesAsync();
         }
 
         await using (MyCondoDbContext dbB = _fixture.CreateDbContext(tenantB))
         {
-            dbB.Set<Building>().Add(Building.Create(tenantB, "Tower B", null, DateTimeOffset.UtcNow));
+            dbB.Set<Building>().Add(Building.Create(tenantB, "Tower B", "TWRB", null, DateTimeOffset.UtcNow));
             await dbB.SaveChangesAsync();
         }
 
@@ -62,7 +62,7 @@ public class PropertyResidentsCrossTenantIsolationTests : IClassFixture<MultiTen
         await using MyCondoDbContext dbAsTenantB = _fixture.CreateDbContext(tenantB);
 
         // Row claims tenantA while the connection's context is tenantB — WITH CHECK must reject it.
-        dbAsTenantB.Set<Building>().Add(Building.Create(tenantA, "Impersonator Tower", null, DateTimeOffset.UtcNow));
+        dbAsTenantB.Set<Building>().Add(Building.Create(tenantA, "Impersonator Tower", "IMP", null, DateTimeOffset.UtcNow));
 
         Func<Task> act = () => dbAsTenantB.SaveChangesAsync();
 

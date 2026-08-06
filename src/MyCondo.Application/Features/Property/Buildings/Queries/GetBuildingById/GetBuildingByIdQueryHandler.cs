@@ -27,6 +27,6 @@ public sealed class GetBuildingByIdQueryHandler(
             throw new NotFoundException(nameof(Building), query.BuildingId);
         }
 
-        return new BuildingDto(building.Id.Value, building.Name, building.Address);
+        return new BuildingDto(building.Id.Value, building.Name, building.Code, building.Address);
     }
 }

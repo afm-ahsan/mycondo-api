@@ -26,7 +26,7 @@ public sealed class GetFlatsForBuildingQueryHandler(
             tenantId, buildingId, query.Search, query.Page, query.PageSize, cancellationToken);
 
         List<FlatDto> items = result.Items
-            .Select(f => new FlatDto(f.Id.Value, f.BuildingId.Value, f.FlatNumber, f.FloorNumber, f.FlatType.ToString()))
+            .Select(f => new FlatDto(f.Id.Value, f.BuildingId.Value, f.FlatNumber, f.FloorNumber, f.FlatType.ToString(), f.AreaSqFt))
             .ToList();
 
         return new PagedResult<FlatDto>(items, result.Page, result.PageSize, result.Total);

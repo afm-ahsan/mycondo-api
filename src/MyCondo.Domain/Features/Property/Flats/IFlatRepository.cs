@@ -18,5 +18,16 @@ public interface IFlatRepository
         int pageSize,
         CancellationToken cancellationToken);
 
+    /// <summary>Flats a PerSquareFoot service-charge rule cannot bill yet — see billing readiness check.</summary>
+    Task<PagedResult<Flat>> SearchMissingAreaSqFtAsync(
+        Guid tenantId,
+        BuildingId buildingId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken);
+
+    /// <summary>Unpaginated — invoice batch generation needs every flat in the building, not a page.</summary>
+    Task<IReadOnlyList<Flat>> GetAllForBuildingAsync(Guid tenantId, BuildingId buildingId, CancellationToken cancellationToken);
+
     void Add(Flat flat);
 }

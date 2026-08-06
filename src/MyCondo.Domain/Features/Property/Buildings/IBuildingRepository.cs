@@ -8,6 +8,8 @@ public interface IBuildingRepository
 
     Task<Building?> GetByNameAsync(Guid tenantId, string name, CancellationToken cancellationToken);
 
+    Task<Building?> GetByCodeAsync(Guid tenantId, string code, CancellationToken cancellationToken);
+
     Task<PagedResult<Building>> SearchAsync(
         Guid tenantId,
         string? search,

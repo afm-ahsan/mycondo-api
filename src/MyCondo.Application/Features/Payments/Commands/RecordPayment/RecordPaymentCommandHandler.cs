@@ -5,16 +5,30 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Payments.Ledger;
+using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
 using MyCondo.Domain.Features.Payments.ResidentAccounts;
 using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Application.Features.Payments.Commands.RecordPayment;
 
+/// <summary>
+/// Records a payment and immediately allocates it FIFO against the flat's outstanding invoices
+/// (oldest due date first, then invoice date, then invoice number as the final deterministic
+/// tie-breaker — see financial-engine.md invariant 5). Any remainder after all outstanding
+/// invoices are paid off is not force-allocated — it stays as unapplied credit, already
+/// representable via <see cref="ILedgerEntryRepository.GetReceivableBalanceForFlatAsync"/> going
+/// negative; no separate "unapplied credit" entity is introduced. Wrapped in an explicit
+/// transaction because the outstanding-invoice lock (<c>FOR UPDATE</c>) must be held across the
+/// allocation writes and the final commit, not released after the read.
+/// </summary>
 public sealed class RecordPaymentCommandHandler(
     IResidentAccountRepository accounts,
     IPaymentRepository payments,
+    IInvoiceRepository invoices,
+    IPaymentAllocationRepository paymentAllocations,
     ILedgerPostingRepository ledgerPostings,
     ILedgerEntryRepository ledgerEntries,
     IUnitOfWork unitOfWork,
@@ -43,6 +57,8 @@ public sealed class RecordPaymentCommandHandler(
             : command.Description;
         DateTimeOffset nowUtc = clock.UtcNow;
 
+        await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         LedgerLine[] lines =
         [
             new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, command.Amount, description),
@@ -60,12 +76,51 @@ public sealed class RecordPaymentCommandHandler(
             currentUser.UserId, posting.Id, nowUtc);
         payments.Add(payment);
 
+        IReadOnlyList<PaymentAllocation> allocations = await AllocateFifoAsync(
+            tenantId, flatId, payment, command.Amount, nowUtc, cancellationToken);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
-            "Payment {PaymentId} of {Amount} recorded for flat {FlatId}, tenant {TenantId}",
-            payment.Id, command.Amount, flatId, tenantId);
+            "Payment {PaymentId} of {Amount} recorded for flat {FlatId}, tenant {TenantId}, allocated across {InvoiceCount} invoice(s)",
+            payment.Id, command.Amount, flatId, tenantId, allocations.Count);
 
-        return payment.ToDto();
+        return payment.ToDto(allocations);
+    }
+
+    private async Task<IReadOnlyList<PaymentAllocation>> AllocateFifoAsync(
+        Guid tenantId, FlatId flatId, Payment payment, decimal paymentAmount, DateTimeOffset nowUtc, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Invoice> outstanding = await invoices.GetOutstandingForFlatForUpdateAsync(tenantId, flatId, cancellationToken);
+
+        List<PaymentAllocation> allocations = [];
+        decimal remaining = paymentAmount;
+
+        foreach (Invoice invoice in outstanding)
+        {
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            if (invoice.FlatId != flatId)
+            {
+                throw new InvalidOperationException(
+                    $"Outstanding-invoice query returned invoice {invoice.Id} for flat {invoice.FlatId}, expected {flatId}.");
+            }
+
+            decimal allocatedAmount = Math.Min(remaining, invoice.Balance);
+            invoice.ApplyPayment(allocatedAmount);
+
+            PaymentAllocation allocation = PaymentAllocation.Allocate(tenantId, payment.Id, invoice.Id, flatId, allocatedAmount, nowUtc);
+            allocations.Add(allocation);
+
+            remaining -= allocatedAmount;
+        }
+
+        paymentAllocations.AddRange(allocations);
+
+        return allocations;
     }
 }

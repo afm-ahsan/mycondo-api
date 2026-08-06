@@ -17,12 +17,17 @@ public sealed class BuildingConfiguration : IEntityTypeConfiguration<Building>
 
         builder.Property(x => x.TenantId).IsRequired();
         builder.Property(x => x.Name).IsRequired().HasMaxLength(200);
+        builder.Property(x => x.Code).IsRequired().HasMaxLength(20);
         builder.Property(x => x.Address).HasMaxLength(400);
         builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.HasIndex(x => new { x.TenantId, x.Name })
             .IsUnique()
             .HasDatabaseName("ux_buildings_tenant_id_name");
+
+        builder.HasIndex(x => new { x.TenantId, x.Code })
+            .IsUnique()
+            .HasDatabaseName("ux_buildings_tenant_id_code");
 
         builder.HasQueryFilter(x => x.DeletedAtUtc == null);
         builder.Ignore(x => x.DomainEvents);

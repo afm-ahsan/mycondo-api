@@ -63,6 +63,8 @@ app.MapSebaVisitorEndpoints();
 app.MapParcelEndpoints();
 app.MapResidentAccountEndpoints();
 app.MapPaymentEndpoints();
+app.MapServiceChargeRuleEndpoints();
+app.MapInvoiceEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>

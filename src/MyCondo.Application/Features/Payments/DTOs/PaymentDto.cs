@@ -12,4 +12,5 @@ public sealed record PaymentDto(
     Guid LedgerPostingId,
     DateTimeOffset? ReversedAtUtc,
     Guid? ReversedBy,
-    string? ReversalReason);
+    string? ReversalReason,
+    IReadOnlyList<PaymentAllocationDto> Allocations);

@@ -44,5 +44,35 @@ public sealed class FlatRepository(MyCondoDbContext db) : IFlatRepository
         return new PagedResult<Flat>(items, page, pageSize, total);
     }
 
+    public async Task<PagedResult<Flat>> SearchMissingAreaSqFtAsync(
+        Guid tenantId,
+        BuildingId buildingId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<Flat> query = db.Set<Flat>()
+            .AsNoTracking()
+            .Where(f => f.TenantId == tenantId && f.BuildingId == buildingId && f.AreaSqFt == null);
+
+        long total = await query.LongCountAsync(cancellationToken);
+
+        List<Flat> items = await query
+            .OrderBy(f => f.FlatNumber)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Flat>(items, page, pageSize, total);
+    }
+
+    public async Task<IReadOnlyList<Flat>> GetAllForBuildingAsync(
+        Guid tenantId, BuildingId buildingId, CancellationToken cancellationToken) =>
+        await db.Set<Flat>()
+            .AsNoTracking()
+            .Where(f => f.TenantId == tenantId && f.BuildingId == buildingId)
+            .OrderBy(f => f.FlatNumber)
+            .ToListAsync(cancellationToken);
+
     public void Add(Flat flat) => db.Set<Flat>().Add(flat);
 }

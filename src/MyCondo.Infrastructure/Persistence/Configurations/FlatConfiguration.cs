@@ -23,6 +23,7 @@ public sealed class FlatConfiguration : IEntityTypeConfiguration<Flat>
         builder.Property(x => x.FlatNumber).IsRequired().HasMaxLength(50);
         builder.Property(x => x.FloorNumber);
         builder.Property(x => x.FlatType).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.AreaSqFt).HasPrecision(10, 2);
         builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.HasIndex(x => new { x.TenantId, x.BuildingId, x.FlatNumber })

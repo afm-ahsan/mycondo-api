@@ -12,12 +12,16 @@ using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Tenancy;
 using MyCondo.Domain.Features.Attachments;
+using MyCondo.Domain.Features.Billing.InvoiceSequences;
+using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Billing.ServiceChargeRules;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Property.Gates;
 using MyCondo.Domain.Features.Residents;
 using MyCondo.Domain.Features.Payments.Idempotency;
 using MyCondo.Domain.Features.Payments.Ledger;
+using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
 using MyCondo.Domain.Features.Payments.ResidentAccounts;
 using MyCondo.Domain.Features.Payroll.AttendanceRecords;
@@ -130,6 +134,10 @@ public static class DependencyInjection
         services.AddScoped<IResidentAccountRepository, ResidentAccountRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepository>();
+        services.AddScoped<IServiceChargeRuleRepository, ServiceChargeRuleRepository>();
+        services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+        services.AddScoped<IInvoiceSequenceRepository, InvoiceSequenceRepository>();
+        services.AddScoped<IPaymentAllocationRepository, PaymentAllocationRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>

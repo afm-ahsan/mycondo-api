@@ -4,5 +4,6 @@ namespace MyCondo.Application.Features.Property.Buildings.Commands.CreateBuildin
 
 public sealed record CreateBuildingCommand(
     string Name,
+    string Code,
     string? Address
 ) : IRequest<CreateBuildingResult>;
