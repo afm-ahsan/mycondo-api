@@ -1,6 +1,13 @@
-# MyCondo — local development infrastructure.
+# MyCondo — local development infrastructure (Docker Compose path).
 # Brings up PostgreSQL 18 + Redis 8.6 + Mailhog. The API and SignalR run via `dotnet run` from
 # the host during dev; once the API has a Dockerfile (Phase 3+), uncomment the `api` service.
+#
+# This is the ADR-016 role-split model (mycondo_migrator/mycondo_app) — the local execution mode
+# that actually exercises RLS/least-privilege, same as production is intended to. It is a distinct,
+# parallel path from the native-PostgreSQL-Windows-service setup documented in README.md/CLAUDE.md
+# (which uses dev_user/mycondo for day-to-day convenience and does NOT validate RLS). See the
+# Developer Environment Matrix in README.md for the full comparison across Native/Docker/
+# Testcontainers/Production.
 #
 # Common commands:
 #   docker compose up -d                  # start postgres + redis + mailhog
@@ -20,14 +27,18 @@ services:
       # This is the initdb bootstrap role — Postgres always makes it a superuser, which
       # unconditionally bypasses Row-Level Security. It must stay DDL-only (migrations); the running
       # API/DbMigrator connect as the restricted mycondo_app role instead, created by
-      # db/init/01_create_app_role.sql on first boot. See mycondo-docs ADR-009 and its follow-up ADR.
+      # db/init/01_create_app_role.sql on first boot. See mycondo-docs ADR-016.
       POSTGRES_USER: mycondo_migrator
-      POSTGRES_PASSWORD: mycondo_migrator_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env — see .env.example}
       POSTGRES_DB: mycondo_dev
       # Reasonable dev defaults; production tuning happens in the AWS RDS parameter group
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      # Host port 5433, not 5432 — this machine also runs a native PostgreSQL 18 Windows service
+      # bound to the default 5432, and both may need to run at once. Container-internal port stays
+      # the Postgres default (5432); only the host-side mapping changes, so nothing inside Compose
+      # (services connecting via the `postgres` hostname) is affected.
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Runs once, on first boot against an empty data volume — creates the restricted mycondo_app

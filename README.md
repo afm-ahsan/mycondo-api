@@ -37,43 +37,66 @@ mycondo-api/
 ├── tools/MyCondo.DbMigrator/             # Standalone migration runner
 ├── docs/                                 # conventions/, architecture/, decisions/, runbooks/
 ├── docker-compose.yml
+├── .env.example                          # Docker Compose secrets template (copy to .env)
 └── Dockerfile
 ```
 
+## Developer Environment Matrix
+
+There are three distinct local PostgreSQL execution modes, plus production — each with a different
+purpose. **Only Docker Compose, Testcontainers, and Production actually enforce Row-Level Security
+and least-privilege**; Native PostgreSQL is a superuser connection and must never be cited as proof
+that RLS/tenant isolation works. See `mycondo-docs` ADR-016 for why the role split exists at all, and
+the `postgresql-rls` skill (`.claude/skills/postgresql-rls.md`) for the full mechanics.
+
+| Environment | Database | User | Auth source | Purpose | RLS validated |
+|---|---|---|---|---|---|
+| Native PostgreSQL | `mycondo` | `dev_user` | .NET User Secrets | Daily development, debugging, EF migrations, manual testing | ❌ No — superuser connection |
+| Docker Compose | `mycondo_dev` | `mycondo_migrator` (bootstrap/DDL) / `mycondo_app` (runtime) | `.env` (Compose) | Canonical local architecture validation (ADR-016 model) | ✅ Yes |
+| Testcontainers | Ephemeral (`mycondo_test` / `mycondo_rls_test`) | Ephemeral `mycondo_migrator`/`mycondo_app`, created per run | Generated in-process | Automated integration tests (`MultiTenancyTests`, `Api.IntegrationTests`) | ✅ Yes |
+| Production | Managed DB (not yet provisioned) | Restricted runtime role (TBD when RDS is provisioned) | Deployment secret manager | Production traffic | ✅ Yes (by design; not yet provisioned — see ADR-016's production note) |
+
 ## Quickstart (Local Dev)
+
+Pick **one** of the two local paths below — they're independent, not meant to run against the same
+database. Both can coexist on one machine (Docker Compose's PostgreSQL is remapped to host port
+`5433` specifically so it doesn't collide with a native install on `5432`).
 
 ### Prerequisites
 
 - .NET 10 SDK
-- Docker Desktop (or Docker + Compose v2)
 - An IDE: Visual Studio 2026, Rider, or VS Code with the C# Dev Kit
+- Docker Desktop (or Docker + Compose v2) — only required for the Docker Compose path and for
+  Testcontainers-backed tests (`MultiTenancyTests`, the `*DbTests` classes in `Api.IntegrationTests`)
 
-### Setup
+### Option A — Native PostgreSQL (day-to-day default)
+
+Fastest path; does **not** validate RLS (see the matrix above). Requires a locally installed
+PostgreSQL 18 server (e.g. the native Windows service, or any other local install) with a `mycondo`
+database and a `dev_user` role already created — this repo doesn't script that bootstrap, since it's
+a pre-existing local server, not something Compose provisions.
 
 ```powershell
 # Clone
 git clone https://github.com/afm-ahsan/mycondo-api.git
 cd mycondo-api
 
-# Bring up infra (Postgres + Redis + Mailhog)
-docker compose up -d
-
-# Set required user-secrets
+# Set required user-secrets (never commit real credentials — appsettings.json only holds a
+# non-functional placeholder password)
 dotnet user-secrets init --project src/MyCondo.Api
 dotnet user-secrets set --project src/MyCondo.Api `
   "Jwt:SigningKey" "<your-32-char-or-longer-key>"
 dotnet user-secrets set --project src/MyCondo.Api `
-  "ConnectionStrings:Default" "Host=localhost;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev"
+  "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=mycondo;Username=dev_user;Password=<your-local-password>"
 
-# Apply migrations — as mycondo_migrator (DDL/owner role), NOT mycondo_app (restricted runtime
-# role, see appsettings.json/user-secrets above). mycondo_app can't CREATE TABLE by design, so a
-# migrator connection string must be supplied for this one command via an env-var override, which
-# takes precedence over the user-secrets value above.
-$env:ConnectionStrings__Default = "Host=localhost;Database=mycondo_dev;Username=mycondo_migrator;Password=mycondo_migrator_dev"
+# Apply migrations (dev_user is sufficient here — see "Whether table owners bypass RLS" caveat in
+# the Developer Environment Matrix above; this is a convenience path, not a least-privilege one)
 dotnet ef database update `
   --project src/MyCondo.Infrastructure `
   --startup-project src/MyCondo.Api
-Remove-Item Env:\ConnectionStrings__Default
+
+# Verify the effective connection resolved correctly without printing secrets
+dotnet ef migrations list --project src/MyCondo.Infrastructure --startup-project src/MyCondo.Api
 
 # Optional but recommended: check reserved ports are free before starting (see
 # docs/local-development-ports.md for the full multi-project port registry)
@@ -84,6 +107,43 @@ dotnet run --project src/MyCondo.Api
 # → API on https://localhost:7219 (HTTP fallback: http://localhost:5219)
 # → OpenAPI 3.1 spec at https://localhost:7219/openapi/v1.json
 # → Scalar UI at https://localhost:7219/scalar
+```
+
+### Option B — Docker Compose (RLS-validating, ADR-016 model)
+
+Slower to set up, but the one local path that actually exercises RLS and least-privilege the way
+production is intended to.
+
+```powershell
+# Clone
+git clone https://github.com/afm-ahsan/mycondo-api.git
+cd mycondo-api
+
+# Copy the secrets template and fill in a real password (never commit .env — it's gitignored)
+cp .env.example .env
+# edit .env: set POSTGRES_PASSWORD
+
+# Bring up infra (Postgres on host port 5433 + Redis + Mailhog)
+docker compose up -d
+docker compose ps   # wait for postgres to report healthy
+
+# Set required user-secrets — migrator role (DDL/owner), NOT mycondo_app (restricted runtime role;
+# it can't CREATE TABLE by design, so migrations must run as mycondo_migrator)
+dotnet user-secrets init --project src/MyCondo.Api
+dotnet user-secrets set --project src/MyCondo.Api `
+  "Jwt:SigningKey" "<your-32-char-or-longer-key>"
+dotnet user-secrets set --project src/MyCondo.Api `
+  "ConnectionStrings:Default" "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_migrator;Password=<same value as .env's POSTGRES_PASSWORD>"
+
+dotnet ef database update `
+  --project src/MyCondo.Infrastructure `
+  --startup-project src/MyCondo.Api
+
+# Before running the API day-to-day against this path, switch the user-secrets connection string to
+# the restricted mycondo_app role instead (Password=mycondo_dev, set by db/init/01_create_app_role.sql
+# on first container boot) — running as mycondo_migrator long-term would own the tables and bypass RLS.
+
+dotnet run --project src/MyCondo.Api
 ```
 
 The companion frontend (`mycondo-web`) reads `VITE_MYCONDO_API_BASE_URL=https://localhost:7219`.
@@ -99,6 +159,12 @@ To be populated when the Identity module is seeded.
 ```powershell
 dotnet test
 ```
+
+`MyCondo.Domain.UnitTests`, `MyCondo.Application.UnitTests`, and `MyCondo.ArchitectureTests` need no
+database. `MyCondo.MultiTenancyTests` and the `*DbTests` classes in `MyCondo.Api.IntegrationTests`
+are Testcontainers-based — they need a running Docker daemon (Docker Desktop's backend) and manage
+their own ephemeral PostgreSQL container and roles independently of `docker-compose.yml`/`appsettings.json`.
+They do not read the Native or Docker Compose connection strings above at all.
 
 ### Lint and format
 
