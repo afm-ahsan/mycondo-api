@@ -28,7 +28,7 @@ public sealed class InvoiceLineConfiguration : IEntityTypeConfiguration<InvoiceL
 
         builder.Property(x => x.RuleNameSnapshot).IsRequired().HasMaxLength(200);
         builder.Property(x => x.RuleCategorySnapshot).IsRequired().HasMaxLength(100);
-        builder.Property(x => x.CalculationMethodSnapshot).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(x => x.CalculationMethodSnapshot).IsRequired().HasMaxLength(20);
         builder.Property(x => x.RateSnapshot).HasPrecision(18, 2).IsRequired();
         builder.Property(x => x.AreaSqFtSnapshot).HasPrecision(10, 2);
         builder.Property(x => x.Quantity).HasPrecision(10, 2).IsRequired();

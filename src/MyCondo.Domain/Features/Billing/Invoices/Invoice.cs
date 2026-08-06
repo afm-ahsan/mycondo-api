@@ -19,6 +19,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
     public BuildingId BuildingId { get; private set; }
     public FlatId FlatId { get; private set; }
     public string InvoiceNumber { get; private set; }
+    public InvoiceSource Source { get; private set; }
     public DateOnly PeriodStart { get; private set; }
     public DateOnly PeriodEnd { get; private set; }
     public DateOnly InvoiceDate { get; private set; }
@@ -54,6 +55,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         BuildingId buildingId,
         FlatId flatId,
         string invoiceNumber,
+        InvoiceSource source,
         DateOnly periodStart,
         DateOnly periodEnd,
         DateOnly invoiceDate,
@@ -66,6 +68,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         BuildingId = buildingId;
         FlatId = flatId;
         InvoiceNumber = invoiceNumber;
+        Source = source;
         PeriodStart = periodStart;
         PeriodEnd = periodEnd;
         InvoiceDate = invoiceDate;
@@ -91,6 +94,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         BuildingId buildingId,
         FlatId flatId,
         string invoiceNumber,
+        InvoiceSource source,
         DateOnly periodStart,
         DateOnly periodEnd,
         DateOnly invoiceDate,
@@ -122,8 +126,8 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
 
         InvoiceId invoiceId = InvoiceId.New();
         Invoice invoice = new(
-            invoiceId, tenantId, buildingId, flatId, invoiceNumber, periodStart, periodEnd, invoiceDate, dueDate,
-            subtotal, ledgerPostingId, nowUtc);
+            invoiceId, tenantId, buildingId, flatId, invoiceNumber, source, periodStart, periodEnd, invoiceDate,
+            dueDate, subtotal, ledgerPostingId, nowUtc);
 
         List<InvoiceLine> invoiceLines = lines
             .Select(input => new InvoiceLine(InvoiceLineId.New(), tenantId, invoiceId, input, nowUtc))

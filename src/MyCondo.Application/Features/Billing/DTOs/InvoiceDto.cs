@@ -5,6 +5,7 @@ public sealed record InvoiceDto(
     Guid BuildingId,
     Guid FlatId,
     string InvoiceNumber,
+    string Source,
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
     DateOnly InvoiceDate,

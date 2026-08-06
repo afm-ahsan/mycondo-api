@@ -16,6 +16,7 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
         BuildingId? buildingId,
         FlatId? flatId,
         InvoiceStatus? status,
+        InvoiceSource? source,
         int page,
         int pageSize,
         CancellationToken cancellationToken)
@@ -39,6 +40,11 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
             query = query.Where(i => i.Status == status);
         }
 
+        if (source is not null)
+        {
+            query = query.Where(i => i.Source == source);
+        }
+
         long total = await query.LongCountAsync(cancellationToken);
 
         List<Invoice> items = await query
@@ -52,11 +58,13 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
     }
 
     public Task<bool> ExistsForFlatAndPeriodAsync(
-        Guid tenantId, FlatId flatId, DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken) =>
+        Guid tenantId, FlatId flatId, DateOnly periodStart, DateOnly periodEnd, InvoiceSource source,
+        CancellationToken cancellationToken) =>
         db.Set<Invoice>()
             .AsNoTracking()
             .AnyAsync(i =>
-                i.TenantId == tenantId && i.FlatId == flatId && i.PeriodStart == periodStart && i.PeriodEnd == periodEnd,
+                i.TenantId == tenantId && i.FlatId == flatId && i.PeriodStart == periodStart &&
+                i.PeriodEnd == periodEnd && i.Source == source,
                 cancellationToken);
 
     /// <summary>Locks rows via <c>FOR UPDATE</c> per financial-engine.md invariant 5 — tracked (not

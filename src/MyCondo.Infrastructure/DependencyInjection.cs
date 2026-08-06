@@ -36,6 +36,10 @@ using MyCondo.Domain.Features.Security.SebaVisits;
 using MyCondo.Domain.Features.Security.ServiceProviderAssignments;
 using MyCondo.Domain.Features.Security.ServiceProviders;
 using MyCondo.Domain.Features.Security.Vehicles;
+using MyCondo.Domain.Features.Utilities.MeterAssignments;
+using MyCondo.Domain.Features.Utilities.Meters;
+using MyCondo.Domain.Features.Utilities.RatePlans;
+using MyCondo.Domain.Features.Utilities.Readings;
 using MyCondo.Infrastructure.Identity;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
@@ -138,6 +142,10 @@ public static class DependencyInjection
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IInvoiceSequenceRepository, InvoiceSequenceRepository>();
         services.AddScoped<IPaymentAllocationRepository, PaymentAllocationRepository>();
+        services.AddScoped<IMeterRepository, MeterRepository>();
+        services.AddScoped<IMeterAssignmentRepository, MeterAssignmentRepository>();
+        services.AddScoped<IRatePlanRepository, RatePlanRepository>();
+        services.AddScoped<IReadingRepository, ReadingRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>

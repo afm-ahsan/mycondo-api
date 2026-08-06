@@ -26,6 +26,7 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .HasConversion(id => id.Value, value => new FlatId(value))
             .IsRequired();
         builder.Property(x => x.InvoiceNumber).IsRequired().HasMaxLength(60);
+        builder.Property(x => x.Source).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(x => x.PeriodStart).IsRequired();
         builder.Property(x => x.PeriodEnd).IsRequired();
         builder.Property(x => x.InvoiceDate).IsRequired();
@@ -59,9 +60,11 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
 
         // Authoritative duplicate-generation guard — see plan §6. Handler does a
         // check-before-insert against these same dimensions; this is the race-condition backstop.
-        builder.HasIndex(x => new { x.TenantId, x.FlatId, x.PeriodStart, x.PeriodEnd })
+        // Source is part of the key (Slice F) so a flat can have both a ServiceCharge invoice and a
+        // Utility invoice for the same calendar period.
+        builder.HasIndex(x => new { x.TenantId, x.FlatId, x.PeriodStart, x.PeriodEnd, x.Source })
             .IsUnique()
-            .HasDatabaseName("ux_invoices_tenant_id_flat_id_period");
+            .HasDatabaseName("ux_invoices_tenant_id_flat_id_period_source");
 
         builder.HasIndex(x => new { x.TenantId, x.BuildingId, x.Status })
             .HasDatabaseName("ix_invoices_tenant_id_building_id_status");

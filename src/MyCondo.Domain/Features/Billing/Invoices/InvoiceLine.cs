@@ -17,7 +17,7 @@ public sealed class InvoiceLine : Entity<InvoiceLineId>, ITenantScoped
     public ServiceChargeRuleId? ServiceChargeRuleId { get; private set; }
     public string RuleNameSnapshot { get; private set; }
     public string RuleCategorySnapshot { get; private set; }
-    public CalculationMethod CalculationMethodSnapshot { get; private set; }
+    public string CalculationMethodSnapshot { get; private set; }
     public decimal RateSnapshot { get; private set; }
     public decimal? AreaSqFtSnapshot { get; private set; }
     public decimal Quantity { get; private set; }
@@ -29,6 +29,7 @@ public sealed class InvoiceLine : Entity<InvoiceLineId>, ITenantScoped
     {
         RuleNameSnapshot = null!;
         RuleCategorySnapshot = null!;
+        CalculationMethodSnapshot = null!;
         Description = null!;
     }
 

@@ -19,7 +19,7 @@ public static class ServiceChargeCalculator
         {
             case CalculationMethod.FixedAmount:
                 return ServiceChargeCalculationResult.Ok(new InvoiceLineInput(
-                    rule.Id, rule.Name, rule.Category, rule.CalculationMethod, rule.Rate, null, 1m, rule.Rate,
+                    rule.Id, rule.Name, rule.Category, rule.CalculationMethod.ToString(), rule.Rate, null, 1m, rule.Rate,
                     $"{rule.Name} ({rule.Category})"));
 
             case CalculationMethod.PerSquareFoot:
@@ -31,7 +31,7 @@ public static class ServiceChargeCalculator
 
                 decimal amount = Math.Round(rule.Rate * areaSqFt, 2, MidpointRounding.AwayFromZero);
                 return ServiceChargeCalculationResult.Ok(new InvoiceLineInput(
-                    rule.Id, rule.Name, rule.Category, rule.CalculationMethod, rule.Rate, areaSqFt, 1m, amount,
+                    rule.Id, rule.Name, rule.Category, rule.CalculationMethod.ToString(), rule.Rate, areaSqFt, 1m, amount,
                     $"{rule.Name} ({rule.Category}): {areaSqFt:0.##} sqft @ {rule.Rate:0.00}/sqft"));
 
             default:

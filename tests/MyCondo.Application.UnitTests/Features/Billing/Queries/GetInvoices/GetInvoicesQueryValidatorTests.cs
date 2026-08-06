@@ -11,7 +11,7 @@ public class GetInvoicesQueryValidatorTests
     [Fact]
     public void Valid_Query_Passes()
     {
-        GetInvoicesQuery query = new(Guid.NewGuid(), null, "Issued", 1, 20);
+        GetInvoicesQuery query = new(Guid.NewGuid(), null, "Issued", "ServiceCharge", 1, 20);
 
         ValidationResult result = _validator.Validate(query);
 
@@ -21,7 +21,7 @@ public class GetInvoicesQueryValidatorTests
     [Fact]
     public void Null_Filters_Are_Valid()
     {
-        GetInvoicesQuery query = new(null, null, null, 1, 20);
+        GetInvoicesQuery query = new(null, null, null, null, 1, 20);
 
         ValidationResult result = _validator.Validate(query);
 
@@ -31,7 +31,7 @@ public class GetInvoicesQueryValidatorTests
     [Fact]
     public void Invalid_Status_Fails()
     {
-        GetInvoicesQuery query = new(null, null, "NotAStatus", 1, 20);
+        GetInvoicesQuery query = new(null, null, "NotAStatus", null, 1, 20);
 
         ValidationResult result = _validator.Validate(query);
 
@@ -40,9 +40,20 @@ public class GetInvoicesQueryValidatorTests
     }
 
     [Fact]
+    public void Invalid_Source_Fails()
+    {
+        GetInvoicesQuery query = new(null, null, null, "NotASource", 1, 20);
+
+        ValidationResult result = _validator.Validate(query);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(GetInvoicesQuery.Source));
+    }
+
+    [Fact]
     public void PageSize_Over_100_Fails()
     {
-        GetInvoicesQuery query = new(null, null, null, 1, 101);
+        GetInvoicesQuery query = new(null, null, null, null, 1, 101);
 
         ValidationResult result = _validator.Validate(query);
 

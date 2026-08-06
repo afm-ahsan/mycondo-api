@@ -65,6 +65,9 @@ app.MapResidentAccountEndpoints();
 app.MapPaymentEndpoints();
 app.MapServiceChargeRuleEndpoints();
 app.MapInvoiceEndpoints();
+app.MapMeterEndpoints();
+app.MapRatePlanEndpoints();
+app.MapReadingEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>

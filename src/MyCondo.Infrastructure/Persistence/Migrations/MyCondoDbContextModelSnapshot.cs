@@ -154,6 +154,12 @@ partial class MyCondoDbContextModelSnapshot : ModelSnapshot
                         .HasColumnType("date")
                         .HasColumnName("period_start");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -217,9 +223,9 @@ partial class MyCondoDbContextModelSnapshot : ModelSnapshot
                     b.HasIndex("TenantId", "FlatId", "Status")
                         .HasDatabaseName("ix_invoices_tenant_id_flat_id_status");
 
-                    b.HasIndex("TenantId", "FlatId", "PeriodStart", "PeriodEnd")
+                    b.HasIndex("TenantId", "FlatId", "PeriodStart", "PeriodEnd", "Source")
                         .IsUnique()
-                        .HasDatabaseName("ux_invoices_tenant_id_flat_id_period");
+                        .HasDatabaseName("ux_invoices_tenant_id_flat_id_period_source");
 
                     b.ToTable("invoices", "billing");
                 });
@@ -2536,6 +2542,412 @@ partial class MyCondoDbContextModelSnapshot : ModelSnapshot
                         .HasDatabaseName("ux_tenants_slug");
 
                     b.ToTable("tenants", "tenancy");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Utilities.MeterAssignments.MeterAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AssignedFromUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_from_utc");
+
+                    b.Property<DateTimeOffset?>("AssignedToUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_to_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("FlatId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flat_id");
+
+                    b.Property<Guid>("MeterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("meter_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_meter_assignments");
+
+                    b.HasIndex("TenantId", "FlatId")
+                        .HasDatabaseName("ix_meter_assignments_tenant_id_flat_id");
+
+                    b.HasIndex("TenantId", "MeterId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_meter_assignments_tenant_id_meter_id_open")
+                        .HasFilter("assigned_to_utc IS NULL");
+
+                    b.HasIndex("TenantId", "MeterId", "AssignedFromUtc")
+                        .HasDatabaseName("ix_meter_assignments_tenant_id_meter_id_assigned_from");
+
+                    b.ToTable("meter_assignments", "utilities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Utilities.Meters.Meter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("building_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("MeterNumber")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("meter_number");
+
+                    b.Property<Guid?>("ReplacesMeterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaces_meter_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("UtilityType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("utility_type");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_meters");
+
+                    b.HasIndex("TenantId", "BuildingId")
+                        .HasDatabaseName("ix_meters_tenant_id_building_id");
+
+                    b.HasIndex("TenantId", "UtilityType", "MeterNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_meters_tenant_id_utility_type_meter_number");
+
+                    b.ToTable("meters", "utilities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Utilities.RatePlans.RatePlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("building_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_to");
+
+                    b.Property<decimal?>("FixedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("fixed_amount");
+
+                    b.Property<decimal>("FixedServiceCharge")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("fixed_service_charge");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Structure")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("structure");
+
+                    b.Property<decimal>("TaxPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("tax_percentage");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("UtilityType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("utility_type");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rate_plans");
+
+                    b.HasIndex("TenantId", "BuildingId", "UtilityType")
+                        .HasDatabaseName("ix_rate_plans_tenant_id_building_id_utility_type");
+
+                    b.ToTable("rate_plans", "utilities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Utilities.RatePlans.RateSlab", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("FromUnits")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("from_units");
+
+                    b.Property<decimal>("RatePerUnit")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("rate_per_unit");
+
+                    b.Property<Guid>("RatePlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rate_plan_id");
+
+                    b.Property<int>("SlabOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("slab_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal?>("ToUnits")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("to_units");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rate_slabs");
+
+                    b.HasIndex("TenantId", "RatePlanId", "SlabOrder")
+                        .IsUnique()
+                        .HasDatabaseName("ux_rate_slabs_tenant_id_rate_plan_id_slab_order");
+
+                    b.ToTable("rate_slabs", "utilities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Utilities.Readings.Reading", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AbnormalConsumptionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("abnormal_consumption_reason");
+
+                    b.Property<DateTimeOffset?>("BilledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("billed_at_utc");
+
+                    b.Property<Guid?>("BilledBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("billed_by");
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("building_id");
+
+                    b.Property<decimal>("ConsumptionUnits")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("consumption_units");
+
+                    b.Property<Guid?>("CorrectsReadingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("corrects_reading_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("FinalizedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finalized_at_utc");
+
+                    b.Property<Guid?>("FinalizedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("finalized_by");
+
+                    b.Property<Guid>("FlatId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flat_id");
+
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsAbnormalConsumption")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_abnormal_consumption");
+
+                    b.Property<Guid>("MeterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("meter_id");
+
+                    b.Property<string>("OverrideReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("override_reason");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("period_end");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date")
+                        .HasColumnName("period_start");
+
+                    b.Property<decimal>("PresentReading")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("present_reading");
+
+                    b.Property<decimal>("PreviousReading")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("previous_reading");
+
+                    b.Property<DateOnly>("ReadingDate")
+                        .HasColumnType("date")
+                        .HasColumnName("reading_date");
+
+                    b.Property<DateTimeOffset?>("ReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at_utc");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("UtilityType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("utility_type");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_readings");
+
+                    b.HasIndex("TenantId", "FlatId")
+                        .HasDatabaseName("ix_readings_tenant_id_flat_id");
+
+                    b.HasIndex("TenantId", "MeterId", "Status")
+                        .HasDatabaseName("ix_readings_tenant_id_meter_id_status");
+
+                    b.HasIndex("TenantId", "MeterId", "PeriodStart", "PeriodEnd")
+                        .IsUnique()
+                        .HasDatabaseName("ux_readings_tenant_id_meter_id_period_active")
+                        .HasFilter("status <> 'Corrected'");
+
+                    b.ToTable("readings", "utilities");
                 });
 #pragma warning restore 612, 618
         }

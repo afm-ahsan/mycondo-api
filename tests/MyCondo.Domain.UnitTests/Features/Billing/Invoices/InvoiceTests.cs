@@ -19,13 +19,13 @@ public class InvoiceTests
     private static readonly DateOnly PeriodEnd = new(2026, 3, 31);
 
     private static InvoiceLineInput OneLine(decimal amount = 1500m) => new(
-        ServiceChargeRuleId.New(), "Standard Charge", "ServiceCharge", CalculationMethod.FixedAmount, amount, null, 1m,
+        ServiceChargeRuleId.New(), "Standard Charge", "ServiceCharge", "FixedAmount", amount, null, 1m,
         amount, "Standard Charge (ServiceCharge)");
 
     private static (Invoice Invoice, IReadOnlyList<InvoiceLine> Lines) IssueInvoice(params InvoiceLineInput[] lines) =>
         Invoice.Issue(
-            TenantId, BuildingId, FlatId, "INV-TEST-2026-000001", PeriodStart, PeriodEnd, PeriodStart, PeriodEnd,
-            lines, LedgerPostingId, Now);
+            TenantId, BuildingId, FlatId, "INV-TEST-2026-000001", InvoiceSource.ServiceCharge, PeriodStart, PeriodEnd,
+            PeriodStart, PeriodEnd, lines, LedgerPostingId, Now);
 
     [Fact]
     public void Issue_Computes_Subtotal_And_Total_From_Lines()

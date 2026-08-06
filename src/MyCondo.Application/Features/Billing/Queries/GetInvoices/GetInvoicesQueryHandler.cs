@@ -25,9 +25,10 @@ public sealed class GetInvoicesQueryHandler(
         BuildingId? buildingId = query.BuildingId is Guid rawBuildingId ? new BuildingId(rawBuildingId) : null;
         FlatId? flatId = query.FlatId is Guid rawFlatId ? new FlatId(rawFlatId) : null;
         InvoiceStatus? status = query.Status is null ? null : Enum.Parse<InvoiceStatus>(query.Status);
+        InvoiceSource? source = query.Source is null ? null : Enum.Parse<InvoiceSource>(query.Source);
 
         PagedResult<Invoice> result = await invoices.SearchAsync(
-            tenantId, buildingId, flatId, status, query.Page, query.PageSize, cancellationToken);
+            tenantId, buildingId, flatId, status, source, query.Page, query.PageSize, cancellationToken);
 
         List<InvoiceDto> items = result.Items.Select(i => i.ToDto()).ToList();
 

@@ -24,10 +24,10 @@ public static class InvoiceEndpoints
             .RequireIdempotencyKey()
             .Produces<GenerateInvoiceBatchResultDto>(StatusCodes.Status200OK);
 
-        invoices.MapGet("/", async (Guid? buildingId, Guid? flatId, string? status, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        invoices.MapGet("/", async (Guid? buildingId, Guid? flatId, string? status, string? source, int page, int pageSize, ISender sender, CancellationToken ct) =>
             {
                 PagedResult<InvoiceDto> result = await sender.Send(
-                    new GetInvoicesQuery(buildingId, flatId, status, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
+                    new GetInvoicesQuery(buildingId, flatId, status, source, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("billing.invoice.view")

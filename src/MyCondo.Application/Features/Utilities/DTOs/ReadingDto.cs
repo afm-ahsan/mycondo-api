@@ -1,0 +1,26 @@
+namespace MyCondo.Application.Features.Utilities.DTOs;
+
+public sealed record ReadingDto(
+    Guid ReadingId,
+    Guid MeterId,
+    Guid FlatId,
+    string UtilityType,
+    Guid BuildingId,
+    DateOnly PeriodStart,
+    DateOnly PeriodEnd,
+    decimal PreviousReading,
+    decimal PresentReading,
+    decimal ConsumptionUnits,
+    DateOnly ReadingDate,
+    string? OverrideReason,
+    bool IsAbnormalConsumption,
+    string? AbnormalConsumptionReason,
+    string Status,
+    DateTimeOffset? ReviewedAtUtc,
+    Guid? ReviewedBy,
+    DateTimeOffset? FinalizedAtUtc,
+    Guid? FinalizedBy,
+    DateTimeOffset? BilledAtUtc,
+    Guid? BilledBy,
+    Guid? InvoiceId,
+    Guid? CorrectsReadingId);

@@ -74,7 +74,7 @@ public sealed class GenerateInvoiceBatchCommandHandler(
         foreach (Flat flat in buildingFlats)
         {
             bool alreadyExists = await invoices.ExistsForFlatAndPeriodAsync(
-                tenantId, flat.Id, command.PeriodStart, command.PeriodEnd, cancellationToken);
+                tenantId, flat.Id, command.PeriodStart, command.PeriodEnd, InvoiceSource.ServiceCharge, cancellationToken);
             if (alreadyExists)
             {
                 alreadyExistingCount++;
@@ -149,8 +149,8 @@ public sealed class GenerateInvoiceBatchCommandHandler(
                 ledgerEntries.AddRange(entries);
 
                 (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
-                    tenantId, buildingId, flat.Id, invoiceNumber, command.PeriodStart, command.PeriodEnd, invoiceDate,
-                    dueDate, lineInputs, posting.Id, nowUtc);
+                    tenantId, buildingId, flat.Id, invoiceNumber, InvoiceSource.ServiceCharge, command.PeriodStart,
+                    command.PeriodEnd, invoiceDate, dueDate, lineInputs, posting.Id, nowUtc);
 
                 invoices.Add(invoice);
                 invoices.AddLines(lines);

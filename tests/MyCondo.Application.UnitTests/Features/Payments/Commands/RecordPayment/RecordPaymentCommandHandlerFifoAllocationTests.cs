@@ -59,12 +59,12 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
     private static Invoice IssueInvoiceWithBalance(string invoiceNumber, decimal amount)
     {
         InvoiceLineInput line = new(
-            ServiceChargeRuleId.New(), "Standard Charge", "ServiceCharge", CalculationMethod.FixedAmount, amount,
+            ServiceChargeRuleId.New(), "Standard Charge", "ServiceCharge", "FixedAmount", amount,
             null, 1m, amount, "Standard Charge (ServiceCharge)");
 
         (Invoice invoice, _) = Invoice.Issue(
-            TenantId, BuildingId, FlatId, invoiceNumber, BusinessDate, BusinessDate, BusinessDate, BusinessDate,
-            [line], LedgerPostingId.New(), Now);
+            TenantId, BuildingId, FlatId, invoiceNumber, InvoiceSource.ServiceCharge, BusinessDate, BusinessDate,
+            BusinessDate, BusinessDate, [line], LedgerPostingId.New(), Now);
 
         return invoice;
     }

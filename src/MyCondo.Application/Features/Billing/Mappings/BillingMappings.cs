@@ -14,13 +14,13 @@ internal static class BillingMappings
 
     public static InvoiceDto ToDto(this Invoice invoice) => new(
         invoice.Id.Value, invoice.BuildingId.Value, invoice.FlatId.Value, invoice.InvoiceNumber,
-        invoice.PeriodStart, invoice.PeriodEnd, invoice.InvoiceDate, invoice.DueDate, invoice.SubtotalAmount,
-        invoice.TotalAmount, invoice.AmountPaid, invoice.Balance, invoice.Status.ToString(), invoice.IssuedAtUtc,
-        invoice.VoidedAtUtc, invoice.VoidedBy, invoice.VoidReason);
+        invoice.Source.ToString(), invoice.PeriodStart, invoice.PeriodEnd, invoice.InvoiceDate, invoice.DueDate,
+        invoice.SubtotalAmount, invoice.TotalAmount, invoice.AmountPaid, invoice.Balance, invoice.Status.ToString(),
+        invoice.IssuedAtUtc, invoice.VoidedAtUtc, invoice.VoidedBy, invoice.VoidReason);
 
     public static InvoiceLineDto ToDto(this InvoiceLine line) => new(
         line.Id.Value, line.ServiceChargeRuleId?.Value, line.RuleNameSnapshot, line.RuleCategorySnapshot,
-        line.CalculationMethodSnapshot.ToString(), line.RateSnapshot, line.AreaSqFtSnapshot, line.Quantity,
+        line.CalculationMethodSnapshot, line.RateSnapshot, line.AreaSqFtSnapshot, line.Quantity,
         line.LineAmount, line.Description);
 
     public static FlatMissingAreaDto ToMissingAreaDto(this Flat flat) => new(flat.Id.Value, flat.FlatNumber);

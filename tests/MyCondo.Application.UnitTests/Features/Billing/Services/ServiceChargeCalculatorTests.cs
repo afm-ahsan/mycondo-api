@@ -85,7 +85,7 @@ public class ServiceChargeCalculatorTests
         result.Line!.ServiceChargeRuleId.Should().Be(rule.Id);
         result.Line.RuleNameSnapshot.Should().Be(rule.Name);
         result.Line.RuleCategorySnapshot.Should().Be(rule.Category);
-        result.Line.CalculationMethodSnapshot.Should().Be(rule.CalculationMethod);
+        result.Line.CalculationMethodSnapshot.Should().Be(rule.CalculationMethod.ToString());
         result.Line.RateSnapshot.Should().Be(rule.Rate);
     }
 }
