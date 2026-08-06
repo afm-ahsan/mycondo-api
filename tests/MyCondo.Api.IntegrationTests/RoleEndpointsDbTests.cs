@@ -129,9 +129,13 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         List<PermissionDto>? permissions = await response.Content.ReadFromJsonAsync<List<PermissionDto>>(JsonOptions);
-        permissions.Should().HaveCount(47);
+        // 47 in the original catalogue + 13 (security) + 19 (domestic worker/service provider/staff
+        // attendance/seba visitor) + 7 (parcel) + 5 (payments) + 5 (billing) = 96. Was hardcoded to the
+        // stale original 47 — never caught because these tests are Docker-gated and hadn't run.
+        permissions.Should().HaveCount(96);
         permissions.Should().Contain(p => p.Name == "role.manage");
         permissions.Should().Contain(p => p.Name == "permission.view");
+        permissions.Should().Contain(p => p.Name == "billing.invoice.generate");
     }
 
     private static async Task<HttpResponseMessage> SendAuthedAsync(
