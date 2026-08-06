@@ -61,6 +61,8 @@ app.MapServiceProviderEndpoints();
 app.MapStaffAttendanceEndpoints();
 app.MapSebaVisitorEndpoints();
 app.MapParcelEndpoints();
+app.MapResidentAccountEndpoints();
+app.MapPaymentEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>

@@ -16,6 +16,10 @@ using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Property.Gates;
 using MyCondo.Domain.Features.Residents;
+using MyCondo.Domain.Features.Payments.Idempotency;
+using MyCondo.Domain.Features.Payments.Ledger;
+using MyCondo.Domain.Features.Payments.Payments;
+using MyCondo.Domain.Features.Payments.ResidentAccounts;
 using MyCondo.Domain.Features.Payroll.AttendanceRecords;
 using MyCondo.Domain.Features.Payroll.StaffMembers;
 using MyCondo.Domain.Features.Security.AccessSessions;
@@ -121,6 +125,11 @@ public static class DependencyInjection
         services.AddScoped<ISebaVisitDetailRepository, SebaVisitDetailRepository>();
         services.AddScoped<IParcelRepository, ParcelRepository>();
         services.AddScoped<IParcelCustodyEventRepository, ParcelCustodyEventRepository>();
+        services.AddScoped<ILedgerPostingRepository, LedgerPostingRepository>();
+        services.AddScoped<ILedgerEntryRepository, LedgerEntryRepository>();
+        services.AddScoped<IResidentAccountRepository, ResidentAccountRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>
