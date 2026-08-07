@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-MyCondo is a multi-tenant SaaS building automation and property management platform delivered to ARP Flat Owner's Association under proposal MC-PROP-2026-001 (fixed-price BDT 2,50,000, 24 weeks). This repo is the **backend**: a Clean Architecture + modular monolith .NET 10 API serving 14 modules across 18 PostgreSQL schemas, with strict tenant isolation via Row-Level Security.
+MyCondo is a multi-tenant SaaS building automation and property management platform delivered to ARP Flat Owner's Association under proposal MC-PROP-2026-001 (fixed-price BDT 2,50,000, 24 weeks). This repo is the **backend**: a Clean Architecture + modular monolith .NET 10 API serving 14+ modules across 19 PostgreSQL schemas (18 approved 2026-07-28 per ADR-004, plus `operations` added 2026-08-07 for Slice H — see the ADR-004 addendum), with strict tenant isolation via Row-Level Security.
 
 The companion frontend repo is at https://github.com/afm-ahsan/mycondo-web.
 
@@ -79,7 +79,7 @@ When the conventions specify a rule, **follow it**. Project-specific overrides a
 
 ## Architecture (one-paragraph summary)
 
-Clean Architecture: Domain → Application → Infrastructure → Api. Domain has zero external deps. Application uses CQRS via MediatR with FluentValidation pipeline behavior. Infrastructure uses EF Core 10 + PostgreSQL 18 with **schema-per-module** (18 schemas, snake_case naming). Api exposes Minimal API endpoints, one group per aggregate, every endpoint declares `[RequirePermission(...)]` or `[AllowAnonymous]`. Modules communicate **only** via MediatR domain events — no direct cross-module project references (enforced by NetArchTest).
+Clean Architecture: Domain → Application → Infrastructure → Api. Domain has zero external deps. Application uses CQRS via `Mediator` (martinothamar, MIT — not the commercially-licensed `MediatR`, see ADR-002) with FluentValidation pipeline behavior. Infrastructure uses EF Core 10 + PostgreSQL 18 with **schema-per-module** (19 schemas, snake_case naming — see ADR-004 and its 2026-08-07 addendum). Api exposes Minimal API endpoints, one group per aggregate, every endpoint declares `[RequirePermission(...)]` or `[AllowAnonymous]`. Modules communicate **only** via domain events — no direct cross-module project references (enforced by NetArchTest).
 
 ## Multi-tenancy (non-negotiable)
 
@@ -181,7 +181,7 @@ dotnet user-secrets set --project src/MyCondo.Api `
 These deviate from the conventions library; an ADR will be added to `docs/decisions/` before Phase 2 work begins.
 
 - **Two-repo layout** (this repo + `mycondo-web`) instead of the convention's monorepo with sibling `MyCondo.Core/` + `MyCondo.Client/` folders. Per proposal §03 ("two clean repos, lowercase, hyphenated, role-based, independent deployment").
-- **Schema-per-module** (18 schemas) instead of the convention's single `app` schema default. Per proposal §06 / MyCondo.md §06: surfaces module ownership at the DB layer and eases future microservice extraction.
+- **Schema-per-module** (19 schemas as of the ADR-004 addendum adding `operations` for Slice H) instead of the convention's single `app` schema default. Per proposal §06 / MyCondo.md §06: surfaces module ownership at the DB layer and eases future microservice extraction.
 - **PostgreSQL 18 + Redis 8.6** instead of the convention's PG 16 / Redis 7 mention. Per proposal §06 — current stable releases.
 
 ## Module Implementation Order

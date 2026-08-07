@@ -72,6 +72,15 @@ app.MapFacilityEndpoints();
 app.MapFacilityBookingEndpoints();
 app.MapPoolEndpoints();
 app.MapFacilityReportEndpoints();
+app.MapGeneratorEndpoints();
+app.MapGeneratorSessionEndpoints();
+app.MapGeneratorFuelReceiptEndpoints();
+app.MapGeneratorMaintenanceEndpoints();
+app.MapGeneratorReportEndpoints();
+app.MapGasCylinderSupplierEndpoints();
+app.MapCylinderPurchaseEndpoints();
+app.MapCylinderStockEndpoints();
+app.MapGasCylinderReportEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>
