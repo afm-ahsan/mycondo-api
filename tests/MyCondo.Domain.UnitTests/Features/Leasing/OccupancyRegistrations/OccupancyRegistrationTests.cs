@@ -38,6 +38,26 @@ public class OccupancyRegistrationTests
     }
 
     [Fact]
+    public void UpdateDraft_Preserves_NationalIdNumber_When_Not_Provided()
+    {
+        OccupancyRegistration registration = Register();
+
+        registration.UpdateDraft("Jane Doe", null, null, null, null, null, null, null, null);
+
+        registration.PrimaryNationalIdNumber.Should().Be("1234567890");
+    }
+
+    [Fact]
+    public void UpdateDraft_Replaces_NationalIdNumber_When_Provided()
+    {
+        OccupancyRegistration registration = Register();
+
+        registration.UpdateDraft("Jane Doe", null, null, "9876543210", null, null, null, null, null);
+
+        registration.PrimaryNationalIdNumber.Should().Be("9876543210");
+    }
+
+    [Fact]
     public void Submit_Moves_Draft_To_Submitted()
     {
         OccupancyRegistration registration = Register();
