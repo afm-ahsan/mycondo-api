@@ -68,6 +68,10 @@ app.MapInvoiceEndpoints();
 app.MapMeterEndpoints();
 app.MapRatePlanEndpoints();
 app.MapReadingEndpoints();
+app.MapFacilityEndpoints();
+app.MapFacilityBookingEndpoints();
+app.MapPoolEndpoints();
+app.MapFacilityReportEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>
