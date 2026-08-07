@@ -6,6 +6,7 @@ using MyCondo.Application.Features.Payroll.AttendanceRecords.Commands.ClockOut;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Commands.RequestAttendanceCorrection;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.DTOs;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Queries.GetAttendanceRecordsForStaffMember;
+using MyCondo.Application.Features.Payroll.AttendanceRecords.Queries.GetAttendanceRecordsForTenant;
 using MyCondo.Application.Features.Payroll.StaffMembers.Commands.RegisterStaffMember;
 using MyCondo.Application.Features.Payroll.StaffMembers.DTOs;
 using MyCondo.Application.Features.Payroll.StaffMembers.Queries.GetStaffMembersForTenant;
@@ -56,6 +57,15 @@ public static class StaffAttendanceEndpoints
             .Produces<PagedResult<AttendanceRecordDto>>(StatusCodes.Status200OK);
 
         RouteGroupBuilder attendance = app.MapGroup("/api/v1/attendance-records").WithTags("StaffAttendance");
+
+        attendance.MapGet("/", async (DateOnly? workDate, Guid? staffMemberId, bool? onlyOpen, int page, int pageSize, ISender sender, CancellationToken ct) =>
+            {
+                PagedResult<AttendanceRegisterEntryDto> result = await sender.Send(
+                    new GetAttendanceRecordsForTenantQuery(workDate, staffMemberId, onlyOpen, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("staffattendance.view")
+            .Produces<PagedResult<AttendanceRegisterEntryDto>>(StatusCodes.Status200OK);
 
         attendance.MapPost("/{id:guid}/clock-out", async (Guid id, ISender sender, CancellationToken ct) =>
             {
