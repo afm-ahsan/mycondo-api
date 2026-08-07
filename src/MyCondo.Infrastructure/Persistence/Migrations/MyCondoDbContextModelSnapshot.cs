@@ -1274,6 +1274,387 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.ToTable("users", "identity");
                 });
 
+            modelBuilder.Entity("MyCondo.Domain.Features.Leasing.HouseholdMembers.HouseholdMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("date_of_birth");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("full_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("NationalIdNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("national_id_number");
+
+                    b.Property<Guid>("OccupancyRegistrationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("occupancy_registration_id");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("RelationshipToPrimary")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("relationship_to_primary");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_household_members");
+
+                    b.HasIndex("TenantId", "OccupancyRegistrationId")
+                        .HasDatabaseName("ix_household_members_tenant_id_occupancy_registration_id");
+
+                    b.ToTable("household_members", "leasing");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Leasing.OccupancyRegistrationStatusHistories.OccupancyRegistrationStatusHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ChangedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("changed_at_utc");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("changed_by");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("from_status");
+
+                    b.Property<Guid>("OccupancyRegistrationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("occupancy_registration_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("to_status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_occupancy_registration_status_histories");
+
+                    b.HasIndex("TenantId", "OccupancyRegistrationId", "ChangedAtUtc")
+                        .HasDatabaseName("ix_occ_reg_status_histories_tenant_id_occ_reg_id_changed_at_utc");
+
+                    b.ToTable("occupancy_registration_status_histories", "leasing");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Leasing.OccupancyRegistrationVehicleAssignments.OccupancyRegistrationVehicleAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AssignedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("EndedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at_utc");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("OccupancyRegistrationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("occupancy_registration_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vehicle_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_occupancy_registration_vehicle_assignments");
+
+                    b.HasIndex("TenantId", "OccupancyRegistrationId")
+                        .HasDatabaseName("ix_occ_reg_vehicle_assignments_tenant_id_occ_reg_id");
+
+                    b.ToTable("occupancy_registration_vehicle_assignments", "leasing");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Leasing.OccupancyRegistrationWorkerAssignments.OccupancyRegistrationWorkerAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AssignedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("DomesticWorkerProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("domestic_worker_profile_id");
+
+                    b.Property<DateTimeOffset?>("EndedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at_utc");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("OccupancyRegistrationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("occupancy_registration_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_occupancy_registration_worker_assignments");
+
+                    b.HasIndex("TenantId", "OccupancyRegistrationId")
+                        .HasDatabaseName("ix_occ_reg_worker_assignments_tenant_id_occ_reg_id");
+
+                    b.ToTable("occupancy_registration_worker_assignments", "leasing");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Leasing.OccupancyRegistrations.OccupancyRegistration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ActivatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("activated_at_utc");
+
+                    b.Property<string>("CorrectionsRequestedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("corrections_requested_reason");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("EmergencyContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("emergency_contact_name");
+
+                    b.Property<string>("EmergencyContactPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("emergency_contact_phone");
+
+                    b.Property<Guid>("FlatId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flat_id");
+
+                    b.Property<DateTimeOffset?>("ManagementVerifiedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("management_verified_at_utc");
+
+                    b.Property<Guid?>("ManagementVerifiedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("management_verified_by");
+
+                    b.Property<DateOnly?>("MoveInExpectedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("move_in_expected_date");
+
+                    b.Property<string>("MoveOutReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("move_out_reason");
+
+                    b.Property<DateTimeOffset?>("MovedOutAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("moved_out_at_utc");
+
+                    b.Property<string>("OccupancyType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("occupancy_type");
+
+                    b.Property<DateTimeOffset?>("OwnerReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("owner_reviewed_at_utc");
+
+                    b.Property<Guid?>("OwnerReviewedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_reviewed_by");
+
+                    b.Property<DateOnly?>("PrimaryDateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("primary_date_of_birth");
+
+                    b.Property<string>("PrimaryEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("primary_email");
+
+                    b.Property<string>("PrimaryFullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("primary_full_name");
+
+                    b.Property<string>("PrimaryNationalIdNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("primary_national_id_number");
+
+                    b.Property<string>("PrimaryPermanentAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("primary_permanent_address");
+
+                    b.Property<string>("PrimaryPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("primary_phone");
+
+                    b.Property<Guid?>("PrimaryPhotoAttachmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_photo_attachment_id");
+
+                    b.Property<Guid>("PrimaryResidentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_resident_id");
+
+                    b.Property<string>("RejectedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejected_reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SubmittedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at_utc");
+
+                    b.Property<Guid?>("SubmittedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submitted_by");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_occupancy_registrations");
+
+                    b.HasIndex("TenantId", "FlatId", "Status")
+                        .HasDatabaseName("ix_occupancy_registrations_tenant_id_flat_id_status");
+
+                    b.ToTable("occupancy_registrations", "leasing");
+                });
+
             modelBuilder.Entity("MyCondo.Domain.Features.Operations.CylinderPurchases.CylinderPurchase", b =>
                 {
                     b.Property<Guid>("Id")

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Infrastructure.Persistence.Repositories;
@@ -38,6 +39,12 @@ public sealed class ResidentRepository(MyCondoDbContext db) : IResidentRepositor
 
         return new PagedResult<Resident>(items, page, pageSize, total);
     }
+
+    public Task<Resident?> FindByFlatAndNameAsync(
+        Guid tenantId, FlatId flatId, string fullName, CancellationToken cancellationToken) =>
+        db.Set<Resident>().FirstOrDefaultAsync(
+            r => r.TenantId == tenantId && r.FlatId == flatId && EF.Functions.ILike(r.FullName, fullName),
+            cancellationToken);
 
     public void Add(Resident resident) => db.Set<Resident>().Add(resident);
 }
