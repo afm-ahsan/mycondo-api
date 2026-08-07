@@ -17,4 +17,10 @@ public enum LedgerAccountType
     /// <summary>Used only when recording a migrated legacy opening balance — crediting
     /// AssociationRevenue for a balance that isn't new revenue would misstate income.</summary>
     OpeningBalanceEquity = 4,
+    /// <summary>Added in Slice G — a facility-booking refundable security deposit, held as a liability
+    /// from collection until settlement (full refund, partial refund with deduction, or forfeiture).
+    /// Tenant-wide like every non-<see cref="ResidentReceivable"/> account; deposit lines carry no
+    /// <see cref="LedgerEntry.FlatId"/> even though the deposit is conceptually flat-specific, per
+    /// <see cref="LedgerPosting.Create"/>'s existing, unmodified invariant.</summary>
+    RefundableDepositsHeld = 5,
 }

@@ -86,6 +86,13 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
     public async Task<IReadOnlyList<InvoiceLine>> GetLinesForInvoiceAsync(InvoiceId invoiceId, CancellationToken cancellationToken) =>
         await db.Set<InvoiceLine>().AsNoTracking().Where(l => l.InvoiceId == invoiceId).ToListAsync(cancellationToken);
 
+    public async Task<decimal> GetOutstandingBalanceForFlatAsync(Guid tenantId, FlatId flatId, CancellationToken cancellationToken) =>
+        await db.Set<Invoice>()
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId && i.FlatId == flatId
+                && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid))
+            .SumAsync(i => i.TotalAmount - i.AmountPaid, cancellationToken);
+
     public void Add(Invoice invoice) => db.Set<Invoice>().Add(invoice);
 
     public void AddLines(IEnumerable<InvoiceLine> lines) => db.Set<InvoiceLine>().AddRange(lines);

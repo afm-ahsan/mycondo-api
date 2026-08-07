@@ -30,6 +30,12 @@ public interface IInvoiceRepository
 
     Task<IReadOnlyList<InvoiceLine>> GetLinesForInvoiceAsync(InvoiceId invoiceId, CancellationToken cancellationToken);
 
+    /// <summary>Sum of <see cref="Invoice.Balance"/> across a flat's outstanding invoices — a
+    /// read-only eligibility check (Slice G's pool overdue-balance gate), not a locking financial-engine
+    /// read, so it deliberately does not use <see cref="GetOutstandingForFlatForUpdateAsync"/>'s
+    /// <c>FOR UPDATE</c> query.</summary>
+    Task<decimal> GetOutstandingBalanceForFlatAsync(Guid tenantId, FlatId flatId, CancellationToken cancellationToken);
+
     void Add(Invoice invoice);
 
     void AddLines(IEnumerable<InvoiceLine> lines);

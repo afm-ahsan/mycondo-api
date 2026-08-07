@@ -4,6 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Settings;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Amenities.BlackoutDates;
+using MyCondo.Domain.Features.Amenities.Bookings;
+using MyCondo.Domain.Features.Amenities.Facilities;
+using MyCondo.Domain.Features.Amenities.PoolIncidents;
+using MyCondo.Domain.Features.Amenities.PoolSessions;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RefreshTokens;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
@@ -146,6 +151,11 @@ public static class DependencyInjection
         services.AddScoped<IMeterAssignmentRepository, MeterAssignmentRepository>();
         services.AddScoped<IRatePlanRepository, RatePlanRepository>();
         services.AddScoped<IReadingRepository, ReadingRepository>();
+        services.AddScoped<IFacilityRepository, FacilityRepository>();
+        services.AddScoped<IBlackoutDateRepository, BlackoutDateRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IPoolSessionRepository, PoolSessionRepository>();
+        services.AddScoped<IPoolIncidentRepository, PoolIncidentRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>

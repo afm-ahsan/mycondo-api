@@ -8,11 +8,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyCondo.Infrastructure.Persistence.Migrations;
-
-[DbContext(typeof(MyCondoDbContext))]
-partial class MyCondoDbContextModelSnapshot : ModelSnapshot
+namespace MyCondo.Infrastructure.Persistence.Migrations
 {
+    [DbContext(typeof(MyCondoDbContext))]
+    partial class MyCondoDbContextModelSnapshot : ModelSnapshot
+    {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -21,6 +21,542 @@ partial class MyCondoDbContextModelSnapshot : ModelSnapshot
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Amenities.BlackoutDates.BlackoutDate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly>("DateFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("date_from");
+
+                    b.Property<DateOnly>("DateTo")
+                        .HasColumnType("date")
+                        .HasColumnName("date_to");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("facility_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_blackout_dates");
+
+                    b.HasIndex("TenantId", "FacilityId", "IsActive")
+                        .HasDatabaseName("ix_blackout_dates_tenant_id_facility_id_is_active");
+
+                    b.ToTable("blackout_dates", "amenities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Amenities.Bookings.Booking", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("ApprovalRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("approval_required");
+
+                    b.Property<DateTimeOffset?>("ApprovedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at_utc");
+
+                    b.Property<Guid?>("ApprovedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by");
+
+                    b.Property<decimal>("BookingChargeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("booking_charge_amount");
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("building_id");
+
+                    b.Property<int>("CancellationDeadlineHours")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancellation_deadline_hours");
+
+                    b.Property<decimal>("CancellationDeductionPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("cancellation_deduction_percentage");
+
+                    b.Property<DateTimeOffset?>("CancelledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at_utc");
+
+                    b.Property<Guid?>("CancelledBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cancelled_by");
+
+                    b.Property<string>("CancelledReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cancelled_reason");
+
+                    b.Property<DateTimeOffset?>("CheckedInAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("checked_in_at_utc");
+
+                    b.Property<Guid?>("CheckedInBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("checked_in_by");
+
+                    b.Property<int>("CleanupBufferMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("cleanup_buffer_minutes");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DamageDeductionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("damage_deduction_reason");
+
+                    b.Property<decimal>("DepositAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("deposit_amount");
+
+                    b.Property<Guid?>("DepositCollectionPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deposit_collection_posting_id");
+
+                    b.Property<decimal?>("DepositDeductedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("deposit_deducted_amount");
+
+                    b.Property<decimal?>("DepositRefundedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("deposit_refunded_amount");
+
+                    b.Property<Guid?>("DepositSettlementPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deposit_settlement_posting_id");
+
+                    b.Property<DateTimeOffset>("EndAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_at_utc");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("event_type");
+
+                    b.Property<int>("ExpectedGuestCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("expected_guest_count");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("facility_id");
+
+                    b.Property<Guid>("FlatId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flat_id");
+
+                    b.Property<DateTimeOffset?>("InspectedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inspected_at_utc");
+
+                    b.Property<Guid?>("InspectedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("inspected_by");
+
+                    b.Property<string>("InspectionNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("inspection_notes");
+
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<bool>("PaymentRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("payment_required");
+
+                    b.Property<string>("RejectedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejected_reason");
+
+                    b.Property<int>("SetupBufferMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("setup_buffer_minutes");
+
+                    b.Property<DateTimeOffset>("StartAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("TermsAcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("terms_accepted_at_utc");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bookings");
+
+                    b.HasIndex("TenantId", "FacilityId", "StartAtUtc")
+                        .HasDatabaseName("ix_bookings_tenant_id_facility_id_start_at_utc");
+
+                    b.HasIndex("TenantId", "FlatId", "Status")
+                        .HasDatabaseName("ix_bookings_tenant_id_flat_id_status");
+
+                    b.ToTable("bookings", "amenities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Amenities.Facilities.Facility", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("BlocksEntryIfAccountOverdue")
+                        .HasColumnType("boolean")
+                        .HasColumnName("blocks_entry_if_account_overdue");
+
+                    b.Property<decimal?>("BookingChargeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("booking_charge_amount");
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("building_id");
+
+                    b.Property<int>("CancellationDeadlineHours")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancellation_deadline_hours");
+
+                    b.Property<decimal>("CancellationDeductionPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("cancellation_deduction_percentage");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("integer")
+                        .HasColumnName("capacity");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal?>("DepositAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("deposit_amount");
+
+                    b.Property<string>("FacilityType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("facility_type");
+
+                    b.Property<decimal?>("GuestFeeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("guest_fee_amount");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<int?>("MinimumAgeUnaccompanied")
+                        .HasColumnType("integer")
+                        .HasColumnName("minimum_age_unaccompanied");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<TimeOnly?>("OperatingHoursEnd")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("operating_hours_end");
+
+                    b.Property<TimeOnly?>("OperatingHoursStart")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("operating_hours_start");
+
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("boolean")
+                        .HasColumnName("requires_approval");
+
+                    b.Property<bool>("RequiresSafetyAcknowledgement")
+                        .HasColumnType("boolean")
+                        .HasColumnName("requires_safety_acknowledgement");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_facilities");
+
+                    b.HasIndex("TenantId", "BuildingId", "FacilityType")
+                        .HasDatabaseName("ix_facilities_tenant_id_building_id_facility_type");
+
+                    b.ToTable("facilities", "amenities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Amenities.PoolIncidents.PoolIncident", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActionTaken")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("action_taken");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("facility_id");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<Guid?>("PoolSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pool_session_id");
+
+                    b.Property<Guid?>("ReportedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reported_by");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("severity");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pool_incidents");
+
+                    b.HasIndex("TenantId", "FacilityId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_pool_incidents_tenant_id_facility_id_occurred_at_utc");
+
+                    b.ToTable("pool_incidents", "amenities");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Amenities.PoolSessions.PoolSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AccompaniedBySessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("accompanied_by_session_id");
+
+                    b.Property<string>("AgeCategory")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("age_category");
+
+                    b.Property<Guid?>("CheckedInBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("checked_in_by");
+
+                    b.Property<Guid?>("CheckedOutBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("checked_out_by");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("EntryAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("entry_at_utc");
+
+                    b.Property<DateTimeOffset?>("ExitAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("exit_at_utc");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("facility_id");
+
+                    b.Property<Guid>("FlatId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flat_id");
+
+                    b.Property<decimal?>("GuestFeeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("guest_fee_amount");
+
+                    b.Property<string>("OverrideReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("override_reason");
+
+                    b.Property<string>("PersonType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("person_type");
+
+                    b.Property<DateTimeOffset?>("SafetyAcknowledgedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("safety_acknowledged_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pool_sessions");
+
+                    b.HasIndex("TenantId", "FlatId")
+                        .HasDatabaseName("ix_pool_sessions_tenant_id_flat_id");
+
+                    b.HasIndex("TenantId", "FacilityId", "ExitAtUtc")
+                        .HasDatabaseName("ix_pool_sessions_tenant_id_facility_id_exit_at_utc");
+
+                    b.ToTable("pool_sessions", "amenities");
+                });
 
             modelBuilder.Entity("MyCondo.Domain.Features.Attachments.Attachment", b =>
                 {
@@ -225,7 +761,8 @@ partial class MyCondoDbContextModelSnapshot : ModelSnapshot
 
                     b.HasIndex("TenantId", "FlatId", "PeriodStart", "PeriodEnd", "Source")
                         .IsUnique()
-                        .HasDatabaseName("ux_invoices_tenant_id_flat_id_period_source");
+                        .HasDatabaseName("ux_invoices_tenant_id_flat_id_period_source")
+                        .HasFilter("source <> 'FacilityBooking'");
 
                     b.ToTable("invoices", "billing");
                 });
@@ -2952,4 +3489,4 @@ partial class MyCondoDbContextModelSnapshot : ModelSnapshot
 #pragma warning restore 612, 618
         }
     }
-
+}

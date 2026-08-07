@@ -61,9 +61,13 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         // Authoritative duplicate-generation guard — see plan §6. Handler does a
         // check-before-insert against these same dimensions; this is the race-condition backstop.
         // Source is part of the key (Slice F) so a flat can have both a ServiceCharge invoice and a
-        // Utility invoice for the same calendar period.
+        // Utility invoice for the same calendar period. Slice G narrows this to exclude
+        // FacilityBooking: that source is a one-off charge, not a recurring-period one (two same-day
+        // bookings for the same flat would otherwise collide on PeriodStart/PeriodEnd), and uniqueness
+        // for booking invoices is instead guaranteed structurally by Booking's own single InvoiceId.
         builder.HasIndex(x => new { x.TenantId, x.FlatId, x.PeriodStart, x.PeriodEnd, x.Source })
             .IsUnique()
+            .HasFilter("source <> 'FacilityBooking'")
             .HasDatabaseName("ux_invoices_tenant_id_flat_id_period_source");
 
         builder.HasIndex(x => new { x.TenantId, x.BuildingId, x.Status })
