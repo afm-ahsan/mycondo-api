@@ -8,4 +8,5 @@ namespace MyCondo.Domain.Features.Attachments;
 public enum AttachmentOwnerType
 {
     Resident = 0,
+    OccupancyRegistration = 1,
 }

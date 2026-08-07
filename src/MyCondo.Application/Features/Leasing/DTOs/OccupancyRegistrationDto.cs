@@ -1,0 +1,26 @@
+namespace MyCondo.Application.Features.Leasing.DTOs;
+
+public sealed record OccupancyRegistrationDto(
+    Guid OccupancyRegistrationId,
+    Guid FlatId,
+    Guid PrimaryResidentId,
+    string OccupancyType,
+    string PrimaryFullName,
+    string? PrimaryPhone,
+    string? PrimaryEmail,
+    string? PrimaryNationalIdNumberMasked,
+    DateOnly? PrimaryDateOfBirth,
+    string? PrimaryPermanentAddress,
+    string? EmergencyContactName,
+    string? EmergencyContactPhone,
+    Guid? PrimaryPhotoAttachmentId,
+    DateOnly? MoveInExpectedDate,
+    string Status,
+    DateTimeOffset? SubmittedAtUtc,
+    DateTimeOffset? OwnerReviewedAtUtc,
+    DateTimeOffset? ManagementVerifiedAtUtc,
+    DateTimeOffset? ActivatedAtUtc,
+    DateTimeOffset? MovedOutAtUtc,
+    string? MoveOutReason,
+    string? CorrectionsRequestedReason,
+    string? RejectedReason);

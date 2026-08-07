@@ -19,6 +19,9 @@ using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Leasing.HouseholdMembers;
+using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
+using MyCondo.Domain.Features.Leasing.OccupancyRegistrationStatusHistories;
 using MyCondo.Domain.Features.Operations.CylinderPurchases;
 using MyCondo.Domain.Features.Operations.CylinderStockMovements;
 using MyCondo.Domain.Features.Operations.GasCylinderSuppliers;
@@ -176,6 +179,9 @@ public static class DependencyInjection
         services.AddScoped<ICylinderPurchaseRepository, CylinderPurchaseRepository>();
         services.AddScoped<ICylinderStockMovementRepository, CylinderStockMovementRepository>();
         services.AddScoped<IMonthlyCylinderReconciliationRepository, MonthlyCylinderReconciliationRepository>();
+        services.AddScoped<IOccupancyRegistrationRepository, OccupancyRegistrationRepository>();
+        services.AddScoped<IHouseholdMemberRepository, HouseholdMemberRepository>();
+        services.AddScoped<IOccupancyRegistrationStatusHistoryRepository, OccupancyRegistrationStatusHistoryRepository>();
 
         // Redis (lazy singleton)
         services.AddSingleton<IConnectionMultiplexer>(sp =>

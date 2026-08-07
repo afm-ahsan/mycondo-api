@@ -5,6 +5,7 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Attachments.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Attachments;
+using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
 using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Application.Features.Attachments.Commands.RecordAttachment;
@@ -12,6 +13,7 @@ namespace MyCondo.Application.Features.Attachments.Commands.RecordAttachment;
 public sealed class RecordAttachmentCommandHandler(
     IAttachmentRepository attachments,
     IResidentRepository residents,
+    IOccupancyRegistrationRepository occupancyRegistrations,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -56,6 +58,16 @@ public sealed class RecordAttachmentCommandHandler(
                 if (resident.TenantId != tenantId)
                 {
                     throw new NotFoundException(nameof(Resident), ownerId);
+                }
+
+                break;
+            case AttachmentOwnerType.OccupancyRegistration:
+                OccupancyRegistration registration = await occupancyRegistrations.GetByIdAsync(
+                        new OccupancyRegistrationId(ownerId), cancellationToken)
+                    ?? throw new NotFoundException(nameof(OccupancyRegistration), ownerId);
+                if (registration.TenantId != tenantId)
+                {
+                    throw new NotFoundException(nameof(OccupancyRegistration), ownerId);
                 }
 
                 break;

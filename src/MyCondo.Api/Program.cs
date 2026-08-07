@@ -81,6 +81,7 @@ app.MapGasCylinderSupplierEndpoints();
 app.MapCylinderPurchaseEndpoints();
 app.MapCylinderStockEndpoints();
 app.MapGasCylinderReportEndpoints();
+app.MapOccupancyRegistrationEndpoints();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>
