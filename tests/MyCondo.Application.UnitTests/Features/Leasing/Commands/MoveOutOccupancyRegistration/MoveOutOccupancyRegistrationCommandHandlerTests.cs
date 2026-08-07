@@ -9,15 +9,19 @@ using MyCondo.Domain.Features.Leasing.HouseholdMembers;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations.Exceptions;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrationStatusHistories;
+using MyCondo.Domain.Features.Leasing.OccupancyRegistrationVehicleAssignments;
+using MyCondo.Domain.Features.Leasing.OccupancyRegistrationWorkerAssignments;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Residents;
+using MyCondo.Domain.Features.Security.DomesticWorkers;
+using MyCondo.Domain.Features.Security.Vehicles;
 using NSubstitute;
 
 namespace MyCondo.Application.UnitTests.Features.Leasing.Commands.MoveOutOccupancyRegistration;
 
-/// <summary>Proves the move-out cascade deactivates every active household member in the same
-/// transaction, matching the requirement that access-relevant info drop out of active security
-/// views once occupancy ends.</summary>
+/// <summary>Proves the move-out cascade deactivates every active household member and ends every
+/// active worker/vehicle assignment in the same transaction, matching the requirement that
+/// access-relevant info drop out of active security views once occupancy ends.</summary>
 public class MoveOutOccupancyRegistrationCommandHandlerTests
 {
     private static readonly Guid TenantId = Guid.NewGuid();
@@ -25,6 +29,10 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
 
     private readonly IOccupancyRegistrationRepository _registrations = Substitute.For<IOccupancyRegistrationRepository>();
     private readonly IHouseholdMemberRepository _members = Substitute.For<IHouseholdMemberRepository>();
+    private readonly IOccupancyRegistrationWorkerAssignmentRepository _workerAssignments =
+        Substitute.For<IOccupancyRegistrationWorkerAssignmentRepository>();
+    private readonly IOccupancyRegistrationVehicleAssignmentRepository _vehicleAssignments =
+        Substitute.For<IOccupancyRegistrationVehicleAssignmentRepository>();
     private readonly IOccupancyRegistrationStatusHistoryRepository _history = Substitute.For<IOccupancyRegistrationStatusHistoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
@@ -34,10 +42,14 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
     {
         _currentUser.TenantId.Returns(TenantId);
         _clock.UtcNow.Returns(Now);
+        _workerAssignments.GetForRegistrationAsync(Arg.Any<OccupancyRegistrationId>(), Arg.Any<CancellationToken>())
+            .Returns(new List<OccupancyRegistrationWorkerAssignment>());
+        _vehicleAssignments.GetForRegistrationAsync(Arg.Any<OccupancyRegistrationId>(), Arg.Any<CancellationToken>())
+            .Returns(new List<OccupancyRegistrationVehicleAssignment>());
     }
 
     private MoveOutOccupancyRegistrationCommandHandler CreateHandler() => new(
-        _registrations, _members, _history, _unitOfWork, _currentUser, _clock,
+        _registrations, _members, _workerAssignments, _vehicleAssignments, _history, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<MoveOutOccupancyRegistrationCommandHandler>>());
 
     private static OccupancyRegistration ActiveRegistration()
@@ -71,6 +83,33 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
 
         result.Status.Should().Be(nameof(OccupancyRegistrationStatus.MovedOut));
         activeMember.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Ends_All_Active_Worker_And_Vehicle_Assignments()
+    {
+        OccupancyRegistration registration = ActiveRegistration();
+        _registrations.GetByIdAsync(registration.Id, Arg.Any<CancellationToken>()).Returns(registration);
+        _members.GetForRegistrationAsync(registration.Id, Arg.Any<CancellationToken>())
+            .Returns(new List<HouseholdMember>());
+
+        OccupancyRegistrationWorkerAssignment activeWorker = OccupancyRegistrationWorkerAssignment.Assign(
+            TenantId, registration.Id, DomesticWorkerProfileId.New(), Now);
+        OccupancyRegistrationWorkerAssignment alreadyEndedWorker = OccupancyRegistrationWorkerAssignment.Assign(
+            TenantId, registration.Id, DomesticWorkerProfileId.New(), Now);
+        alreadyEndedWorker.End(Now);
+        _workerAssignments.GetForRegistrationAsync(registration.Id, Arg.Any<CancellationToken>())
+            .Returns(new List<OccupancyRegistrationWorkerAssignment> { activeWorker, alreadyEndedWorker });
+
+        OccupancyRegistrationVehicleAssignment activeVehicle = OccupancyRegistrationVehicleAssignment.Assign(
+            TenantId, registration.Id, VehicleId.New(), Now);
+        _vehicleAssignments.GetForRegistrationAsync(registration.Id, Arg.Any<CancellationToken>())
+            .Returns(new List<OccupancyRegistrationVehicleAssignment> { activeVehicle });
+
+        await CreateHandler().Handle(new MoveOutOccupancyRegistrationCommand(registration.Id.Value, null), CancellationToken.None);
+
+        activeWorker.IsActive.Should().BeFalse();
+        activeVehicle.IsActive.Should().BeFalse();
     }
 
     [Fact]

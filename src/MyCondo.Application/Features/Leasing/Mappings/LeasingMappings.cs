@@ -3,6 +3,10 @@ using MyCondo.Application.Features.Leasing.DTOs;
 using MyCondo.Domain.Features.Leasing.HouseholdMembers;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrationStatusHistories;
+using MyCondo.Domain.Features.Leasing.OccupancyRegistrationVehicleAssignments;
+using MyCondo.Domain.Features.Leasing.OccupancyRegistrationWorkerAssignments;
+using MyCondo.Domain.Features.Security.DomesticWorkers;
+using MyCondo.Domain.Features.Security.Vehicles;
 
 namespace MyCondo.Application.Features.Leasing.Mappings;
 
@@ -28,4 +32,16 @@ internal static class LeasingMappings
     public static OccupancyRegistrationStatusHistoryDto ToDto(this OccupancyRegistrationStatusHistory entry) => new(
         entry.Id.Value, entry.OccupancyRegistrationId.Value, entry.FromStatus?.ToString(), entry.ToStatus.ToString(),
         entry.ChangedBy, entry.ChangedAtUtc, entry.Reason);
+
+    public static OccupancyRegistrationWorkerAssignmentDto ToDto(
+        this OccupancyRegistrationWorkerAssignment assignment, DomesticWorkerProfile worker) => new(
+        assignment.Id.Value, assignment.OccupancyRegistrationId.Value, assignment.DomesticWorkerProfileId.Value,
+        worker.FullName, worker.Phone, worker.WorkerType.ToString(), worker.VerificationStatus.ToString(),
+        assignment.AssignedAtUtc, assignment.EndedAtUtc, assignment.IsActive);
+
+    public static OccupancyRegistrationVehicleAssignmentDto ToDto(
+        this OccupancyRegistrationVehicleAssignment assignment, Vehicle vehicle) => new(
+        assignment.Id.Value, assignment.OccupancyRegistrationId.Value, assignment.VehicleId.Value,
+        vehicle.RegistrationNumber, vehicle.VehicleType.ToString(), vehicle.IsBlocked, assignment.AssignedAtUtc,
+        assignment.EndedAtUtc, assignment.IsActive);
 }

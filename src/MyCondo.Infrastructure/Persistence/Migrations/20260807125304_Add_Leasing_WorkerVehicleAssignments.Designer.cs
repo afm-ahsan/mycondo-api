@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyCondo.Infrastructure.Persistence;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyCondo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(MyCondoDbContext))]
-    partial class MyCondoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260807125304_Add_Leasing_WorkerVehicleAssignments")]
+    partial class Add_Leasing_WorkerVehicleAssignments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
