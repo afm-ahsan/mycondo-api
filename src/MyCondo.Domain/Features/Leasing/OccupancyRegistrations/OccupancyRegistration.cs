@@ -121,7 +121,13 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         PrimaryFullName = primaryFullName.Trim();
         PrimaryPhone = primaryPhone?.Trim();
         PrimaryEmail = primaryEmail?.Trim();
-        PrimaryNationalIdNumber = primaryNationalIdNumber?.Trim();
+        // The National ID is masked on every read, so the client can never round-trip the existing
+        // value back through this form — an empty submission means "not retyped", not "clear it".
+        // Replacing it requires a new full value; see IdentityMasking / the security review.
+        if (!string.IsNullOrWhiteSpace(primaryNationalIdNumber))
+        {
+            PrimaryNationalIdNumber = primaryNationalIdNumber.Trim();
+        }
         PrimaryDateOfBirth = primaryDateOfBirth;
         PrimaryPermanentAddress = primaryPermanentAddress?.Trim();
         EmergencyContactName = emergencyContactName?.Trim();
