@@ -31,6 +31,11 @@ if (builder.Environment.IsDevelopment())
 
 WebApplication app = builder.Build();
 
+// Must run before anything that reads Request.Scheme/Connection.RemoteIpAddress (HTTPS redirection,
+// the refresh-token cookie's Secure flag, IP-partitioned rate limiting, request logging) — see
+// AddForwardedHeadersForTrustedProxy's doc comment for the trusted-proxy configuration model.
+app.UseForwardedHeaders();
+
 app.UseSerilogRequestLogging();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -86,15 +91,23 @@ app.MapCylinderStockEndpoints();
 app.MapGasCylinderReportEndpoints();
 app.MapOccupancyRegistrationEndpoints();
 
-app.MapOpenApi();
-app.MapScalarApiReference(options =>
+// Scalar UI + the raw OpenAPI JSON document expose the full internal API surface (every endpoint,
+// DTO shape, route pattern) — reconnaissance value for an attacker even though it doesn't bypass auth
+// on the endpoints themselves. Development-only; this does not affect the underlying OpenAPI
+// generation the frontend's codegen:api script depends on, which reads the file mycondo-web checks in
+// (openapi/mycondo-api.json), regenerated locally against a Development-mode instance.
+if (app.Environment.IsDevelopment())
 {
-    options
-        .WithTitle("MyCondo API")
-        .WithTheme(ScalarTheme.BluePlanet);
-});
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("MyCondo API")
+            .WithTheme(ScalarTheme.BluePlanet);
+    });
 
-app.MapGet("/", () => Results.Redirect("/scalar"));
+    app.MapGet("/", () => Results.Redirect("/scalar"));
+}
 
 await app.RunAsync();
 

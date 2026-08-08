@@ -28,6 +28,7 @@ public static class AuthEndpoints
                 return Results.Ok(AuthResponse.From(result));
             })
             .AllowAnonymous()
+            .RequireRateLimiting("auth")
             .Produces<AuthResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/login", async (LoginCommand command, ISender sender, HttpContext http, CancellationToken ct) =>
@@ -38,6 +39,7 @@ public static class AuthEndpoints
                 return Results.Ok(AuthResponse.From(result));
             })
             .AllowAnonymous()
+            .RequireRateLimiting("auth")
             .Produces<AuthResponse>(StatusCodes.Status200OK);
 
         // The refresh token itself comes from the HttpOnly cookie, not the body — RefreshRequest only
