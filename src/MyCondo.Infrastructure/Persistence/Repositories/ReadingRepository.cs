@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
+using MyCondo.Domain.Features.Utilities.Common;
 using MyCondo.Domain.Features.Utilities.Meters;
 using MyCondo.Domain.Features.Utilities.Readings;
 
@@ -81,6 +83,52 @@ public sealed class ReadingRepository(MyCondoDbContext db) : IReadingRepository
                 r.PeriodStart >= fromDate && r.PeriodEnd <= toDate)
             .OrderBy(r => r.PeriodStart)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ConsumptionSummaryLine>> GetConsumptionSummaryAsync(
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, DateOnly fromDate, DateOnly toDate,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<Reading> query = db.Set<Reading>()
+            .AsNoTracking()
+            .Where(r => r.TenantId == tenantId && FinalizedOrLater.Contains(r.Status)
+                && r.PeriodEnd >= fromDate && r.PeriodEnd <= toDate);
+
+        if (buildingId is not null)
+        {
+            query = query.Where(r => r.BuildingId == buildingId);
+        }
+
+        if (utilityType is not null)
+        {
+            query = query.Where(r => r.UtilityType == utilityType);
+        }
+
+        return await query
+            .GroupBy(r => r.UtilityType)
+            .Select(g => new ConsumptionSummaryLine(g.Key, g.Sum(r => r.ConsumptionUnits), g.Count()))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ReadingStatusSummaryLine>> GetStatusSummaryAsync(
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, CancellationToken cancellationToken)
+    {
+        IQueryable<Reading> query = db.Set<Reading>().AsNoTracking().Where(r => r.TenantId == tenantId);
+
+        if (buildingId is not null)
+        {
+            query = query.Where(r => r.BuildingId == buildingId);
+        }
+
+        if (utilityType is not null)
+        {
+            query = query.Where(r => r.UtilityType == utilityType);
+        }
+
+        return await query
+            .GroupBy(r => new { r.UtilityType, r.Status })
+            .Select(g => new ReadingStatusSummaryLine(g.Key.UtilityType, g.Key.Status, g.Count()))
+            .ToListAsync(cancellationToken);
+    }
 
     public void Add(Reading reading) => db.Set<Reading>().Add(reading);
 }

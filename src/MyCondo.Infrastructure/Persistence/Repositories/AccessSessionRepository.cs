@@ -160,5 +160,14 @@ public sealed class AccessSessionRepository(MyCondoDbContext db) : IAccessSessio
         return new PagedResult<AccessSession>(items, page, pageSize, total);
     }
 
+    public async Task<IReadOnlyList<CurrentlyInsideCategoryCount>> GetCurrentlyInsideCountsByCategoryAsync(
+        Guid tenantId, CancellationToken cancellationToken) =>
+        await db.Set<AccessSession>()
+            .AsNoTracking()
+            .Where(s => s.TenantId == tenantId && s.Status == AccessSessionStatus.CheckedIn)
+            .GroupBy(s => s.AccessCategory)
+            .Select(g => new CurrentlyInsideCategoryCount(g.Key, g.Count()))
+            .ToListAsync(cancellationToken);
+
     public void Add(AccessSession accessSession) => db.Set<AccessSession>().Add(accessSession);
 }

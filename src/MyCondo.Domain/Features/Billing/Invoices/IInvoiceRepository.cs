@@ -36,6 +36,21 @@ public interface IInvoiceRepository
     /// <c>FOR UPDATE</c> query.</summary>
     Task<decimal> GetOutstandingBalanceForFlatAsync(Guid tenantId, FlatId flatId, CancellationToken cancellationToken);
 
+    /// <summary>Tenant-wide (optionally building-scoped) financial aggregate for reporting. TotalBilled
+    /// is computed over invoices with <c>InvoiceDate</c> in [fromDate, toDate], excluding Void. All other
+    /// fields are current-snapshot values as of <paramref name="asOfDate"/> — see
+    /// <see cref="InvoiceFinancialAggregate"/>.</summary>
+    Task<InvoiceFinancialAggregate> GetFinancialAggregateAsync(
+        Guid tenantId, BuildingId? buildingId, DateOnly fromDate, DateOnly toDate, DateOnly asOfDate,
+        CancellationToken cancellationToken);
+
+    /// <summary>All open (Issued/PartiallyPaid) invoices for ageing, as a minimal (DueDate, Balance)
+    /// projection — tenant/building/status filtering is SQL-pushed; bucketing by AsOfDate happens in
+    /// the caller, since the open-receivables population is inherently bounded (not the full invoice
+    /// history) and DateOnly day-difference arithmetic is not reliably translatable across EF providers.</summary>
+    Task<IReadOnlyList<AgeingReceivableLine>> GetOpenReceivablesAsync(
+        Guid tenantId, BuildingId? buildingId, CancellationToken cancellationToken);
+
     void Add(Invoice invoice);
 
     void AddLines(IEnumerable<InvoiceLine> lines);

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Payments.Payments;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Infrastructure.Persistence.Repositories;
@@ -60,6 +61,23 @@ public sealed class PaymentRepository(MyCondoDbContext db) : IPaymentRepository
             .ToListAsync(cancellationToken);
 
         return new PagedResult<Payment>(items, page, pageSize, total);
+    }
+
+    public async Task<decimal> GetTotalCollectedAsync(
+        Guid tenantId, BuildingId? buildingId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken)
+    {
+        IQueryable<Payment> query = db.Set<Payment>()
+            .AsNoTracking()
+            .Where(p => p.TenantId == tenantId && p.Status == PaymentStatus.Posted
+                && p.BusinessDate >= fromDate && p.BusinessDate <= toDate);
+
+        if (buildingId is not null)
+        {
+            BuildingId requiredBuildingId = buildingId.Value;
+            query = query.Where(p => db.Set<Flat>().Any(f => f.Id == p.FlatId && f.BuildingId == requiredBuildingId));
+        }
+
+        return await query.SumAsync(p => p.Amount, cancellationToken);
     }
 
     public void Add(Payment payment) => db.Set<Payment>().Add(payment);

@@ -40,5 +40,26 @@ public sealed class MeterRepository(MyCondoDbContext db) : IMeterRepository
         return new PagedResult<Meter>(items, page, pageSize, total);
     }
 
+    public async Task<IReadOnlyList<MeterStatusSummaryLine>> GetStatusSummaryAsync(
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, CancellationToken cancellationToken)
+    {
+        IQueryable<Meter> query = db.Set<Meter>().AsNoTracking().Where(m => m.TenantId == tenantId);
+
+        if (buildingId is not null)
+        {
+            query = query.Where(m => m.BuildingId == buildingId);
+        }
+
+        if (utilityType is not null)
+        {
+            query = query.Where(m => m.UtilityType == utilityType);
+        }
+
+        return await query
+            .GroupBy(m => new { m.UtilityType, m.Status })
+            .Select(g => new MeterStatusSummaryLine(g.Key.UtilityType, g.Key.Status, g.Count()))
+            .ToListAsync(cancellationToken);
+    }
+
     public void Add(Meter meter) => db.Set<Meter>().Add(meter);
 }

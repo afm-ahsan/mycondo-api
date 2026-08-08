@@ -43,5 +43,14 @@ public sealed class ParcelRepository(MyCondoDbContext db) : IParcelRepository
         return new PagedResult<Parcel>(items, page, pageSize, total);
     }
 
+    private static readonly ParcelStatus[] UnresolvedStatuses =
+        [ParcelStatus.Received, ParcelStatus.ResidentNotified, ParcelStatus.AwaitingCollection];
+
+    public Task<int> GetAwaitingCollectionCountAsync(Guid tenantId, CancellationToken cancellationToken) =>
+        db.Set<Parcel>()
+            .AsNoTracking()
+            .Where(p => p.TenantId == tenantId && UnresolvedStatuses.Contains(p.Status))
+            .CountAsync(cancellationToken);
+
     public void Add(Parcel parcel) => db.Set<Parcel>().Add(parcel);
 }

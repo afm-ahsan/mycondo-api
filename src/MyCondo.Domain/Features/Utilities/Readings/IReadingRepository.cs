@@ -1,5 +1,7 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
+using MyCondo.Domain.Features.Utilities.Common;
 using MyCondo.Domain.Features.Utilities.Meters;
 
 namespace MyCondo.Domain.Features.Utilities.Readings;
@@ -29,6 +31,18 @@ public interface IReadingRepository
 
     Task<IReadOnlyList<Reading>> GetConsumptionHistoryAsync(
         Guid tenantId, MeterId meterId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken);
+
+    /// <summary>SUM(ConsumptionUnits)/COUNT grouped by UtilityType, for authoritative (Finalized or
+    /// Billed) readings whose PeriodEnd falls in [fromDate, toDate].</summary>
+    Task<IReadOnlyList<ConsumptionSummaryLine>> GetConsumptionSummaryAsync(
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, DateOnly fromDate, DateOnly toDate,
+        CancellationToken cancellationToken);
+
+    /// <summary>Current-snapshot COUNT grouped by (UtilityType, Status), across every reading status —
+    /// this one is not restricted to Finalized/Billed, since its purpose is showing how much work is
+    /// sitting in each stage of the pipeline.</summary>
+    Task<IReadOnlyList<ReadingStatusSummaryLine>> GetStatusSummaryAsync(
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, CancellationToken cancellationToken);
 
     void Add(Reading reading);
 }
