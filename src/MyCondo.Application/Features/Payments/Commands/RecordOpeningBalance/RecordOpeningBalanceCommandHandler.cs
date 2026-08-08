@@ -57,6 +57,6 @@ public sealed class RecordOpeningBalanceCommandHandler(
             "Opening balance {Amount} posted for flat {FlatId}, tenant {TenantId}, posting {PostingId}",
             command.Amount, flatId, tenantId, posting.Id);
 
-        return entries.Select(e => e.ToDto()).ToList();
+        return entries.Select(e => e.ToDto(posting.ReferenceType, posting.ReferenceId)).ToList();
     }
 }

@@ -5,13 +5,27 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Payments.Ledger;
+using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
+using MyCondo.Domain.Features.Payments.Payments.Exceptions;
 
 namespace MyCondo.Application.Features.Payments.Commands.ReversePayment;
 
+/// <summary>
+/// Reverses a payment AND the effect of its FIFO allocations on the invoices they were applied
+/// to — the two must never drift apart (a reversed payment with invoices still showing as paid is a
+/// financial-integrity bug, not a cosmetic one). Wrapped in an explicit transaction because the
+/// invoice mutations and the reversing ledger posting must commit atomically, same reasoning as
+/// <c>RecordPaymentCommandHandler</c>'s own transaction. <see cref="Payment.Reverse"/> is called
+/// first so a double-reversal attempt (<see cref="PaymentAlreadyReversedException"/>) fails before
+/// any invoice is touched.
+/// </summary>
 public sealed class ReversePaymentCommandHandler(
     IPaymentRepository payments,
+    IPaymentAllocationRepository paymentAllocations,
+    IInvoiceRepository invoices,
     ILedgerPostingRepository ledgerPostings,
     ILedgerEntryRepository ledgerEntries,
     IUnitOfWork unitOfWork,
@@ -35,8 +49,27 @@ public sealed class ReversePaymentCommandHandler(
             throw new NotFoundException(nameof(Payment), command.PaymentId);
         }
 
+        await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+
         DateTimeOffset nowUtc = clock.UtcNow;
         payment.Reverse(command.Reason, currentUser.UserId, nowUtc);
+
+        IReadOnlyList<PaymentAllocation> allocations = await paymentAllocations.GetForPaymentAsync(id, cancellationToken);
+        List<(PaymentAllocation Allocation, string InvoiceNumber)> allocationsWithInvoiceNumbers = [];
+        foreach (PaymentAllocation allocation in allocations)
+        {
+            Invoice invoice = await invoices.GetByIdAsync(allocation.InvoiceId, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    $"Invoice {allocation.InvoiceId} referenced by allocation {allocation.Id} not found.");
+            if (invoice.TenantId != tenantId)
+            {
+                throw new InvalidOperationException(
+                    $"Invoice {allocation.InvoiceId} referenced by allocation {allocation.Id} belongs to a different tenant.");
+            }
+
+            invoice.ReverseAppliedPayment(allocation.AllocatedAmount);
+            allocationsWithInvoiceNumbers.Add((allocation, invoice.InvoiceNumber));
+        }
 
         string description = $"Reversal of payment {payment.Id}: {command.Reason}";
         LedgerLine[] lines =
@@ -53,11 +86,12 @@ public sealed class ReversePaymentCommandHandler(
         ledgerEntries.AddRange(entries);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
-            "Payment {PaymentId} reversed for tenant {TenantId}, reversal posting {PostingId}",
-            payment.Id, tenantId, posting.Id);
+            "Payment {PaymentId} reversed for tenant {TenantId}, {InvoiceCount} invoice(s) restored to outstanding, reversal posting {PostingId}",
+            payment.Id, tenantId, allocations.Count, posting.Id);
 
-        return payment.ToDto();
+        return payment.ToDto(allocationsWithInvoiceNumbers);
     }
 }

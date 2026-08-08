@@ -156,6 +156,34 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         Version++;
     }
 
+    /// <summary>Reverses part of a previously-applied FIFO allocation — called when the underlying
+    /// Payment is reversed. Symmetric with <see cref="ApplyPayment"/>: recomputes <see cref="Status"/>
+    /// from the new <see cref="AmountPaid"/>. The <see cref="Void"/> guard (<c>AmountPaid == 0</c>)
+    /// makes a voided invoice structurally unreachable here — it could never have had a payment
+    /// applied to it in the first place — so that check is defensive, not a reachable path today.
+    /// </summary>
+    public void ReverseAppliedPayment(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Reversed amount must be positive.");
+        }
+
+        if (amount > AmountPaid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Reversed amount cannot exceed the invoice's amount paid.");
+        }
+
+        if (Status == InvoiceStatus.Void)
+        {
+            throw new InvoiceAlreadyVoidException(Id);
+        }
+
+        AmountPaid -= amount;
+        Status = AmountPaid <= 0 ? InvoiceStatus.Issued : InvoiceStatus.PartiallyPaid;
+        Version++;
+    }
+
     /// <summary>Restricted to invoices with <c>AmountPaid == 0</c> — see
     /// <see cref="InvoiceCannotBeVoidedException"/>. <paramref name="voidLedgerPostingId"/> is the
     /// reversing posting the caller already created in the same transaction as this call.</summary>

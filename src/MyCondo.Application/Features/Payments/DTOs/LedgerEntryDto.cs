@@ -9,4 +9,6 @@ public sealed record LedgerEntryDto(
     decimal Amount,
     DateOnly BusinessDate,
     string Description,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    string? ReferenceType,
+    Guid? ReferenceId);

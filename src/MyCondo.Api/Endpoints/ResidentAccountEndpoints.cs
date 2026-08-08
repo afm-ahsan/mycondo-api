@@ -40,10 +40,13 @@ public static class ResidentAccountEndpoints
             .RequirePermission("residentaccount.view")
             .Produces<AccountBalanceDto>(StatusCodes.Status200OK);
 
-        accounts.MapGet("/{flatId:guid}/ledger-entries", async (Guid flatId, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        accounts.MapGet("/{flatId:guid}/ledger-entries", async (
+                Guid flatId, DateOnly? fromDate, DateOnly? toDate, string? referenceType, int page, int pageSize,
+                ISender sender, CancellationToken ct) =>
             {
                 PagedResult<LedgerEntryDto> result = await sender.Send(
-                    new GetLedgerEntriesForAccountQuery(flatId, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
+                    new GetLedgerEntriesForAccountQuery(
+                        flatId, fromDate, toDate, referenceType, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("payment.view")
