@@ -29,6 +29,12 @@ public interface IAccessSessionRepository
         int pageSize,
         CancellationToken cancellationToken);
 
+    /// <summary>COUNT of currently-inside (open, CheckedIn) sessions grouped by category — tenant-wide
+    /// only, since <see cref="AccessSession"/> has no BuildingId of its own (a single front gate serves
+    /// the whole property, not one per building).</summary>
+    Task<IReadOnlyList<CurrentlyInsideCategoryCount>> GetCurrentlyInsideCountsByCategoryAsync(
+        Guid tenantId, CancellationToken cancellationToken);
+
     Task<PagedResult<AccessSession>> SearchForGuestProfileAsync(
         Guid tenantId,
         GuestProfileId guestProfileId,

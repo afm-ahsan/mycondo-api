@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyCondo.Infrastructure.Persistence;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyCondo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(MyCondoDbContext))]
-    partial class MyCondoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260808062902_Seed_UtilityReport_Permission")]
+    partial class Seed_UtilityReport_Permission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2681,9 +2684,6 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "FlatId")
                         .HasDatabaseName("ix_payments_tenant_id_flat_id");
 
-                    b.HasIndex("TenantId", "Status", "BusinessDate")
-                        .HasDatabaseName("ix_payments_tenant_id_status_business_date");
-
                     b.ToTable("payments", "payments");
                 });
 
@@ -4577,9 +4577,6 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "MeterId", "Status")
                         .HasDatabaseName("ix_readings_tenant_id_meter_id_status");
-
-                    b.HasIndex("TenantId", "BuildingId", "UtilityType", "Status")
-                        .HasDatabaseName("ix_readings_tenant_id_building_id_utility_type_status");
 
                     b.HasIndex("TenantId", "MeterId", "PeriodStart", "PeriodEnd")
                         .IsUnique()

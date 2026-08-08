@@ -65,6 +65,11 @@ public sealed class ReadingConfiguration : IEntityTypeConfiguration<Reading>
         builder.HasIndex(x => new { x.TenantId, x.FlatId })
             .HasDatabaseName("ix_readings_tenant_id_flat_id");
 
+        // Supports UX-5's tenant/building/utilityType-wide consumption and reading-status aggregate
+        // reports — the prior indexes only covered the per-meter/per-flat lookup paths.
+        builder.HasIndex(x => new { x.TenantId, x.BuildingId, x.UtilityType, x.Status })
+            .HasDatabaseName("ix_readings_tenant_id_building_id_utility_type_status");
+
         // "One finalized reading per meter/period" — Corrected readings are excluded so a correction
         // can exist for the same (meter, period) as the reading it supersedes. Same partial-unique
         // pattern as AttendanceRecord's open-record index / MeterAssignment's open-assignment index.

@@ -93,6 +93,49 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
                 && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid))
             .SumAsync(i => i.TotalAmount - i.AmountPaid, cancellationToken);
 
+    public async Task<InvoiceFinancialAggregate> GetFinancialAggregateAsync(
+        Guid tenantId, BuildingId? buildingId, DateOnly fromDate, DateOnly toDate, DateOnly asOfDate,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<Invoice> scoped = db.Set<Invoice>().AsNoTracking().Where(i => i.TenantId == tenantId);
+
+        if (buildingId is not null)
+        {
+            scoped = scoped.Where(i => i.BuildingId == buildingId);
+        }
+
+        decimal totalBilled = await scoped
+            .Where(i => i.InvoiceDate >= fromDate && i.InvoiceDate <= toDate && i.Status != InvoiceStatus.Void)
+            .SumAsync(i => i.TotalAmount, cancellationToken);
+
+        IQueryable<Invoice> open = scoped.Where(i => i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid);
+
+        decimal totalOutstanding = await open.SumAsync(i => i.TotalAmount - i.AmountPaid, cancellationToken);
+        int unpaidCount = await scoped.CountAsync(i => i.Status == InvoiceStatus.Issued, cancellationToken);
+        int partiallyPaidCount = await scoped.CountAsync(i => i.Status == InvoiceStatus.PartiallyPaid, cancellationToken);
+        int overdueCount = await open.CountAsync(
+            i => i.DueDate < asOfDate && i.TotalAmount - i.AmountPaid > 0m, cancellationToken);
+
+        return new InvoiceFinancialAggregate(totalBilled, totalOutstanding, unpaidCount, partiallyPaidCount, overdueCount);
+    }
+
+    public async Task<IReadOnlyList<AgeingReceivableLine>> GetOpenReceivablesAsync(
+        Guid tenantId, BuildingId? buildingId, CancellationToken cancellationToken)
+    {
+        IQueryable<Invoice> query = db.Set<Invoice>()
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid));
+
+        if (buildingId is not null)
+        {
+            query = query.Where(i => i.BuildingId == buildingId);
+        }
+
+        return await query
+            .Select(i => new AgeingReceivableLine(i.DueDate, i.TotalAmount - i.AmountPaid))
+            .ToListAsync(cancellationToken);
+    }
+
     public void Add(Invoice invoice) => db.Set<Invoice>().Add(invoice);
 
     public void AddLines(IEnumerable<InvoiceLine> lines) => db.Set<InvoiceLine>().AddRange(lines);

@@ -40,6 +40,11 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasIndex(x => new { x.TenantId, x.FlatId })
             .HasDatabaseName("ix_payments_tenant_id_flat_id");
 
+        // Supports both SearchAsync's status/date-range filters and UX-5's GetTotalCollectedAsync
+        // aggregate — neither had a covering index before this.
+        builder.HasIndex(x => new { x.TenantId, x.Status, x.BusinessDate })
+            .HasDatabaseName("ix_payments_tenant_id_status_business_date");
+
         builder.HasIndex(x => x.LedgerPostingId)
             .IsUnique()
             .HasDatabaseName("ux_payments_ledger_posting_id");

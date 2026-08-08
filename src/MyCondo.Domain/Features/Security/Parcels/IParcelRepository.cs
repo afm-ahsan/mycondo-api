@@ -15,5 +15,9 @@ public interface IParcelRepository
         int pageSize,
         CancellationToken cancellationToken);
 
+    /// <summary>COUNT of parcels not yet resolved (Received, ResidentNotified, or AwaitingCollection —
+    /// i.e. not Collected/Returned/Rejected/Damaged/LostOrEscalated), tenant-wide.</summary>
+    Task<int> GetAwaitingCollectionCountAsync(Guid tenantId, CancellationToken cancellationToken);
+
     void Add(Parcel parcel);
 }
