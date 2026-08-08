@@ -6,6 +6,7 @@ using MyCondo.Application.Features.Amenities.Mappings;
 using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Amenities.Bookings;
 using MyCondo.Domain.Features.Amenities.Facilities;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Application.Features.Amenities.Queries.GetBookings;
@@ -25,9 +26,14 @@ public sealed class GetBookingsQueryHandler(
         FacilityId? facilityId = query.FacilityId is Guid rawFacilityId ? new FacilityId(rawFacilityId) : null;
         FlatId? flatId = query.FlatId is Guid rawFlatId ? new FlatId(rawFlatId) : null;
         BookingStatus? status = query.Status is null ? null : Enum.Parse<BookingStatus>(query.Status);
+        BuildingId? buildingId = query.BuildingId is Guid rawBuildingId ? new BuildingId(rawBuildingId) : null;
+        BookingPaymentStatus? paymentStatus = query.PaymentStatus is null
+            ? null
+            : Enum.Parse<BookingPaymentStatus>(query.PaymentStatus);
 
         PagedResult<Booking> result = await bookings.SearchAsync(
-            tenantId, facilityId, flatId, status, query.Page, query.PageSize, cancellationToken);
+            tenantId, facilityId, flatId, status, buildingId, query.EventType, paymentStatus, query.FromDate,
+            query.ToDate, query.Page, query.PageSize, cancellationToken);
 
         List<BookingDto> items = result.Items.Select(b => b.ToDto()).ToList();
 

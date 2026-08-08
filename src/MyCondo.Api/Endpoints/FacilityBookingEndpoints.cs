@@ -32,10 +32,16 @@ public static class FacilityBookingEndpoints
             .RequirePermission("facility.booking.create")
             .Produces<BookingDto>(StatusCodes.Status200OK);
 
-        bookings.MapGet("/", async (Guid? facilityId, Guid? flatId, string? status, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        bookings.MapGet("/", async (
+                Guid? facilityId, Guid? flatId, string? status, Guid? buildingId, string? eventType,
+                string? paymentStatus, DateTimeOffset? fromDate, DateTimeOffset? toDate, int page, int pageSize,
+                ISender sender, CancellationToken ct) =>
             {
                 PagedResult<BookingDto> result = await sender.Send(
-                    new GetBookingsQuery(facilityId, flatId, status, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
+                    new GetBookingsQuery(
+                        facilityId, flatId, status, buildingId, eventType, paymentStatus, fromDate, toDate,
+                        page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize),
+                    ct);
                 return Results.Ok(result);
             })
             .RequirePermission("facility.booking.view")
