@@ -110,6 +110,30 @@ public class BookingTests
     }
 
     [Fact]
+    public void Approve_Throws_When_Already_Approved()
+    {
+        Booking booking = RequestBooking(approvalRequired: true);
+        booking.Submit(Now);
+        booking.Approve(Guid.NewGuid(), Now);
+
+        Action act = () => booking.Approve(Guid.NewGuid(), Now);
+
+        act.Should().Throw<BookingInvalidTransitionException>();
+    }
+
+    [Fact]
+    public void Reject_Throws_When_Already_Rejected()
+    {
+        Booking booking = RequestBooking(approvalRequired: true);
+        booking.Submit(Now);
+        booking.Reject("First reason", Guid.NewGuid(), Now);
+
+        Action act = () => booking.Reject("Second attempt", Guid.NewGuid(), Now);
+
+        act.Should().Throw<BookingInvalidTransitionException>();
+    }
+
+    [Fact]
     public void ConfirmPayment_Transitions_AwaitingPayment_To_Confirmed_And_Stores_References()
     {
         Booking booking = RequestBooking(approvalRequired: false);
@@ -152,6 +176,17 @@ public class BookingTests
         Booking booking = ConfirmedBooking();
 
         Action act = () => booking.Inspect(Guid.NewGuid(), null, null, null, null, null, Now);
+
+        act.Should().Throw<BookingInvalidTransitionException>();
+    }
+
+    [Fact]
+    public void CheckIn_Throws_When_Not_Confirmed()
+    {
+        Booking booking = RequestBooking(approvalRequired: true);
+        booking.Submit(Now);
+
+        Action act = () => booking.CheckIn(Guid.NewGuid(), Now);
 
         act.Should().Throw<BookingInvalidTransitionException>();
     }

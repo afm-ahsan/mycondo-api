@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MyCondo.Api.IntegrationTests;
 
@@ -124,14 +126,21 @@ public class RoleEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
     }
 
     [Fact]
-    public async Task OpenApi_Document_Includes_Role_Routes()
+    public void Role_And_Permission_Routes_Are_Registered()
     {
-        using HttpClient client = _factory.CreateClient();
+        // Was previously asserted by fetching /openapi/v1.json over HTTP, but that endpoint is now
+        // Development-only (see HealthCheckTests) and this factory boots under "Testing" — inspect
+        // the registered EndpointDataSource directly instead (see AuthEndpointsTests for the same
+        // pattern).
+        using IServiceScope scope = _factory.Services.CreateScope();
+        EndpointDataSource endpoints = scope.ServiceProvider.GetRequiredService<EndpointDataSource>();
 
-        HttpResponseMessage response = await client.GetAsync("/openapi/v1.json");
-        string document = await response.Content.ReadAsStringAsync();
+        List<string> routePatterns = endpoints.Endpoints
+            .OfType<RouteEndpoint>()
+            .Select(e => e.RoutePattern.RawText ?? string.Empty)
+            .ToList();
 
-        document.Should().Contain("/api/v1/roles");
-        document.Should().Contain("/api/v1/permissions");
+        routePatterns.Should().Contain("/api/v1/roles/");
+        routePatterns.Should().Contain("/api/v1/permissions");
     }
 }

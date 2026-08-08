@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MyCondo.Api.IntegrationTests;
 
@@ -78,15 +80,22 @@ public class AuthEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
     }
 
     [Fact]
-    public async Task OpenApi_Document_Includes_New_Routes()
+    public void Auth_And_Tenant_Routes_Are_Registered()
     {
-        using HttpClient client = _factory.CreateClient();
+        // Was previously asserted by fetching /openapi/v1.json over HTTP, but that endpoint is now
+        // Development-only (see HealthCheckTests) and this factory boots under "Testing" — inspect
+        // the registered EndpointDataSource directly instead, which is environment-independent and
+        // exercises the same "did the endpoint mapping actually run" concern.
+        using IServiceScope scope = _factory.Services.CreateScope();
+        EndpointDataSource endpoints = scope.ServiceProvider.GetRequiredService<EndpointDataSource>();
 
-        HttpResponseMessage response = await client.GetAsync("/openapi/v1.json");
-        string document = await response.Content.ReadAsStringAsync();
+        List<string> routePatterns = endpoints.Endpoints
+            .OfType<RouteEndpoint>()
+            .Select(e => e.RoutePattern.RawText ?? string.Empty)
+            .ToList();
 
-        document.Should().Contain("/api/v1/auth/login");
-        document.Should().Contain("/api/v1/auth/register");
-        document.Should().Contain("/api/v1/tenants");
+        routePatterns.Should().Contain("/api/v1/auth/login");
+        routePatterns.Should().Contain("/api/v1/auth/register");
+        routePatterns.Should().Contain("/api/v1/tenants/");
     }
 }
