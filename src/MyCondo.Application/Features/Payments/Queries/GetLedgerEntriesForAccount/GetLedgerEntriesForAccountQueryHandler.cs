@@ -23,8 +23,8 @@ public sealed class GetLedgerEntriesForAccountQueryHandler(
         }
 
         FlatId flatId = new(query.FlatId);
-        PagedResult<LedgerEntry> result = await ledgerEntries.SearchForFlatAsync(
-            tenantId, flatId, query.Page, query.PageSize, cancellationToken);
+        PagedResult<LedgerEntryWithReference> result = await ledgerEntries.SearchForFlatAsync(
+            tenantId, flatId, query.FromDate, query.ToDate, query.ReferenceType, query.Page, query.PageSize, cancellationToken);
 
         List<LedgerEntryDto> items = result.Items.Select(e => e.ToDto()).ToList();
 

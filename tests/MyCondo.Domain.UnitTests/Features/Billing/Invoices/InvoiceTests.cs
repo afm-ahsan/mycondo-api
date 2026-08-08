@@ -148,4 +148,52 @@ public class InvoiceTests
 
         act.Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void ReverseAppliedPayment_Full_Restores_Issued_Status()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(1000m));
+        invoice.ApplyPayment(1000m);
+
+        invoice.ReverseAppliedPayment(1000m);
+
+        invoice.AmountPaid.Should().Be(0m);
+        invoice.Balance.Should().Be(1000m);
+        invoice.Status.Should().Be(InvoiceStatus.Issued);
+    }
+
+    [Fact]
+    public void ReverseAppliedPayment_Partial_Leaves_PartiallyPaid_Status()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(1000m));
+        invoice.ApplyPayment(400m);
+        invoice.ApplyPayment(600m); // now Paid
+
+        invoice.ReverseAppliedPayment(600m); // undo only the second payment's allocation
+
+        invoice.AmountPaid.Should().Be(400m);
+        invoice.Status.Should().Be(InvoiceStatus.PartiallyPaid);
+    }
+
+    [Fact]
+    public void ReverseAppliedPayment_Throws_When_Amount_Exceeds_AmountPaid()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(1000m));
+        invoice.ApplyPayment(400m);
+
+        Action act = () => invoice.ReverseAppliedPayment(400.01m);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void ReverseAppliedPayment_Throws_When_Amount_Not_Positive()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(1000m));
+        invoice.ApplyPayment(400m);
+
+        Action act = () => invoice.ReverseAppliedPayment(0m);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
 }

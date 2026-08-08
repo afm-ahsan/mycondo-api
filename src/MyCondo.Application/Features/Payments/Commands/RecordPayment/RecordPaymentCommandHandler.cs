@@ -76,7 +76,7 @@ public sealed class RecordPaymentCommandHandler(
             currentUser.UserId, posting.Id, nowUtc);
         payments.Add(payment);
 
-        IReadOnlyList<PaymentAllocation> allocations = await AllocateFifoAsync(
+        IReadOnlyList<(PaymentAllocation Allocation, string InvoiceNumber)> allocations = await AllocateFifoAsync(
             tenantId, flatId, payment, command.Amount, nowUtc, cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -89,12 +89,12 @@ public sealed class RecordPaymentCommandHandler(
         return payment.ToDto(allocations);
     }
 
-    private async Task<IReadOnlyList<PaymentAllocation>> AllocateFifoAsync(
+    private async Task<IReadOnlyList<(PaymentAllocation Allocation, string InvoiceNumber)>> AllocateFifoAsync(
         Guid tenantId, FlatId flatId, Payment payment, decimal paymentAmount, DateTimeOffset nowUtc, CancellationToken cancellationToken)
     {
         IReadOnlyList<Invoice> outstanding = await invoices.GetOutstandingForFlatForUpdateAsync(tenantId, flatId, cancellationToken);
 
-        List<PaymentAllocation> allocations = [];
+        List<(PaymentAllocation Allocation, string InvoiceNumber)> allocations = [];
         decimal remaining = paymentAmount;
 
         foreach (Invoice invoice in outstanding)
@@ -114,12 +114,12 @@ public sealed class RecordPaymentCommandHandler(
             invoice.ApplyPayment(allocatedAmount);
 
             PaymentAllocation allocation = PaymentAllocation.Allocate(tenantId, payment.Id, invoice.Id, flatId, allocatedAmount, nowUtc);
-            allocations.Add(allocation);
+            allocations.Add((allocation, invoice.InvoiceNumber));
 
             remaining -= allocatedAmount;
         }
 
-        paymentAllocations.AddRange(allocations);
+        paymentAllocations.AddRange(allocations.Select(a => a.Allocation));
 
         return allocations;
     }

@@ -6,6 +6,9 @@ namespace MyCondo.Application.Features.Payments.Queries.GetLedgerEntriesForAccou
 
 public sealed record GetLedgerEntriesForAccountQuery(
     Guid FlatId,
+    DateOnly? FromDate,
+    DateOnly? ToDate,
+    string? ReferenceType,
     int Page,
     int PageSize
 ) : IRequest<PagedResult<LedgerEntryDto>>;
