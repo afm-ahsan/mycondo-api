@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Amenities.Bookings;
 using MyCondo.Domain.Features.Amenities.Facilities;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Infrastructure.Persistence.Repositories;
@@ -12,8 +13,9 @@ public sealed class BookingRepository(MyCondoDbContext db) : IBookingRepository
         db.Set<Booking>().FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
     public async Task<PagedResult<Booking>> SearchAsync(
-        Guid tenantId, FacilityId? facilityId, FlatId? flatId, BookingStatus? status, int page, int pageSize,
-        CancellationToken cancellationToken)
+        Guid tenantId, FacilityId? facilityId, FlatId? flatId, BookingStatus? status, BuildingId? buildingId,
+        string? eventType, BookingPaymentStatus? paymentStatus, DateTimeOffset? fromDate, DateTimeOffset? toDate,
+        int page, int pageSize, CancellationToken cancellationToken)
     {
         IQueryable<Booking> query = db.Set<Booking>()
             .AsNoTracking()
@@ -32,6 +34,39 @@ public sealed class BookingRepository(MyCondoDbContext db) : IBookingRepository
         if (status is not null)
         {
             query = query.Where(b => b.Status == status);
+        }
+
+        if (buildingId is not null)
+        {
+            query = query.Where(b => b.BuildingId == buildingId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(eventType))
+        {
+            query = query.Where(b => EF.Functions.ILike(b.EventType, $"%{eventType}%"));
+        }
+
+        if (paymentStatus is not null)
+        {
+            query = paymentStatus switch
+            {
+                BookingPaymentStatus.NotRequired => query.Where(b => !b.PaymentRequired),
+                BookingPaymentStatus.Paid => query.Where(b =>
+                    b.PaymentRequired && (b.InvoiceId != null || b.DepositCollectionPostingId != null)),
+                BookingPaymentStatus.AwaitingPayment => query.Where(b =>
+                    b.PaymentRequired && b.InvoiceId == null && b.DepositCollectionPostingId == null),
+                _ => query,
+            };
+        }
+
+        if (fromDate is not null)
+        {
+            query = query.Where(b => b.StartAtUtc >= fromDate);
+        }
+
+        if (toDate is not null)
+        {
+            query = query.Where(b => b.StartAtUtc < toDate);
         }
 
         long total = await query.LongCountAsync(cancellationToken);

@@ -8,6 +8,11 @@ public sealed record GetBookingsQuery(
     Guid? FacilityId,
     Guid? FlatId,
     string? Status,
+    Guid? BuildingId,
+    string? EventType,
+    string? PaymentStatus,
+    DateTimeOffset? FromDate,
+    DateTimeOffset? ToDate,
     int Page,
     int PageSize
 ) : IRequest<PagedResult<BookingDto>>;
