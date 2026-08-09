@@ -8,6 +8,7 @@ using MyCondo.Application.Features.Auth.DTOs;
 using MyCondo.Application.Features.Roles.Queries.GetPermissionCatalogue;
 using MyCondo.Application.Features.Roles.Queries.GetRolesForTenant;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Tenancy;
@@ -17,7 +18,7 @@ namespace MyCondo.Api.IntegrationTests;
 
 /// <summary>
 /// Round-trip tests against a real, ephemeral PostgreSQL container (see PostgresApiFactory), proving
-/// the SuperAdmin bootstrap (RegisterUserCommandHandler) and the permission catalogue end-to-end.
+/// the OrganizationAdmin bootstrap (RegisterUserCommandHandler) and the permission catalogue end-to-end.
 /// These need a Docker daemon and were NOT executed in the environment they were authored in — see
 /// PostgresApiFactory's doc comment. Run wherever Docker is available before trusting them.
 /// </summary>
@@ -65,9 +66,9 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
     }
 
     [Fact]
-    public async Task First_User_Of_Tenant_Is_Bootstrapped_As_SuperAdmin()
+    public async Task First_User_Of_Tenant_Is_Bootstrapped_As_OrganizationAdmin()
     {
-        Guid tenantId = await SeedActiveTenantAsync("superadmin-bootstrap");
+        Guid tenantId = await SeedActiveTenantAsync("orgadmin-bootstrap");
         using HttpClient client = _factory.CreateClient();
 
         AuthTokensDto tokens = await RegisterAsync(client, tenantId, "first-user@example.com");
@@ -78,7 +79,8 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         List<RoleSummaryDto>? roles = await response.Content.ReadFromJsonAsync<List<RoleSummaryDto>>(JsonOptions);
-        roles.Should().ContainSingle(r => r.Name == "SuperAdmin" && r.IsSystem);
+        roles.Should().ContainSingle(r =>
+            r.Name == "OrganizationAdmin" && r.IsSystem && r.Code == "organization.admin" && r.RequiresBuildingScope == false);
     }
 
     [Fact]
@@ -116,8 +118,15 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
     }
 
     [Fact]
-    public async Task Get_Permissions_Returns_Full_Seeded_Catalogue()
+    public async Task Tenant_Permission_Catalogue_Excludes_Platform_Permissions()
     {
+        // Formerly "Get_Permissions_Returns_Full_Seeded_Catalogue", asserting a hardcoded count (99)
+        // that was already stale before Phase 2 (the real non-platform count had grown to 132 across
+        // several later slices) and, since Phase 2, is architecturally the wrong thing to assert at
+        // all: GetPermissionCatalogueQueryHandler now deliberately filters platform.* out of this
+        // endpoint's response (mycondo-docs ADR-020) — a fixed magic number can never distinguish
+        // "the catalogue grew" from "the platform.* exclusion broke," so this test now asserts the
+        // actual invariant Phase 2 introduced instead of an incidental count.
         Guid tenantId = await SeedActiveTenantAsync("permission-catalogue");
         using HttpClient client = _factory.CreateClient();
 
@@ -129,18 +138,24 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         List<PermissionDto>? permissions = await response.Content.ReadFromJsonAsync<List<PermissionDto>>(JsonOptions);
-        // 47 in the original catalogue + 13 (security) + 19 (domestic worker/service provider/staff
-        // attendance/seba visitor) + 7 (parcel) + 2 (payments — payment.view/record/reverse already
-        // existed in the original catalogue, so only residentaccount.view/manage are new) + 3
-        // (billing — billing.rule.view/manage already existed in the original catalogue, so only
-        // billing.invoice.view/generate/void are new) + 8 (utility) = 99. The original catalogue
-        // overlap was a genuine duplicate-seed bug, only caught once migrations were first run
-        // against a real Postgres instance — see Seed_Payments_Permissions/Seed_Billing_Permissions.
-        permissions.Should().HaveCount(99);
+
+        permissions.Should().NotBeNullOrEmpty();
+        permissions!.Should().OnlyContain(p => p.Module != "platform", "tenant RBAC must never receive or expose platform.* permissions");
+        permissions.Select(p => p.Name).Should().OnlyHaveUniqueItems();
+
+        // Representative permissions across several long-standing tenant modules remain present —
+        // proves the exclusion filter is scoped to "platform" specifically, not an over-broad filter
+        // that accidentally also dropped real tenant permissions.
         permissions.Should().Contain(p => p.Name == "role.manage");
         permissions.Should().Contain(p => p.Name == "permission.view");
         permissions.Should().Contain(p => p.Name == "billing.invoice.generate");
         permissions.Should().Contain(p => p.Name == "utility.reading.correct");
+
+        // The endpoint's result must equal the database's actual non-platform catalogue exactly — not
+        // a hardcoded number, so this never goes stale as the catalogue grows in later slices.
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
+        int expectedNonPlatformCount = await db.Set<Permission>().CountAsync(p => p.Module != "platform");
+        permissions.Should().HaveCount(expectedNonPlatformCount);
     }
 
     private static async Task<HttpResponseMessage> SendAuthedAsync(
@@ -261,11 +276,33 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
         List<RoleSummaryDto>? roleList = await listResponse.Content.ReadFromJsonAsync<List<RoleSummaryDto>>(JsonOptions);
 
         roleList.Should().NotBeNull();
+        // OrganizationAdmin (Phase 2, mycondo-docs ADR-020) + the 7 ROLE_CATALOGUE_PROPOSAL.md custom
+        // roles + the 5 Phase-2 condominium-scoped system roles.
         roleList!.Select(r => r.Name).Should().BeEquivalentTo(
         [
-            "SuperAdmin", "BuildingAdmin", "Treasurer", "Secretary", "SecurityHead", "Owner", "Renter", "Auditor",
+            "OrganizationAdmin", "BuildingAdmin", "Treasurer", "Secretary", "SecurityHead", "Owner", "Renter", "Auditor",
+            "CondoAdmin", "Manager", "Accountant", "SecurityOfficer", "FacilityManager",
         ]);
-        roleList.Should().OnlyContain(r => r.Name == "SuperAdmin" || !r.IsSystem);
+        roleList.Should().OnlyContain(r =>
+            r.Name == "OrganizationAdmin" || r.Name == "CondoAdmin" || r.Name == "Manager"
+            || r.Name == "Accountant" || r.Name == "SecurityOfficer" || r.Name == "FacilityManager"
+            || !r.IsSystem);
+
+        RoleSummaryDto organizationAdmin = roleList.Single(r => r.Name == "OrganizationAdmin");
+        organizationAdmin.RequiresBuildingScope.Should().BeFalse();
+        organizationAdmin.Code.Should().Be("organization.admin");
+
+        foreach ((string name, string code) in new[]
+        {
+            ("CondoAdmin", "condominium.admin"), ("Manager", "condominium.manager"),
+            ("Accountant", "condominium.accountant"), ("SecurityOfficer", "condominium.security"),
+            ("FacilityManager", "condominium.facility-manager"),
+        })
+        {
+            RoleSummaryDto condoRole = roleList.Single(r => r.Name == name);
+            condoRole.RequiresBuildingScope.Should().BeTrue();
+            condoRole.Code.Should().Be(code);
+        }
 
         await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
 
@@ -278,6 +315,20 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
         (await GrantCountAsync("SecurityHead")).Should().Be(1);
         (await GrantCountAsync("Treasurer")).Should().Be(11);
         (await GrantCountAsync("Auditor")).Should().Be(18);
+        (await GrantCountAsync("CondoAdmin")).Should().Be(27);
+        (await GrantCountAsync("Manager")).Should().Be(9);
+        (await GrantCountAsync("Accountant")).Should().Be(8);
+        (await GrantCountAsync("SecurityOfficer")).Should().Be(19);
+        (await GrantCountAsync("FacilityManager")).Should().Be(19);
+
+        // OrganizationAdmin gets the entire tenant-usable catalogue — never a hardcoded number, since
+        // it must always equal whatever /api/v1/permissions actually returns (platform.* excluded).
+        HttpResponseMessage catalogueResponse = await SendAuthedAsync(
+            client, HttpMethod.Get, "/api/v1/permissions", tokens.AccessToken);
+        List<PermissionDto>? catalogue = await catalogueResponse.Content.ReadFromJsonAsync<List<PermissionDto>>(JsonOptions);
+        catalogue.Should().NotBeNull();
+        catalogue!.Should().OnlyContain(p => p.Module != "platform");
+        (await GrantCountAsync("OrganizationAdmin")).Should().Be(catalogue.Count);
     }
 
     private static Guid ParseUserIdFromAccessToken(string accessToken)

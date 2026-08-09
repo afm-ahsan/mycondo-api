@@ -12,8 +12,9 @@ namespace MyCondo.Application.Features.Auth.Commands.Register;
 public sealed class RegisterUserCommandHandler(
     IUserRepository users,
     ITenantRepository tenants,
-    ISuperAdminBootstrapper superAdminBootstrapper,
+    IOrganizationAdminBootstrapper organizationAdminBootstrapper,
     IDefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder,
+    ICondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -60,15 +61,19 @@ public sealed class RegisterUserCommandHandler(
 
         if (isFirstUserOfTenant)
         {
-            // The first user to register for a tenant becomes its SuperAdmin — granted every
+            // The first user to register for a tenant becomes its OrganizationAdmin (mycondo-docs
+            // ADR-020, Phase 2 — supersedes the legacy tenant SuperAdmin for newly bootstrapped tenants
+            // only; existing tenants' SuperAdmin assignments are untouched) — granted every non-Platform
             // catalogue permission, so they can bootstrap further roles/users themselves. Runs before
             // SaveChangesAsync so the issued JWT's `perm` claims (built in
             // userContextResolver.ResolveAsync below) immediately reflect the grant.
-            await superAdminBootstrapper.BootstrapAsync(command.TenantId, user, nowUtc, cancellationToken);
+            await organizationAdminBootstrapper.BootstrapAsync(command.TenantId, user, nowUtc, cancellationToken);
 
-            // Also seed the tenant's default custom roles (ROLE_CATALOGUE_PROPOSAL.md) so the new
-            // SuperAdmin has something sensible to hand out immediately — nobody is auto-assigned.
+            // Also seed the tenant's default custom roles (ROLE_CATALOGUE_PROPOSAL.md) and the five
+            // condominium-scoped system roles (Phase 2) so the new OrganizationAdmin has something
+            // sensible to hand out immediately — nobody is auto-assigned to either set.
             await defaultRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
+            await condominiumRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

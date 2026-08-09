@@ -15,7 +15,7 @@ namespace MyCondo.Api.IntegrationTests;
 /// <c>PermissionEndpointFilter</c> on the endpoints that declare them — not just present in the
 /// seeded catalogue. Mirrors <see cref="RoleEndpointsDbTests"/>'s
 /// <c>Second_User_Of_Tenant_Is_Not_Bootstrapped_And_Cannot_View_Roles</c> pattern: only a tenant's
-/// first registered user is bootstrapped as SuperAdmin (see <c>ISuperAdminBootstrapper</c>), so a
+/// first registered user is bootstrapped as OrganizationAdmin (see <c>IOrganizationAdminBootstrapper</c>), so a
 /// second registered user in the same tenant holds no permissions at all and is the standard way to
 /// prove a permission-gated endpoint actually rejects an unauthorized caller.
 ///

@@ -16,5 +16,11 @@ public sealed class JwtClaims(JsonWebToken token)
 
     public string? GetClaimValue(string type) => token.TryGetClaim(type, out System.Security.Claims.Claim claim) ? claim.Value : null;
 
+    /// <summary>Every value of a claim type that can appear more than once in the same token — e.g.
+    /// "perm"/"bperm"/"building_ids" (see JwtTokenService.WriteAccessToken), where each grant is its
+    /// own repeated claim, not a single delimited/array value.</summary>
+    public List<string> GetClaimValues(string type) =>
+        token.Claims.Where(c => c.Type == type).Select(c => c.Value).ToList();
+
     public string GetAudience() => token.Audiences.Single();
 }

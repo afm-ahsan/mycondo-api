@@ -15,6 +15,13 @@ public sealed class GetRolePermissionsQueryHandler(
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetRolePermissionsQuery, List<PermissionDto>>
 {
+    // Same constant/comment as GetPermissionCatalogueQueryHandler and
+    // GrantPermissionToRoleCommandHandler. GrantPermissionToRoleCommandHandler already refuses to ever
+    // attach a platform.* permission to a tenant role, so grantedIds below should never legitimately
+    // contain one — this filter is defense-in-depth, not the primary control, in case some other write
+    // path (a future bug, a raw DB insert) ever bypasses that check.
+    private const string PlatformPermissionModule = "platform";
+
     public async ValueTask<List<PermissionDto>> Handle(GetRolePermissionsQuery query, CancellationToken cancellationToken)
     {
         if (currentUser.TenantId is not Guid tenantId)
@@ -37,7 +44,7 @@ public sealed class GetRolePermissionsQueryHandler(
         List<Permission> catalogue = await permissions.GetAllAsync(cancellationToken);
 
         return catalogue
-            .Where(p => grantedIds.Contains(p.Id))
+            .Where(p => grantedIds.Contains(p.Id) && !string.Equals(p.Module, PlatformPermissionModule, StringComparison.Ordinal))
             .Select(p => new PermissionDto(p.Id.Value, p.Name, p.Description, p.Module, p.IsBuildingScopable))
             .ToList();
     }

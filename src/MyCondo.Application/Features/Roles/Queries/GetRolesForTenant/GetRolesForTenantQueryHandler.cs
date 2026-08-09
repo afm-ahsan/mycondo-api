@@ -20,7 +20,7 @@ public sealed class GetRolesForTenantQueryHandler(
         List<Role> tenantRoles = await roles.GetAllForTenantAsync(tenantId, cancellationToken);
 
         return tenantRoles
-            .Select(r => new RoleSummaryDto(r.Id.Value, r.Name, r.Description, r.IsSystem))
+            .Select(r => new RoleSummaryDto(r.Id.Value, r.Name, r.Description, r.IsSystem, r.Code, r.RequiresBuildingScope))
             .ToList();
     }
 }

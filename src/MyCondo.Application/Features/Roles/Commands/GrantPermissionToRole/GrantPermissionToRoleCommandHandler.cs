@@ -19,6 +19,12 @@ public sealed class GrantPermissionToRoleCommandHandler(
     ILogger<GrantPermissionToRoleCommandHandler> logger
 ) : IRequestHandler<GrantPermissionToRoleCommand>
 {
+    // Lowercase, matching every other permission Module value in the catalog — see
+    // Seed_Permission_Catalogue.cs. Platform-scope permissions are never grantable to a tenant Role
+    // (mycondo-docs ADR-019/ADR-020): they're a defense-in-depth boundary, not just a UI filter, since
+    // Platform endpoints are gated by a completely separate JWT scheme/audience regardless.
+    private const string PlatformPermissionModule = "platform";
+
     public async ValueTask<Unit> Handle(GrantPermissionToRoleCommand command, CancellationToken cancellationToken)
     {
         if (currentUser.TenantId is not Guid tenantId)
@@ -38,6 +44,11 @@ public sealed class GrantPermissionToRoleCommandHandler(
         PermissionId permissionId = new(command.PermissionId);
         Permission permission = await permissions.GetByIdAsync(permissionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Permission), command.PermissionId);
+
+        if (string.Equals(permission.Module, PlatformPermissionModule, StringComparison.Ordinal))
+        {
+            throw new ForbiddenException("Platform-scope permissions cannot be granted to a tenant role.");
+        }
 
         bool alreadyGranted = await rolePermissions.ExistsAsync(roleId, permissionId, cancellationToken);
         if (alreadyGranted)

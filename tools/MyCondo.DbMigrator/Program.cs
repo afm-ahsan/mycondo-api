@@ -111,11 +111,14 @@ public static class Program
         IUserRepository users = sp.GetRequiredService<IUserRepository>();
         users.Add(admin);
 
-        ISuperAdminBootstrapper bootstrapper = sp.GetRequiredService<ISuperAdminBootstrapper>();
+        IOrganizationAdminBootstrapper bootstrapper = sp.GetRequiredService<IOrganizationAdminBootstrapper>();
         await bootstrapper.BootstrapAsync(tenant.Id.Value, admin, nowUtc, CancellationToken.None);
 
         IDefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder = sp.GetRequiredService<IDefaultRoleCatalogueSeeder>();
         await defaultRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, CancellationToken.None);
+
+        ICondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder = sp.GetRequiredService<ICondominiumRoleCatalogueSeeder>();
+        await condominiumRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, CancellationToken.None);
 
         IUnitOfWork unitOfWork = sp.GetRequiredService<IUnitOfWork>();
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
@@ -234,7 +237,7 @@ public static class Program
     {
         Console.Error.WriteLine(
             """
-            MyCondo.DbMigrator bootstrap — creates the first tenant and its SuperAdmin.
+            MyCondo.DbMigrator bootstrap — creates the first tenant and its OrganizationAdmin.
             Refuses (idempotent no-op) if any tenant already exists anywhere.
 
             Usage:
