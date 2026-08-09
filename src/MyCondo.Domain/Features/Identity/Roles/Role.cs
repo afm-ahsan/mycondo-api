@@ -124,6 +124,26 @@ public sealed class Role : AggregateRoot<RoleId>, IAuditable, ISoftDeletable, IT
     }
 
     /// <summary>
+    /// Assigns a <see cref="Code"/> to a legacy role that predates the Code column (created before
+    /// mycondo-docs ADR-020 introduced natural-key reconciliation — see <c>DefaultRoleCatalogueSeeder</c>).
+    /// Used only by catalogue-reconciliation seeders to heal an old code-less row that matches a
+    /// catalogue entry by <see cref="Name"/>, instead of attempting to create a second role with the
+    /// same name and failing on the <c>(tenant_id, name)</c> unique constraint. Not a general-purpose
+    /// setter — a role that already has a Code never needs, and cannot have, it reassigned.
+    /// </summary>
+    public void BackfillCode(string code)
+    {
+        if (Code is not null)
+        {
+            throw new InvalidOperationException(
+                $"Role '{Name}' already has Code '{Code}' — BackfillCode is only for legacy rows with no Code.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        Code = code.Trim();
+    }
+
+    /// <summary>
     /// Soft-deletes the role (picked up by <c>RoleConfiguration</c>'s <c>DeletedAtUtc == null</c>
     /// query filter, same convention as every other <see cref="ISoftDeletable"/> entity). System
     /// roles — legacy tenant <c>SuperAdmin</c>, and since Phase 2, <c>OrganizationAdmin</c> and the
