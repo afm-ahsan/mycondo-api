@@ -12,6 +12,8 @@ public sealed class GetFlatOwnershipsForFlatQueryHandler(
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetFlatOwnershipsForFlatQuery, List<FlatOwnershipDto>>
 {
+    private const string OwnershipManagePermission = "ownership.manage";
+
     public async ValueTask<List<FlatOwnershipDto>> Handle(GetFlatOwnershipsForFlatQuery query, CancellationToken cancellationToken)
     {
         if (currentUser.TenantId is not Guid tenantId)
@@ -26,6 +28,11 @@ public sealed class GetFlatOwnershipsForFlatQueryHandler(
         if (flat.TenantId != tenantId)
         {
             throw new NotFoundException(nameof(Flat), query.FlatId);
+        }
+
+        if (!currentUser.HasPermissionForBuilding(OwnershipManagePermission, flat.BuildingId.Value))
+        {
+            throw new ForbiddenException("You do not have permission to manage ownership for this Building.");
         }
 
         List<FlatOwnership> ownerships = await flatOwnerships.GetForFlatAsync(tenantId, flatId, cancellationToken);

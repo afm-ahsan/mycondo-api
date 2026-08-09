@@ -19,6 +19,8 @@ public sealed class CreateFlatOwnershipCommandHandler(
     ILogger<CreateFlatOwnershipCommandHandler> logger
 ) : IRequestHandler<CreateFlatOwnershipCommand, CreateFlatOwnershipResult>
 {
+    private const string OwnershipManagePermission = "ownership.manage";
+
     public async ValueTask<CreateFlatOwnershipResult> Handle(CreateFlatOwnershipCommand command, CancellationToken cancellationToken)
     {
         if (currentUser.TenantId is not Guid tenantId)
@@ -33,6 +35,11 @@ public sealed class CreateFlatOwnershipCommandHandler(
         if (flat.TenantId != tenantId)
         {
             throw new NotFoundException(nameof(Flat), command.FlatId);
+        }
+
+        if (!currentUser.HasPermissionForBuilding(OwnershipManagePermission, flat.BuildingId.Value))
+        {
+            throw new ForbiddenException("You do not have permission to manage ownership for this Building.");
         }
 
         UserId userId = new(command.UserId);
