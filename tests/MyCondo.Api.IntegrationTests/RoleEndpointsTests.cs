@@ -8,7 +8,7 @@ namespace MyCondo.Api.IntegrationTests;
 
 /// <summary>
 /// Covers request paths that never reach the database — unauthenticated access to every
-/// role/permission-management endpoint. Round-trip tests that actually exercise the SuperAdmin
+/// role/permission-management endpoint. Round-trip tests that actually exercise the OrganizationAdmin
 /// bootstrap and permission catalogue are in RoleEndpointsDbTests.
 /// </summary>
 public class RoleEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
