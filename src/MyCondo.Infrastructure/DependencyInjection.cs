@@ -41,6 +41,12 @@ using MyCondo.Domain.Features.Payments.Payments;
 using MyCondo.Domain.Features.Payments.ResidentAccounts;
 using MyCondo.Domain.Features.Payroll.AttendanceRecords;
 using MyCondo.Domain.Features.Payroll.StaffMembers;
+using MyCondo.Domain.Features.Platform.PlatformAudit;
+using MyCondo.Domain.Features.Platform.PlatformRefreshTokens;
+using MyCondo.Domain.Features.Platform.PlatformRolePermissions;
+using MyCondo.Domain.Features.Platform.PlatformRoles;
+using MyCondo.Domain.Features.Platform.PlatformUserRoleAssignments;
+using MyCondo.Domain.Features.Platform.PlatformUsers;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Property.Gates;
@@ -93,6 +99,8 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IUserContextResolver, UserContextResolver>();
+        services.AddScoped<IPlatformTokenService, PlatformJwtTokenService>();
+        services.AddScoped<IPlatformUserContextResolver, PlatformUserContextResolver>();
 
         // EF Core interceptors
         services.AddScoped<AuditInterceptor>();
@@ -136,6 +144,12 @@ public static class DependencyInjection
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
+        services.AddScoped<IPlatformUserRepository, PlatformUserRepository>();
+        services.AddScoped<IPlatformRoleRepository, PlatformRoleRepository>();
+        services.AddScoped<IPlatformRolePermissionRepository, PlatformRolePermissionRepository>();
+        services.AddScoped<IPlatformUserRoleAssignmentRepository, PlatformUserRoleAssignmentRepository>();
+        services.AddScoped<IPlatformRefreshTokenRepository, PlatformRefreshTokenRepository>();
+        services.AddScoped<IPlatformAuditLogRepository, PlatformAuditLogRepository>();
         services.AddScoped<IBuildingRepository, BuildingRepository>();
         services.AddScoped<IFlatRepository, FlatRepository>();
         services.AddScoped<IGateRepository, GateRepository>();

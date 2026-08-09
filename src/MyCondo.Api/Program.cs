@@ -27,6 +27,10 @@ if (builder.Environment.IsDevelopment())
     // Local-only bootstrap so there's a real tenant to register against — see
     // DevelopmentTenantSeeder's doc comment. Not a production provisioning mechanism.
     builder.Services.AddHostedService<DevelopmentTenantSeeder>();
+
+    // Separate, unrelated hosted service — deliberately not merged with DevelopmentTenantSeeder above.
+    // See PlatformBootstrapSeeder's doc comment and mycondo-docs ADR-019.
+    builder.Services.AddHostedService<PlatformBootstrapSeeder>();
 }
 
 WebApplication app = builder.Build();
@@ -52,6 +56,8 @@ app.UseRateLimiter();
 
 app.MapMyCondoHealthChecks();
 app.MapAuthEndpoints();
+app.MapPlatformAuthEndpoints();
+app.MapPlatformOrganizationEndpoints();
 app.MapTenantEndpoints();
 app.MapRoleEndpoints();
 app.MapUserEndpoints();

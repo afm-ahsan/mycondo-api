@@ -16,6 +16,7 @@ public static class DependencyInjection
     {
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
+        services.AddScoped<ICurrentPlatformUserProvider, PlatformCurrentUserProvider>();
         services.AddScoped<ITenantContextAccessor, TenantContextAccessor>();
         services.AddScoped<IRequestIpAccessor, HttpRequestIpAccessor>();
 
@@ -93,6 +94,25 @@ public static class DependencyInjection
                         _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
                         {
                             PermitLimit = 10,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0,
+                        });
+            });
+
+            // Stricter than "auth": Platform SuperAdmin is the single highest-blast-radius account in
+            // the system (can provision/suspend organizations), so its login/refresh endpoints get a
+            // tighter bound — 5/minute per IP — than ordinary tenant credential entry. See the
+            // approved Phase 1 blueprint §4 ("Platform login brute-force" risk).
+            opt.AddPolicy("platform-auth", ctx =>
+            {
+                string partitionKey = ctx.Connection.RemoteIpAddress?.ToString() ?? "anon";
+
+                return System.Threading.RateLimiting.RateLimitPartition
+                    .GetFixedWindowLimiter(
+                        partitionKey,
+                        _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 5,
                             Window = TimeSpan.FromMinutes(1),
                             QueueLimit = 0,
                         });

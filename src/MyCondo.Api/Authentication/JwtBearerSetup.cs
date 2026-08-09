@@ -17,6 +17,15 @@ public static class JwtBearerSetup
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        // The tenant scheme stays the DEFAULT (JwtBearerDefaults.AuthenticationScheme, "Bearer") —
+        // every existing .RequireAuthorization()/.RequirePermission() call across the whole API
+        // keeps working completely unchanged. Its ValidAudience (settings.Audience) already rejects
+        // a Platform-audience token outright, so tenant endpoints need zero code changes to reject
+        // Platform tokens — see mycondo-docs ADR-019.
+        //
+        // The Platform scheme is registered alongside it, under its own name, with its own
+        // ValidAudience (settings.PlatformAudience) — but is never made the default. Only endpoints
+        // that explicitly opt in via RequirePlatformPermission ever authenticate against it.
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
@@ -37,9 +46,35 @@ public static class JwtBearerSetup
                         Encoding.UTF8.GetBytes(settings.SigningKey)),
                     ClockSkew = TimeSpan.FromMinutes(1)
                 };
+            })
+            .AddJwtBearer(PlatformAuthenticationDefaults.SchemeName, options =>
+            {
+                JwtSettings settings = services.BuildServiceProvider()
+                    .GetRequiredService<IOptions<JwtSettings>>().Value;
+
+                options.RequireHttpsMetadata = false; // toggled by env in Program.cs
+                options.SaveToken = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = settings.Issuer,
+                    ValidAudience = settings.PlatformAudience,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(settings.SigningKey)),
+                    ClockSkew = TimeSpan.FromMinutes(1)
+                };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(PlatformAuthenticationDefaults.AuthorizationPolicyName, policy =>
+                policy
+                    .AddAuthenticationSchemes(PlatformAuthenticationDefaults.SchemeName)
+                    .RequireAuthenticatedUser());
+        });
 
         return services;
     }

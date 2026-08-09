@@ -20,5 +20,8 @@ public sealed class TenantRepository(MyCondoDbContext db) : ITenantRepository
     public Task<bool> AnyAsync(CancellationToken cancellationToken) =>
         db.Set<Tenant>().AnyAsync(cancellationToken);
 
+    public Task<List<Tenant>> GetAllAsync(CancellationToken cancellationToken) =>
+        db.Set<Tenant>().OrderBy(t => t.Name).ToListAsync(cancellationToken);
+
     public void Add(Tenant tenant) => db.Set<Tenant>().Add(tenant);
 }

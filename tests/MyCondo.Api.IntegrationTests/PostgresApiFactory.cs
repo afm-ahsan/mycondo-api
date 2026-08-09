@@ -11,31 +11,56 @@ using Testcontainers.PostgreSql;
 namespace MyCondo.Api.IntegrationTests;
 
 /// <summary>
-/// Boots the real host against a real, ephemeral PostgreSQL container (via Testcontainers) and runs
-/// migrations before tests execute — for the round-trip flows that genuinely need a database
-/// (register/login/etc.), as opposed to <see cref="MyCondoWebApplicationFactory"/>'s no-DB tests.
+/// Boots the real host against a real PostgreSQL instance and runs migrations before tests execute —
+/// for the round-trip flows that genuinely need a database (register/login/etc.), as opposed to
+/// <see cref="MyCondoWebApplicationFactory"/>'s no-DB tests.
 ///
-/// Two roles, mirroring docker-compose.yml/db/init/01_create_app_role.sql: Testcontainers' bootstrap
-/// role (<c>mycondo_migrator</c> here) is always a Postgres superuser, which unconditionally bypasses
-/// Row-Level Security — so migrations run as that role, but the actual app-under-test (everything
-/// <see cref="Services"/> resolves, i.e. every HTTP call a test makes) must run as a separate,
-/// restricted <c>mycondo_app</c> role or these tests would "pass" without RLS meaning anything. This
-/// gap is exactly what let RLS silently do nothing in every environment until the first real
-/// Testcontainers run caught it — see the ADR recording that in mycondo-docs.
+/// Two roles, mirroring docker-compose.yml/db/init/01_create_app_role.sql: the migrator role is
+/// DDL/owner-capable, but the actual app-under-test (everything <see cref="Services"/> resolves, i.e.
+/// every HTTP call a test makes) must run as a separate, restricted <c>mycondo_app</c> role or these
+/// tests would "pass" without RLS meaning anything. This gap is exactly what let RLS silently do
+/// nothing in every environment until the first real Testcontainers run caught it — see the ADR
+/// recording that in mycondo-docs.
 ///
-/// Requires a running Docker daemon.
+/// Two supported paths, selected by the presence of <see cref="ExternalConnectionEnvVar"/>:
+///
+/// - Default (CI, most local runs): starts a real, ephemeral PostgreSQL container via Testcontainers.
+///   Its bootstrap role (<c>mycondo_migrator</c> here) is always a Postgres superuser (Testcontainers'
+///   own bootstrap-user convention), which unconditionally bypasses RLS — this path creates a fresh
+///   <c>mycondo_app</c> role itself, since the container starts empty. Requires a running Docker
+///   daemon. Behavior here is completely unchanged from before this external-path addition.
+///
+/// - External/native PostgreSQL (test-only — see
+///   mycondo-phase1-final-postgresql-rls-verification-prompt.md): when
+///   <see cref="ExternalConnectionEnvVar"/> is set to a migrator-capable connection string pointing at
+///   an already-isolated, disposable verification database, this path skips Testcontainers entirely
+///   and migrates that database directly. It never creates roles or databases itself — the target is
+///   expected to be pre-prepared (an isolated, disposable database, with the literal `mycondo_app` role
+///   already existing, since migrations GRANT to that literal name) — this keeps the adaptation
+///   test-only and introduces no machine-specific assumption into production code or the default path.
 /// </summary>
 public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private const string AppRolePassword = "mycondo_dev";
 
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:18-alpine")
-        .WithDatabase("mycondo_test")
-        .WithUsername("mycondo_migrator")
-        .WithPassword("mycondo_migrator_test")
-        .Build();
+    /// <summary>Migrator-capable connection string to an already-isolated, disposable verification
+    /// database. When set, Testcontainers is not used at all. Test-only — never read by production
+    /// code.</summary>
+    private const string ExternalConnectionEnvVar = "MYCONDO_TEST_EXTERNAL_POSTGRES_CONNECTION";
+
+    /// <summary>Password for the pre-existing `mycondo_app` role on the external instance. Defaults to
+    /// the same value the Testcontainers path uses if not overridden.</summary>
+    private const string ExternalAppPasswordEnvVar = "MYCONDO_TEST_EXTERNAL_APP_PASSWORD";
+
+    // Deliberately NOT constructed here: PostgreSqlBuilder.Build() eagerly probes for a Docker
+    // endpoint (see DockerEndpointAuthenticationProvider.IsAvailable), which would throw during this
+    // factory's own construction — before InitializeAsync even runs — on any machine without Docker,
+    // regardless of whether the external-Postgres path was about to be used instead. Built lazily,
+    // only inside the Testcontainers branch below.
+    private PostgreSqlContainer? _postgres;
 
     private string _appConnectionString = string.Empty;
+    private bool _usingExternalPostgres;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -53,19 +78,30 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
 
     public async Task InitializeAsync()
     {
-        await _postgres.StartAsync();
+        string? externalMigratorConnectionString = Environment.GetEnvironmentVariable(ExternalConnectionEnvVar);
+        string migratorConnectionString;
+        string appRolePassword;
 
-        string migratorConnectionString = _postgres.GetConnectionString();
-
-        NpgsqlConnectionStringBuilder appConnectionBuilder = new(migratorConnectionString)
+        if (externalMigratorConnectionString is not null)
         {
-            Username = "mycondo_app",
-            Password = AppRolePassword,
-        };
-        _appConnectionString = appConnectionBuilder.ConnectionString;
-
-        await using (NpgsqlConnection bootstrapConnection = new(migratorConnectionString))
+            _usingExternalPostgres = true;
+            migratorConnectionString = externalMigratorConnectionString;
+            appRolePassword = Environment.GetEnvironmentVariable(ExternalAppPasswordEnvVar) ?? AppRolePassword;
+            // No role/database creation here by design — see this class's doc comment.
+        }
+        else
         {
+            _postgres = new PostgreSqlBuilder("postgres:18-alpine")
+                .WithDatabase("mycondo_test")
+                .WithUsername("mycondo_migrator")
+                .WithPassword("mycondo_migrator_test")
+                .Build();
+
+            await _postgres.StartAsync();
+            migratorConnectionString = _postgres.GetConnectionString();
+            appRolePassword = AppRolePassword;
+
+            await using NpgsqlConnection bootstrapConnection = new(migratorConnectionString);
             await bootstrapConnection.OpenAsync();
             await using NpgsqlCommand createAppRole = bootstrapConnection.CreateCommand();
             createAppRole.CommandText =
@@ -76,9 +112,16 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
             await createAppRole.ExecuteNonQueryAsync();
         }
 
-        // Migrate as mycondo_migrator (owner/DDL role) via a context built directly against the
-        // bootstrap connection string — not through Services/DI, which (via ConfigureWebHost above)
-        // will only ever see the restricted _appConnectionString once it's built.
+        NpgsqlConnectionStringBuilder appConnectionBuilder = new(migratorConnectionString)
+        {
+            Username = "mycondo_app",
+            Password = appRolePassword,
+        };
+        _appConnectionString = appConnectionBuilder.ConnectionString;
+
+        // Migrate as the migrator role (owner/DDL) via a context built directly against the migrator
+        // connection string — not through Services/DI, which (via ConfigureWebHost above) will only
+        // ever see the restricted _appConnectionString once it's built.
         DbContextOptions<MyCondoDbContext> migratorOptions = new DbContextOptionsBuilder<MyCondoDbContext>()
             .UseNpgsql(migratorConnectionString, npg =>
                 npg.MigrationsHistoryTable("__ef_migrations_history", schema: "public"))
@@ -120,7 +163,14 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
 
     async Task IAsyncLifetime.DisposeAsync()
     {
-        await _postgres.DisposeAsync();
+        // Never created in the external-Postgres path — nothing to tear down, and the external
+        // verification database is intentionally left for the caller to clean up (see the
+        // verification prompt's "clean up disposable verification resources" step, run once at the
+        // end of a whole verification pass, not per test-fixture instance).
+        if (!_usingExternalPostgres && _postgres is not null)
+        {
+            await _postgres.DisposeAsync();
+        }
         await base.DisposeAsync();
     }
 }

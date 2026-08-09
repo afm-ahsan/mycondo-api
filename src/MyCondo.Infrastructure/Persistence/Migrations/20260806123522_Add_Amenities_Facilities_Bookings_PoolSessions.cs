@@ -234,24 +234,47 @@ public partial class Add_Amenities_Facilities_Bookings_PoolSessions : Migration
             columns: new[] { "tenant_id", "flat_id" });
 
         // Authoritative booking-overlap guard — same EXCLUDE/GiST pattern as ServiceChargeRule/
-        // RatePlan (Slices E/F). btree_gist is already created by those migrations, but CREATE
-        // EXTENSION IF NOT EXISTS is idempotent and cheap, so it's repeated here rather than assumed.
-        // A partial constraint: Cancelled/Rejected/NoShow bookings don't hold the slot, but every other
-        // status does (including Draft/PendingApproval) — see Booking's doc comment for why.
+        // RatePlan (Slices E/F), but unlike those (which range over plain `date` columns with no
+        // arithmetic), this one needs `timestamptz +/- interval` to compute the buffered slot.
+        // `timestamptz_pl_interval`/`timestamptz_mi_interval` are STABLE, not IMMUTABLE (Postgres is
+        // conservative because `interval` can carry calendar-relative components like months), so
+        // Postgres rejects them directly inside a GiST index expression — this was never actually
+        // caught until a real Postgres instance ran this migration for the first time (see
+        // mycondo-phase1-final-postgresql-rls-verification-prompt.md's full-chain verification; not a
+        // Phase-1/Platform defect, this table predates Phase 1 entirely). The wrapper function below
+        // is safe to mark IMMUTABLE: setup/cleanup buffers are always `N * INTERVAL '1 minute'` — a
+        // fixed-duration shift with no month/day component — so the result is a deterministic function
+        // of its inputs regardless of session TimeZone, even though the underlying operators are
+        // conservatively labeled STABLE. btree_gist is already created by the Slice E/F migrations,
+        // but CREATE EXTENSION IF NOT EXISTS is idempotent and cheap, so it's repeated here rather than
+        // assumed. A partial constraint: Cancelled/Rejected/NoShow bookings don't hold the slot, but
+        // every other status does (including Draft/PendingApproval) — see Booking's doc comment for why.
         migrationBuilder.Sql(
             """
             CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+            CREATE OR REPLACE FUNCTION amenities.booking_slot_range(
+                start_at_utc timestamptz,
+                end_at_utc timestamptz,
+                setup_buffer_minutes integer,
+                cleanup_buffer_minutes integer
+            ) RETURNS tstzrange
+            LANGUAGE sql
+            IMMUTABLE
+            AS $$
+                SELECT tstzrange(
+                    start_at_utc - (setup_buffer_minutes * INTERVAL '1 minute'),
+                    end_at_utc + (cleanup_buffer_minutes * INTERVAL '1 minute'),
+                    '[]'
+                );
+            $$;
 
             ALTER TABLE amenities.bookings
             ADD CONSTRAINT ex_bookings_no_overlap
             EXCLUDE USING gist (
                 tenant_id WITH =,
                 facility_id WITH =,
-                tstzrange(
-                    start_at_utc - (setup_buffer_minutes * INTERVAL '1 minute'),
-                    end_at_utc + (cleanup_buffer_minutes * INTERVAL '1 minute'),
-                    '[]'
-                ) WITH &&
+                amenities.booking_slot_range(start_at_utc, end_at_utc, setup_buffer_minutes, cleanup_buffer_minutes) WITH &&
             )
             WHERE (status NOT IN ('Cancelled', 'Rejected', 'NoShow'));
             """);
@@ -260,7 +283,11 @@ public partial class Add_Amenities_Facilities_Bookings_PoolSessions : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql("ALTER TABLE amenities.bookings DROP CONSTRAINT IF EXISTS ex_bookings_no_overlap;");
+        migrationBuilder.Sql(
+            """
+            ALTER TABLE amenities.bookings DROP CONSTRAINT IF EXISTS ex_bookings_no_overlap;
+            DROP FUNCTION IF EXISTS amenities.booking_slot_range(timestamptz, timestamptz, integer, integer);
+            """);
 
         migrationBuilder.DropTable(
             name: "blackout_dates",
