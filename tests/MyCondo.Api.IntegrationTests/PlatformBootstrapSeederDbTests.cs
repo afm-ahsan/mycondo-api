@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MyCondo.Application.Common.Abstractions;
@@ -6,6 +7,7 @@ using MyCondo.Domain.Features.Platform.PlatformRolePermissions;
 using MyCondo.Domain.Features.Platform.PlatformRoles;
 using MyCondo.Domain.Features.Platform.PlatformUserRoleAssignments;
 using MyCondo.Domain.Features.Platform.PlatformUsers;
+using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Seed;
 
 namespace MyCondo.Api.IntegrationTests;
@@ -31,7 +33,7 @@ public class PlatformBootstrapSeederDbTests : IClassFixture<PostgresApiFactory>
         PlatformBootstrapSeeder seeder = new(
             scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<PlatformBootstrapSeeder>.Instance);
-        await seeder.StartAsync(CancellationToken.None);
+        await seeder.SeedAsync(CancellationToken.None);
     }
 
     [Fact]
@@ -97,7 +99,7 @@ public class PlatformBootstrapSeederDbTests : IClassFixture<PostgresApiFactory>
     }
 
     [Fact]
-    public async Task Seeder_Is_Idempotent()
+    public async Task Seeder_Is_Idempotent_No_Duplicates_On_Rerun()
     {
         await RunSeederAsync();
         await RunSeederAsync();
@@ -105,10 +107,41 @@ public class PlatformBootstrapSeederDbTests : IClassFixture<PostgresApiFactory>
         using IServiceScope scope = _factory.Services.CreateScope();
         IPlatformRoleRepository roles = scope.ServiceProvider.GetRequiredService<IPlatformRoleRepository>();
 
-        // AnyAsync-gated seeder: a second run is a full no-op, so re-fetching by name still resolves
-        // to exactly the one role/user created the first time — no duplicate-key violation, no
-        // duplicate row.
+        // User identity creation is guarded by "does this email already exist"; the SuperAdmin
+        // PlatformRole's grants are reconciled by permission name every run — either way, rerunning
+        // must not duplicate the role/user or its grants.
         PlatformRole? role = await roles.GetByNameAsync("SuperAdmin", CancellationToken.None);
         role.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Seeder_Reconciles_A_Manually_Removed_Grant_On_Rerun()
+    {
+        await RunSeederAsync();
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IPlatformRoleRepository roles = scope.ServiceProvider.GetRequiredService<IPlatformRoleRepository>();
+        IPlatformRolePermissionRepository rolePermissions =
+            scope.ServiceProvider.GetRequiredService<IPlatformRolePermissionRepository>();
+
+        PlatformRole role = (await roles.GetByNameAsync("SuperAdmin", CancellationToken.None))!;
+        List<string> grantsBefore = await rolePermissions.GetPermissionNamesForRoleAsync(role.Id, CancellationToken.None);
+        grantsBefore.Should().Contain("platform.organization.create");
+
+        // Simulate drift — a grant this seeder created is now missing (e.g. hand-removed, or a defect
+        // elsewhere). Reconciliation, not just "is the user still there," is what this test proves.
+        using (IServiceScope removeScope = _factory.Services.CreateScope())
+        {
+            MyCondoDbContext db = removeScope.ServiceProvider.GetRequiredService<MyCondoDbContext>();
+            PlatformRolePermission grant = await db.Set<PlatformRolePermission>()
+                .FirstAsync(rp => rp.PlatformRoleId == role.Id);
+            db.Set<PlatformRolePermission>().Remove(grant);
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await RunSeederAsync();
+
+        List<string> grantsAfter = await rolePermissions.GetPermissionNamesForRoleAsync(role.Id, CancellationToken.None);
+        grantsAfter.Should().BeEquivalentTo(grantsBefore, "the removed grant must be restored and nothing else changed");
     }
 }

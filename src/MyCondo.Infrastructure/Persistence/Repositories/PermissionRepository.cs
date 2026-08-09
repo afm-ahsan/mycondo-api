@@ -19,4 +19,6 @@ public sealed class PermissionRepository(MyCondoDbContext db) : IPermissionRepos
 
     public Task<bool> ExistsAsync(PermissionId id, CancellationToken cancellationToken) =>
         db.Set<Permission>().AnyAsync(p => p.Id == id, cancellationToken);
+
+    public void Add(Permission permission) => db.Set<Permission>().Add(permission);
 }

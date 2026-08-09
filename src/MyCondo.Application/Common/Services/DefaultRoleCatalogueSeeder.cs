@@ -21,10 +21,14 @@ public sealed class DefaultRoleCatalogueSeeder(
     /// colliding with this platform's own tenant (customer organization) concept. Vendor and Guard are
     /// excluded entirely — zero implementable permissions until Vendor Management / Security-Visitor
     /// Management ship.
+    ///
+    /// <c>Code</c> is a stable natural key used only for idempotent reconciliation (see
+    /// <see cref="SeedAsync"/>) — these remain ordinary <c>Role.CreateCustom</c> roles a tenant admin
+    /// can freely rename/deactivate/re-grant; Code itself is never shown in the UI and never changes.
     /// </summary>
-    private static readonly (string Name, string Description, string[] Permissions)[] DefaultRoles =
+    private static readonly (string Name, string Code, string Description, string[] Permissions)[] DefaultRoles =
     [
-        ("BuildingAdmin", "Day-to-day operational management of a single building.",
+        ("BuildingAdmin", "default.building-admin", "Day-to-day operational management of a single building.",
         [
             "property.view", "property.update", "resident.view", "resident.create", "resident.update",
             "ownership.view", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
@@ -33,33 +37,33 @@ public sealed class DefaultRoleCatalogueSeeder(
             "workorder.create", "workorder.assign", "workorder.complete", "document.view",
             "document.upload", "notification.view",
         ]),
-        ("Treasurer", "Tenant-wide financial oversight and correction authority.",
+        ("Treasurer", "default.treasurer", "Tenant-wide financial oversight and correction authority.",
         [
             "billing.rule.view", "billing.rule.manage", "billing.generate", "invoice.view",
             "invoice.void", "payment.view", "payment.record", "payment.reverse", "expense.view",
             "expense.manage", "report.financial.view",
         ]),
-        ("Secretary", "Administrative/communications support — the point of contact for residents.",
+        ("Secretary", "default.secretary", "Administrative/communications support — the point of contact for residents.",
         [
             "resident.view", "complaint.view", "complaint.create", "complaint.assign",
             "notification.view", "notification.manage", "document.view", "document.upload",
             "report.operational.view",
         ]),
-        ("SecurityHead", "Security oversight for a building.",
+        ("SecurityHead", "default.security-head", "Security oversight for a building.",
         [
             "complaint.view",
         ]),
-        ("Owner", "A flat owner viewing their own ownership/billing/complaint records.",
+        ("Owner", "default.owner", "A flat owner viewing their own ownership/billing/complaint records.",
         [
             "ownership.view", "lease.view", "invoice.view", "payment.view", "complaint.view",
             "complaint.create", "document.view",
         ]),
-        ("Renter", "A renter viewing their lease/billing/complaint records — a strict subset of Owner.",
+        ("Renter", "default.renter", "A renter viewing their lease/billing/complaint records — a strict subset of Owner.",
         [
             "lease.view", "invoice.view", "payment.view", "complaint.view", "complaint.create",
             "document.view",
         ]),
-        ("Auditor", "Read-only oversight across the tenant, for compliance/external audit purposes.",
+        ("Auditor", "default.auditor", "Read-only oversight across the tenant, for compliance/external audit purposes.",
         [
             "tenant.view", "user.view", "property.view", "resident.view", "ownership.view",
             "lease.view", "billing.rule.view", "invoice.view", "payment.view", "expense.view",
@@ -68,15 +72,42 @@ public sealed class DefaultRoleCatalogueSeeder(
         ]),
     ];
 
+    /// <summary>
+    /// Reconciles by <c>Code</c>/<c>PermissionId</c> rather than unconditionally creating — safe to
+    /// call on every tenant-bootstrap run (not just the first), so a role or permission added to the
+    /// catalogue after a tenant already exists still reaches it. Never removes an existing role or
+    /// grant not in the catalogue (an admin's own custom roles, or a permission grant this catalogue no
+    /// longer lists, are left untouched).
+    /// </summary>
     public async Task SeedAsync(Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken)
     {
         List<Permission> catalogue = await permissions.GetAllAsync(cancellationToken);
         Dictionary<string, PermissionId> permissionIdsByName = catalogue.ToDictionary(p => p.Name, p => p.Id);
 
-        foreach ((string name, string description, string[] permissionNames) in DefaultRoles)
+        List<Role> existingRoles = await roles.GetAllForTenantAsync(tenantId, cancellationToken);
+        Dictionary<string, Role> existingByCode = existingRoles
+            .Where(r => r.Code is not null)
+            .ToDictionary(r => r.Code!, StringComparer.Ordinal);
+
+        int rolesCreated = 0;
+        int grantsCreated = 0;
+
+        foreach ((string name, string code, string description, string[] permissionNames) in DefaultRoles)
         {
-            Role role = Role.CreateCustom(tenantId, name, description, nowUtc);
-            roles.Add(role);
+            Role role;
+            if (existingByCode.TryGetValue(code, out Role? found))
+            {
+                role = found;
+            }
+            else
+            {
+                role = Role.CreateCustom(tenantId, name, description, nowUtc, code);
+                roles.Add(role);
+                rolesCreated++;
+            }
+
+            List<RolePermission> existingGrants = await rolePermissions.GetForRoleAsync(role.Id, cancellationToken);
+            HashSet<PermissionId> grantedIds = existingGrants.Select(g => g.PermissionId).ToHashSet();
 
             foreach (string permissionName in permissionNames)
             {
@@ -86,12 +117,17 @@ public sealed class DefaultRoleCatalogueSeeder(
                         $"Default role '{name}' references unknown permission '{permissionName}'.");
                 }
 
-                rolePermissions.Add(new RolePermission(tenantId, role.Id, permissionId, nowUtc, grantedBy: null));
+                if (grantedIds.Add(permissionId))
+                {
+                    rolePermissions.Add(new RolePermission(tenantId, role.Id, permissionId, nowUtc, grantedBy: null));
+                    grantsCreated++;
+                }
             }
         }
 
         logger.LogInformation(
-            "Default role catalogue seeded for tenant {TenantId}: {RoleCount} roles",
-            tenantId, DefaultRoles.Length);
+            "[DatabaseSeed] Default role catalogue for tenant {TenantId}: {RoleCount} roles expected, " +
+            "{RolesCreated} created, {GrantsCreated} grants created",
+            tenantId, DefaultRoles.Length, rolesCreated, grantsCreated);
     }
 }

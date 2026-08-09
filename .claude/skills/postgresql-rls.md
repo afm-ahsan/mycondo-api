@@ -94,6 +94,34 @@ lookup by.
 3. Add a cross-tenant test in `MyCondo.MultiTenancyTests` before/alongside enabling the policy — don't
    assume it works.
 
+## RLS-safe seeding (system catalogue vs. tenant-scoped data)
+
+Seeders run outside any HTTP request, so `TenantContextAccessor`'s JWT-claim/`HttpContext.Items` lookup
+has nothing to read — get this wrong and a seeder either silently writes nothing (RLS's `WITH CHECK`
+rejects it, or `USING` hides everything back) or, worse, someone "fixes" that by bypassing RLS instead
+of supplying a tenant context. Two distinct cases, don't conflate them:
+
+- **Global, tenant-less tables** (`identity.permissions`, `platform.*`, `tenancy.tenants` — no
+  `tenant_id`, no RLS policy at all, per "Not every tenant-related table has tenant_id" above): no
+  tenant context needed. `PermissionSeeder`, `PlatformBootstrapSeeder`, and `DevelopmentTenantSeeder`
+  just write directly through the normal DI-resolved repositories.
+- **Tenant-scoped catalogue tables** (`identity.roles`/`role_permissions`/`role_assignments` — RLS
+  `FORCE`d): the seeder needs an explicit tenant to act as. The established pattern — used by
+  `ArpDevelopmentBootstrapSeeder`, `MyCondo.DbMigrator`'s production bootstrap command, and the test
+  fixtures' `PostgresApiFactory.CreateDbContextForTenant`/`MultiTenancyPostgresFixture.CreateDbContext`
+  — is a small, private `ITenantContextAccessor` implementation whose `CurrentTenantId` is a fixed
+  `Guid` for the one tenant being seeded, wired into a purpose-built `MyCondoDbContext` alongside the
+  normal `TenantContextConnectionInterceptor`. RLS is never bypassed; the seeder is just correctly told
+  which tenant it's writing as, the same way a real authenticated request would be. Do not add a new
+  bypass mechanism (a superuser connection, a `BYPASSRLS` role, an `ExecuteSqlRaw` around the policy)
+  for this — reuse the fixed-accessor pattern.
+
+`DatabaseSeederExtensions.SeedDatabaseAsync` (`src/MyCondo.Infrastructure/Seed/`) is the single
+orchestration entry point that sequences system-catalogue seeding before any tenant-scoped seeding, and
+wraps the whole thing in a Postgres advisory lock for safety under concurrent app-instance startup — see
+that class and the top-level `CLAUDE.md`'s "Seed Data & Bootstrap Architecture" section for the full
+picture; this skill only covers the RLS-specific half of it.
+
 ## Testing
 
 `MyCondo.MultiTenancyTests` uses a real Testcontainers-backed Postgres (`MultiTenancyPostgresFixture`)

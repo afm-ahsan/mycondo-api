@@ -22,22 +22,12 @@ builder.Services
     .AddInfrastructure(builder.Configuration)
     .AddApiServices(builder.Configuration);
 
-if (builder.Environment.IsDevelopment())
-{
-    // Registered first (see ArpDevelopmentBootstrapSeeder's doc comment for why order matters here):
-    // the approved Phase-2 test organization, "Akter Residence Park" — mycondo-docs ADR-020.
-    builder.Services.AddHostedService<ArpDevelopmentBootstrapSeeder>();
-
-    // Local-only bootstrap so there's a real tenant to register against if ARP wasn't created above —
-    // see DevelopmentTenantSeeder's doc comment. Not a production provisioning mechanism.
-    builder.Services.AddHostedService<DevelopmentTenantSeeder>();
-
-    // Separate, unrelated hosted service — deliberately not merged with the seeders above.
-    // See PlatformBootstrapSeeder's doc comment and mycondo-docs ADR-019.
-    builder.Services.AddHostedService<PlatformBootstrapSeeder>();
-}
-
 WebApplication app = builder.Build();
+
+// One explicit, auditable seed-orchestration entry point — see DatabaseSeederExtensions for the order
+// (permissions first, every environment; Development-only bootstrap/demo seeders behind a hard runtime
+// guard, not just DI registration). Runs before the app starts serving requests.
+await app.Services.SeedDatabaseAsync(app.Environment);
 
 // Must run before anything that reads Request.Scheme/Connection.RemoteIpAddress (HTTPS redirection,
 // the refresh-token cookie's Secure flag, IP-partitioned rate limiting, request logging) — see

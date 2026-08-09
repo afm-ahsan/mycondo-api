@@ -312,39 +312,87 @@ For breaking schema changes (e.g. renaming a column), use three deploys:
 
 ## 7. Seed Data
 
-Seed data is for **bootstrap data the app cannot start without**: roles, permissions, system users, default lookups.
+Seed data is for **bootstrap data the app cannot start without**: roles, permissions, system users,
+default lookups. It does **not** belong in EF Core migrations (no `InsertData`/`HasData` for evolving
+catalogues — see MyCondo's own migration history, `Seed_Permission_Catalogue` and its successors, which
+did this and were superseded; those files are preserved as historical record, not as a pattern to
+repeat). Migrations define schema and genuine migration-time *data transformations* on existing
+production rows; seed data is application-owned reference/catalogue data, reconciled by a dedicated
+seeder.
+
+**Do not gate a seeder with `if (await db.Roles.AnyAsync(ct)) return;`.** That pattern — checked once,
+short-circuits forever — silently prevents a role or permission added to the catalogue *after* the
+first successful run from ever reaching an already-bootstrapped environment. It looks idempotent
+(rerunning it never crashes) but it is not idempotent in the sense that matters: idempotent means
+*running it produces the same end state regardless of how many times it's run*, not *running it twice
+is a no-op*.
+
+Instead, reconcile by a **stable natural key** (a permission's `Name`, a role's `Code`, a
+configuration's `Key` — never a database-generated ID):
 
 ```csharp
-public static class IdentitySeeder
+public static class PermissionSeeder
 {
-    public static async Task SeedAsync(AppDbContext db, CancellationToken ct)
+    private static readonly (string Name, string Description, string Module)[] Catalogue =
+    [
+        ("role.manage", "Create roles and manage grants/assignments", "role"),
+        // ...
+    ];
+
+    public static async Task SeedAsync(IPermissionRepository permissions, CancellationToken ct)
     {
-        if (await db.Roles.AnyAsync(ct)) return;
+        HashSet<string> existingNames = (await permissions.GetAllAsync(ct))
+            .Select(p => p.Name).ToHashSet();
 
-        var adminRole = Role.Create("Admin");
-        adminRole.GrantPermission(Permission.AllAccess);
-        db.Roles.Add(adminRole);
-
-        await db.SaveChangesAsync(ct);
+        foreach (var (name, description, module) in Catalogue)
+        {
+            if (existingNames.Contains(name)) continue; // never update/remove an existing row here
+            permissions.Add(Permission.Create(PermissionId.New(), name, description, module));
+        }
     }
 }
 ```
 
-Called from `Program.cs` (or a one-time job):
+Called explicitly, in an auditable order, from one orchestration entry point — not scattered across
+several unrelated `IHostedService` registrations:
 
 ```csharp
-using (var scope = app.Services.CreateScope())
+public static async Task SeedDatabaseAsync(this IServiceProvider services, IHostEnvironment env, CancellationToken ct)
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();   // applies pending migrations
-    await IdentitySeeder.SeedAsync(db, default);
+    using IServiceScope scope = services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<IPermissionSeeder>().SeedAsync(ct);
+    await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(ct);
+
+    if (env.IsDevelopment()) // hard runtime guard, not just DI-registration gating
+    {
+        // Development/demo-only seeders here.
+    }
 }
 ```
 
 ### Rules
 
-- **Idempotent.** Calling the seeder twice produces the same result.
-- **No fake business data in seeds for production.** Use a separate `dev-seed` for local dev.
+- **Reconcile by stable natural key, not `AnyAsync`-then-return.** Create missing entries; never
+  auto-delete an entry the source catalogue no longer lists (treat that as a deliberate deprecation
+  decision, not something a seeder does silently).
+- **Idempotent means the end state is correct after any number of runs**, including a run that happens
+  after new catalogue entries were added — not merely "running it twice doesn't crash."
+- **Separate concerns**: system catalogue (permissions, roles, mandatory lookups — required in every
+  environment) vs. authentication/platform bootstrap (a SuperAdmin identity — a true singleton, fine to
+  guard with an existence check since there's no catalogue to drift) vs. development/demo data (must
+  carry a hard runtime environment guard, not just conditional DI registration).
+- **No fake business data in seeds for production.** Use a separate, clearly-named Development-only
+  seeder for local dev/demo data, and guard it at the call site with `IHostEnvironment.IsDevelopment()`
+  in addition to whatever DI wiring exists — never rely on DI registration alone to keep it out of
+  Production.
+- **Tenant-scoped catalogue seeders need an explicit tenant context**, not the request-bound one — see
+  the multi-tenancy/RLS conventions doc for the pattern (a small, fixed `ITenantContextAccessor`
+  implementation bound to the tenant being seeded, wired into its own short-lived `DbContext`). Global,
+  tenant-less catalogue tables (no `tenant_id`, no RLS policy) need no such accessor at all.
+- **Guard concurrent startup.** If multiple app instances can start at once, wrap the seed sequence in
+  a Postgres advisory lock (`pg_advisory_lock`/`pg_advisory_unlock`) rather than assuming a single
+  process — every seeder should already be safe under that lock because it reconciles by natural key,
+  but the lock avoids redundant work and races.
 - **Permissions and roles are seed data.** Customers, invoices, products are not.
 
 ---
@@ -423,3 +471,6 @@ dotnet ef migrations has-pending-model-changes \
 | Lazy-loading entire aggregate trees on read                      | Use Dapper for reads                                             |
 | Seed data with fake business records                             | Only system/foundation data; use dev-seed for local              |
 | `Down()` empty                                                   | Implement reverse, even if a `DROP`                              |
+| `EF Core InsertData`/`HasData` for an evolving catalogue         | Dedicated seeder reconciling by natural key, outside migrations   |
+| Seeder gated by `if (await db.X.AnyAsync()) return;`              | Reconcile by natural key — create missing, never touch the rest  |
+| Development/demo seeder guarded only by DI registration           | Add a hard runtime `IHostEnvironment.IsDevelopment()` check too  |

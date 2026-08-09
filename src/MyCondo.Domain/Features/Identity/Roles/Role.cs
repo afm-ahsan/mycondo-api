@@ -10,13 +10,15 @@ public sealed class Role : AggregateRoot<RoleId>, IAuditable, ISoftDeletable, IT
     public bool IsSystem { get; private set; }
 
     /// <summary>
-    /// Stable internal identifier for a system role (e.g. <c>"organization.admin"</c>,
-    /// <c>"condominium.admin"</c>), distinct from the human-editable <see cref="Name"/>. Always null
-    /// for <see cref="CreateCustom"/> roles. Introduced in Phase 2 (mycondo-docs ADR-020) so seeders
-    /// can look up "does this tenant already have its OrganizationAdmin role" without depending on the
-    /// display name never colliding with an unrelated custom role a tenant admin might create — Name
-    /// remains what's shown in the UI and is otherwise the same immutable-for-system-roles value it
-    /// always was.
+    /// Stable internal identifier for a role (e.g. <c>"organization.admin"</c>,
+    /// <c>"condominium.admin"</c>, <c>"default.building-admin"</c>), distinct from the human-editable
+    /// <see cref="Name"/>. Introduced in Phase 2 (mycondo-docs ADR-020) so seeders can look up "does
+    /// this tenant already have its OrganizationAdmin role" without depending on the display name never
+    /// colliding with an unrelated custom role a tenant admin might create. Optional on
+    /// <see cref="CreateCustom"/> roles: null for a tenant admin's own ad-hoc roles (created via
+    /// <c>CreateRoleCommandHandler</c>), set for the catalogue seeders' predefined default roles so they
+    /// can be reconciled idempotently — <see cref="Name"/> stays what's shown in the UI and, for
+    /// non-system roles, remains freely renamable via <see cref="Rename"/> regardless of Code.
     /// </summary>
     public string? Code { get; private set; }
 
@@ -74,7 +76,8 @@ public sealed class Role : AggregateRoot<RoleId>, IAuditable, ISoftDeletable, IT
         Guid tenantId,
         string name,
         string description,
-        DateTimeOffset nowUtc)
+        DateTimeOffset nowUtc,
+        string? code = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (tenantId == Guid.Empty)
@@ -84,7 +87,7 @@ public sealed class Role : AggregateRoot<RoleId>, IAuditable, ISoftDeletable, IT
 
         return new Role(
             RoleId.New(), tenantId, name.Trim(), description?.Trim() ?? string.Empty, false,
-            code: null, requiresBuildingScope: null, nowUtc);
+            code: code?.Trim(), requiresBuildingScope: null, nowUtc);
     }
 
     public static Role CreateSystem(

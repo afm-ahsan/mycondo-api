@@ -34,6 +34,7 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
+        services.AddScoped<IPermissionSeeder, PermissionSeeder>();
         services.AddScoped<IOrganizationAdminBootstrapper, OrganizationAdminBootstrapper>();
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
