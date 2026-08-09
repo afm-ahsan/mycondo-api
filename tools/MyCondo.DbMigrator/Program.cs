@@ -120,6 +120,9 @@ public static class Program
         ICondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder = sp.GetRequiredService<ICondominiumRoleCatalogueSeeder>();
         await condominiumRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, CancellationToken.None);
 
+        IResidentRoleCatalogueSeeder residentRoleCatalogueSeeder = sp.GetRequiredService<IResidentRoleCatalogueSeeder>();
+        await residentRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, CancellationToken.None);
+
         IUnitOfWork unitOfWork = sp.GetRequiredService<IUnitOfWork>();
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 

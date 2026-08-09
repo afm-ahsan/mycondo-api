@@ -24,10 +24,14 @@ public sealed class ResidentConfiguration : IEntityTypeConfiguration<Resident>
         builder.Property(x => x.Phone).HasMaxLength(20);
         builder.Property(x => x.Email).HasMaxLength(256);
         builder.Property(x => x.ResidentType).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.UserId);
         builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.HasIndex(x => new { x.TenantId, x.FlatId })
             .HasDatabaseName("ix_residents_tenant_id_flat_id");
+
+        builder.HasIndex(x => new { x.TenantId, x.UserId })
+            .HasDatabaseName("ix_residents_tenant_id_user_id");
 
         builder.HasQueryFilter(x => x.DeletedAtUtc == null);
         builder.Ignore(x => x.DomainEvents);

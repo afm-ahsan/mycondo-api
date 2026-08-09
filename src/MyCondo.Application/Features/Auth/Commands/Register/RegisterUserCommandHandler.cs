@@ -15,6 +15,7 @@ public sealed class RegisterUserCommandHandler(
     IOrganizationAdminBootstrapper organizationAdminBootstrapper,
     IDefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder,
     ICondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder,
+    IResidentRoleCatalogueSeeder residentRoleCatalogueSeeder,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -69,11 +70,13 @@ public sealed class RegisterUserCommandHandler(
             // userContextResolver.ResolveAsync below) immediately reflect the grant.
             await organizationAdminBootstrapper.BootstrapAsync(command.TenantId, user, nowUtc, cancellationToken);
 
-            // Also seed the tenant's default custom roles (ROLE_CATALOGUE_PROPOSAL.md) and the five
-            // condominium-scoped system roles (Phase 2) so the new OrganizationAdmin has something
-            // sensible to hand out immediately — nobody is auto-assigned to either set.
+            // Also seed the tenant's default custom roles (ROLE_CATALOGUE_PROPOSAL.md), the five
+            // condominium-scoped system roles (Phase 2), and the two resident-facing FlatOwner/Tenant
+            // system roles (Phase 3, mycondo-docs ADR-021) so the new OrganizationAdmin has something
+            // sensible to hand out immediately — nobody is auto-assigned to any of these sets.
             await defaultRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
             await condominiumRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
+            await residentRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

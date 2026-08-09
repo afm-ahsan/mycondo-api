@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Features.Residents.Commands.CreateResident;
+using MyCondo.Application.Features.Residents.Commands.LinkResidentToUser;
 using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Application.Features.Residents.Queries.GetResidentById;
 using MyCondo.Application.Features.Residents.Queries.GetResidentsForTenant;
@@ -39,6 +40,16 @@ public static class ResidentEndpoints
             .RequirePermission("resident.view")
             .Produces<ResidentDto>(StatusCodes.Status200OK);
 
+        residents.MapPost("/{id:guid}/link-user", async (Guid id, LinkResidentToUserRequest body, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new LinkResidentToUserCommand(id, body.UserId), ct);
+                return Results.NoContent();
+            })
+            .RequirePermission("resident.update")
+            .Produces(StatusCodes.Status204NoContent);
+
         return app;
     }
 }
+
+public sealed record LinkResidentToUserRequest(Guid UserId);

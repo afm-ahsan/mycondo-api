@@ -37,6 +37,8 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationAdminBootstrapper, OrganizationAdminBootstrapper>();
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
+        services.AddScoped<IResidentRoleCatalogueSeeder, ResidentRoleCatalogueSeeder>();
+        services.AddScoped<IFlatAccessAuthorizer, FlatAccessAuthorizer>();
 
         // Domain-event dispatch bypasses Mediator (see IDomainEventHandler comment for why).
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();

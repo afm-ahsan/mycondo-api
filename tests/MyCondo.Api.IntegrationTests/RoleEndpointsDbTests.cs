@@ -277,15 +277,18 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
 
         roleList.Should().NotBeNull();
         // OrganizationAdmin (Phase 2, mycondo-docs ADR-020) + the 7 ROLE_CATALOGUE_PROPOSAL.md custom
-        // roles + the 5 Phase-2 condominium-scoped system roles.
+        // roles + the 5 Phase-2 condominium-scoped system roles + the 2 Phase-3 resident-facing system
+        // roles (mycondo-docs ADR-021).
         roleList!.Select(r => r.Name).Should().BeEquivalentTo(
         [
             "OrganizationAdmin", "BuildingAdmin", "Treasurer", "Secretary", "SecurityHead", "Owner", "Renter", "Auditor",
             "CondoAdmin", "Manager", "Accountant", "SecurityOfficer", "FacilityManager",
+            "FlatOwner", "Tenant",
         ]);
         roleList.Should().OnlyContain(r =>
             r.Name == "OrganizationAdmin" || r.Name == "CondoAdmin" || r.Name == "Manager"
             || r.Name == "Accountant" || r.Name == "SecurityOfficer" || r.Name == "FacilityManager"
+            || r.Name == "FlatOwner" || r.Name == "Tenant"
             || !r.IsSystem);
 
         RoleSummaryDto organizationAdmin = roleList.Single(r => r.Name == "OrganizationAdmin");
@@ -297,6 +300,7 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
             ("CondoAdmin", "condominium.admin"), ("Manager", "condominium.manager"),
             ("Accountant", "condominium.accountant"), ("SecurityOfficer", "condominium.security"),
             ("FacilityManager", "condominium.facility-manager"),
+            ("FlatOwner", "resident.flat-owner"), ("Tenant", "resident.tenant"),
         })
         {
             RoleSummaryDto condoRole = roleList.Single(r => r.Name == name);
@@ -315,11 +319,13 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
         (await GrantCountAsync("SecurityHead")).Should().Be(1);
         (await GrantCountAsync("Treasurer")).Should().Be(11);
         (await GrantCountAsync("Auditor")).Should().Be(18);
-        (await GrantCountAsync("CondoAdmin")).Should().Be(27);
+        (await GrantCountAsync("CondoAdmin")).Should().Be(28);
         (await GrantCountAsync("Manager")).Should().Be(9);
         (await GrantCountAsync("Accountant")).Should().Be(8);
         (await GrantCountAsync("SecurityOfficer")).Should().Be(19);
         (await GrantCountAsync("FacilityManager")).Should().Be(19);
+        (await GrantCountAsync("FlatOwner")).Should().Be(2);
+        (await GrantCountAsync("Tenant")).Should().Be(2);
 
         // OrganizationAdmin gets the entire tenant-usable catalogue — never a hardcoded number, since
         // it must always equal whatever /api/v1/permissions actually returns (platform.* excluded).

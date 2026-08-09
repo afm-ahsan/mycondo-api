@@ -48,6 +48,7 @@ using MyCondo.Domain.Features.Platform.PlatformRoles;
 using MyCondo.Domain.Features.Platform.PlatformUserRoleAssignments;
 using MyCondo.Domain.Features.Platform.PlatformUsers;
 using MyCondo.Domain.Features.Property.Buildings;
+using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Property.Gates;
 using MyCondo.Domain.Features.Residents;
@@ -152,6 +153,7 @@ public static class DependencyInjection
         services.AddScoped<IPlatformAuditLogRepository, PlatformAuditLogRepository>();
         services.AddScoped<IBuildingRepository, BuildingRepository>();
         services.AddScoped<IFlatRepository, FlatRepository>();
+        services.AddScoped<IFlatOwnershipRepository, FlatOwnershipRepository>();
         services.AddScoped<IGateRepository, GateRepository>();
         services.AddScoped<IResidentRepository, ResidentRepository>();
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();

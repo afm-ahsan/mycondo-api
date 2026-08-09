@@ -46,5 +46,11 @@ public sealed class ResidentRepository(MyCondoDbContext db) : IResidentRepositor
             r => r.TenantId == tenantId && r.FlatId == flatId && EF.Functions.ILike(r.FullName, fullName),
             cancellationToken);
 
+    public Task<List<Resident>> GetByUserIdAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken) =>
+        db.Set<Resident>()
+            .AsNoTracking()
+            .Where(r => r.TenantId == tenantId && r.UserId == userId)
+            .ToListAsync(cancellationToken);
+
     public void Add(Resident resident) => db.Set<Resident>().Add(resident);
 }

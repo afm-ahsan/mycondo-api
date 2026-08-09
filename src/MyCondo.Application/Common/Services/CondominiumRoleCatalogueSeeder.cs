@@ -27,7 +27,7 @@ public sealed class CondominiumRoleCatalogueSeeder(
         ("CondoAdmin", "condominium.admin", "Day-to-day operational management of a single condominium/building.",
         [
             "property.view", "property.update", "resident.view", "resident.create", "resident.update",
-            "ownership.view", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
+            "ownership.view", "ownership.manage", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
             "payment.view", "payment.record", "expense.view", "expense.manage", "complaint.view",
             "complaint.create", "complaint.assign", "complaint.manage", "workorder.view",
             "workorder.create", "workorder.assign", "workorder.complete", "document.view",

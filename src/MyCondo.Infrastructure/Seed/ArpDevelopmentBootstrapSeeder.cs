@@ -22,8 +22,8 @@ namespace MyCondo.Infrastructure.Seed;
 /// Development-only bootstrap for the approved Phase-2 test organization (mycondo-docs ADR-020) —
 /// "Akter Residence Park" (slug <c>arp</c>) with its first user (<c>admin@mycondo.com</c>), seeded the
 /// same way any real tenant's first user would be: <see cref="IOrganizationAdminBootstrapper"/> grants
-/// OrganizationAdmin, then <see cref="IDefaultRoleCatalogueSeeder"/> and
-/// <see cref="ICondominiumRoleCatalogueSeeder"/> seed the rest of the catalogue.
+/// OrganizationAdmin, then <see cref="IDefaultRoleCatalogueSeeder"/>, <see cref="ICondominiumRoleCatalogueSeeder"/>,
+/// and <see cref="IResidentRoleCatalogueSeeder"/> (Phase 3, mycondo-docs ADR-021) seed the rest of the catalogue.
 ///
 /// Unlike <see cref="PlatformBootstrapSeeder"/>/<see cref="DevelopmentTenantSeeder"/> (which write to
 /// tables with no RLS at all — <c>platform.*</c> and <c>tenancy.tenants</c> respectively), this seeder
@@ -110,10 +110,13 @@ public sealed class ArpDevelopmentBootstrapSeeder(
             roles, permissions, rolePermissions, loggerFactory.CreateLogger<DefaultRoleCatalogueSeeder>());
         CondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder = new(
             roles, permissions, rolePermissions, loggerFactory.CreateLogger<CondominiumRoleCatalogueSeeder>());
+        ResidentRoleCatalogueSeeder residentRoleCatalogueSeeder = new(
+            roles, permissions, rolePermissions, loggerFactory.CreateLogger<ResidentRoleCatalogueSeeder>());
 
         await organizationAdminBootstrapper.BootstrapAsync(tenant.Id.Value, admin, nowUtc, cancellationToken);
         await defaultRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, cancellationToken);
         await condominiumRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, cancellationToken);
+        await residentRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 
