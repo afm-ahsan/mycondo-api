@@ -144,4 +144,56 @@ public class DefaultRoleCatalogueSeederTests
         // which already had its one expected grant, gets nothing extra.
         addedGrants.Should().NotContain(g => g.RoleId == existingSecurityHead.Id);
     }
+
+    [Fact]
+    public async Task SeedAsync_Backfills_Code_On_A_Legacy_Code_Less_Role_Instead_Of_Duplicating_It()
+    {
+        // Reproduces the bug found running this seeder against a real, pre-existing tenant bootstrapped
+        // before Role.CreateCustom accepted a code: "BuildingAdmin" exists with Code == null. Without
+        // the Name-based fallback, SeedAsync would try to create a second "BuildingAdmin" role and the
+        // database's (tenant_id, name) unique constraint would reject it.
+        Guid tenantId = Guid.NewGuid();
+        List<Permission> catalogue = BuildCatalogue(FullCatalogueNames);
+        Role legacyBuildingAdmin = Role.CreateCustom(tenantId, "BuildingAdmin", "desc", DateTimeOffset.UtcNow);
+        legacyBuildingAdmin.Code.Should().BeNull("this reproduces a role created before Code existed");
+
+        (IRoleRepository roles, IPermissionRepository permissions, IRolePermissionRepository rolePermissions, ILogger<DefaultRoleCatalogueSeeder> logger) =
+            BuildSubstitutes(catalogue, [legacyBuildingAdmin]);
+
+        List<Role> addedRoles = [];
+        roles.Add(Arg.Do<Role>(r => addedRoles.Add(r)));
+        List<RolePermission> addedGrants = [];
+        rolePermissions.Add(Arg.Do<RolePermission>(g => addedGrants.Add(g)));
+
+        DefaultRoleCatalogueSeeder seeder = new(roles, permissions, rolePermissions, logger);
+        await seeder.SeedAsync(tenantId, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        addedRoles.Should().NotContain(r => r.Name == "BuildingAdmin", "the legacy row must be adopted, not duplicated");
+        legacyBuildingAdmin.Code.Should().Be("default.building-admin", "the legacy row's Code must be backfilled from the catalogue");
+        addedGrants.Should().Contain(g => g.RoleId == legacyBuildingAdmin.Id, "grants still get reconciled onto the backfilled role");
+    }
+
+    [Fact]
+    public async Task SeedAsync_Does_Not_Backfill_A_Role_That_Already_Has_A_Different_Code()
+    {
+        Guid tenantId = Guid.NewGuid();
+        List<Permission> catalogue = BuildCatalogue(FullCatalogueNames);
+        // A role that already has some other Code should never be touched by name-matching — only
+        // genuinely code-less legacy rows are eligible for backfill.
+        Role unrelatedCodedRole = Role.CreateSystem(
+            RoleId.New(), tenantId, "BuildingAdmin", "desc", DateTimeOffset.UtcNow, code: "some.other.code");
+
+        (IRoleRepository roles, IPermissionRepository permissions, IRolePermissionRepository rolePermissions, ILogger<DefaultRoleCatalogueSeeder> logger) =
+            BuildSubstitutes(catalogue, [unrelatedCodedRole]);
+
+        List<Role> addedRoles = [];
+        roles.Add(Arg.Do<Role>(r => addedRoles.Add(r)));
+
+        DefaultRoleCatalogueSeeder seeder = new(roles, permissions, rolePermissions, logger);
+        await seeder.SeedAsync(tenantId, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        unrelatedCodedRole.Code.Should().Be("some.other.code");
+        addedRoles.Should().Contain(r => r.Code == "default.building-admin",
+            "the catalogue's BuildingAdmin entry gets its own new role since the existing 'BuildingAdmin'-named role belongs to a different Code");
+    }
 }

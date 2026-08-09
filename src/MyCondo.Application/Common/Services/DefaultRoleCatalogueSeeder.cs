@@ -78,6 +78,11 @@ public sealed class DefaultRoleCatalogueSeeder(
     /// catalogue after a tenant already exists still reaches it. Never removes an existing role or
     /// grant not in the catalogue (an admin's own custom roles, or a permission grant this catalogue no
     /// longer lists, are left untouched).
+    ///
+    /// Falls back to matching by <see cref="Role.Name"/> for a legacy row with no <see cref="Role.Code"/>
+    /// (created before <c>Role.CreateCustom</c> accepted a code — any tenant bootstrapped before this
+    /// reconciliation existed) and backfills its Code, rather than attempting to create a second role
+    /// with the same name, which the <c>(tenant_id, name)</c> unique constraint would reject anyway.
     /// </summary>
     public async Task SeedAsync(Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken)
     {
@@ -88,16 +93,26 @@ public sealed class DefaultRoleCatalogueSeeder(
         Dictionary<string, Role> existingByCode = existingRoles
             .Where(r => r.Code is not null)
             .ToDictionary(r => r.Code!, StringComparer.Ordinal);
+        Dictionary<string, Role> existingByNameWithNoCode = existingRoles
+            .Where(r => r.Code is null)
+            .ToDictionary(r => r.Name, StringComparer.Ordinal);
 
         int rolesCreated = 0;
+        int rolesBackfilled = 0;
         int grantsCreated = 0;
 
         foreach ((string name, string code, string description, string[] permissionNames) in DefaultRoles)
         {
             Role role;
-            if (existingByCode.TryGetValue(code, out Role? found))
+            if (existingByCode.TryGetValue(code, out Role? foundByCode))
             {
-                role = found;
+                role = foundByCode;
+            }
+            else if (existingByNameWithNoCode.TryGetValue(name, out Role? legacyRole))
+            {
+                legacyRole.BackfillCode(code);
+                role = legacyRole;
+                rolesBackfilled++;
             }
             else
             {
@@ -127,7 +142,8 @@ public sealed class DefaultRoleCatalogueSeeder(
 
         logger.LogInformation(
             "[DatabaseSeed] Default role catalogue for tenant {TenantId}: {RoleCount} roles expected, " +
-            "{RolesCreated} created, {GrantsCreated} grants created",
-            tenantId, DefaultRoles.Length, rolesCreated, grantsCreated);
+            "{RolesCreated} created, {RolesBackfilled} legacy roles backfilled with a Code, " +
+            "{GrantsCreated} grants created",
+            tenantId, DefaultRoles.Length, rolesCreated, rolesBackfilled, grantsCreated);
     }
 }
