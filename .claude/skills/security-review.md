@@ -31,11 +31,15 @@ Wave 0 for the pattern) rather than suppressing the warning.
 
 ## Secrets
 
-Never commit secrets. Use `dotnet user-secrets` locally, GitHub Secrets / AWS Secrets Manager in
-CI/prod, `MYCONDO_*` env var prefix. `appsettings.json`/`appsettings.Development.json` should only
-ever contain non-secret defaults (current connection strings in `appsettings.json` are dev-only
-placeholders pointing at the local Docker Compose Postgres — don't treat them as a template for
-staging/prod config).
+Never commit real/production secrets. Use GitHub Secrets / AWS Secrets Manager in CI/prod, `MYCONDO_*`
+env var prefix. `appsettings.json` contains no connection string at all by design (no placeholder to
+mistake for real); `appsettings.Development.json` **does** contain a real, development-only PostgreSQL
+connection string (`Host=localhost;...;Username=dev_user;Password=PgDev@1357#`) — this is a deliberate,
+temporary MVP exception (mycondo-docs ADR-023, "Temporary MVP Development Credential Strategy"), not
+the target architecture, and must never be treated as a template for Staging/Production config. That
+credential must never be reused anywhere else and must be rotated (not just deleted from config)
+before this repo is used against a shared/production database. `dotnet user-secrets` is not required
+for local dev under this MVP decision, but remains available as an optional personal override.
 
 ## Platform-admin bypass
 

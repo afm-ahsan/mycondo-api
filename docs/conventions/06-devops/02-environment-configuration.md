@@ -34,6 +34,13 @@ Set via `ASPNETCORE_ENVIRONMENT` (backend) and `VITE_ENV` (frontend).
 
 ---
 
+> **MyCondo-specific MVP exception (temporary):** `appsettings.Development.json` currently contains a
+> real, development-only PostgreSQL connection string (`ConnectionStrings:Default`), not just
+> structure/switches — see `mycondo-docs` ADR-023 ("Temporary MVP Development Credential Strategy")
+> and `CLAUDE.md`'s "Credential Configuration (MVP)" section. This must not be treated as precedent
+> for `appsettings.Staging.json`/`appsettings.Production.json`, neither of which exist yet — those must
+> follow the "No secrets in any of these files" rule below when they're introduced.
+
 ## 3. `appsettings.{Environment}.json` Files
 
 ```
