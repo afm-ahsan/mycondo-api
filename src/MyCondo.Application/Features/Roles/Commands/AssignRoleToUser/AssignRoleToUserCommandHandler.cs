@@ -6,12 +6,14 @@ using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Property.Buildings;
 
 namespace MyCondo.Application.Features.Roles.Commands.AssignRoleToUser;
 
 public sealed class AssignRoleToUserCommandHandler(
     IRoleRepository roles,
     IUserRepository users,
+    IBuildingRepository buildings,
     IRoleAssignmentRepository roleAssignments,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
@@ -33,6 +35,30 @@ public sealed class AssignRoleToUserCommandHandler(
         if (role.TenantId != tenantId)
         {
             throw new NotFoundException(nameof(Role), command.RoleId);
+        }
+
+        // Phase-2 scope enforcement (mycondo-docs ADR-020) — null means "no constraint," preserving
+        // pre-Phase-2 behavior for every pre-existing role exactly as it was.
+        if (role.RequiresBuildingScope == true && command.BuildingId is null)
+        {
+            throw new ConflictException($"Role '{role.Name}' requires a Building to be assigned.");
+        }
+
+        if (role.RequiresBuildingScope == false && command.BuildingId is not null)
+        {
+            throw new ConflictException($"Role '{role.Name}' is organization-wide and cannot be assigned to a specific Building.");
+        }
+
+        if (command.BuildingId is Guid buildingIdValue)
+        {
+            BuildingId buildingId = new(buildingIdValue);
+            Building building = await buildings.GetByIdAsync(buildingId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Building), buildingIdValue);
+
+            if (building.TenantId != tenantId)
+            {
+                throw new NotFoundException(nameof(Building), buildingIdValue);
+            }
         }
 
         UserId userId = new(command.UserId);

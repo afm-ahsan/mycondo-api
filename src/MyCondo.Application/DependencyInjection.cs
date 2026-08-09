@@ -34,8 +34,9 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
-        services.AddScoped<ISuperAdminBootstrapper, SuperAdminBootstrapper>();
+        services.AddScoped<IOrganizationAdminBootstrapper, OrganizationAdminBootstrapper>();
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
+        services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
 
         // Domain-event dispatch bypasses Mediator (see IDomainEventHandler comment for why).
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();

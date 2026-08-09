@@ -4,5 +4,7 @@ public sealed record RoleSummaryDto(
     Guid RoleId,
     string Name,
     string Description,
-    bool IsSystem
+    bool IsSystem,
+    string? Code,
+    bool? RequiresBuildingScope
 );

@@ -24,11 +24,15 @@ builder.Services
 
 if (builder.Environment.IsDevelopment())
 {
-    // Local-only bootstrap so there's a real tenant to register against — see
-    // DevelopmentTenantSeeder's doc comment. Not a production provisioning mechanism.
+    // Registered first (see ArpDevelopmentBootstrapSeeder's doc comment for why order matters here):
+    // the approved Phase-2 test organization, "Akter Residence Park" — mycondo-docs ADR-020.
+    builder.Services.AddHostedService<ArpDevelopmentBootstrapSeeder>();
+
+    // Local-only bootstrap so there's a real tenant to register against if ARP wasn't created above —
+    // see DevelopmentTenantSeeder's doc comment. Not a production provisioning mechanism.
     builder.Services.AddHostedService<DevelopmentTenantSeeder>();
 
-    // Separate, unrelated hosted service — deliberately not merged with DevelopmentTenantSeeder above.
+    // Separate, unrelated hosted service — deliberately not merged with the seeders above.
     // See PlatformBootstrapSeeder's doc comment and mycondo-docs ADR-019.
     builder.Services.AddHostedService<PlatformBootstrapSeeder>();
 }
