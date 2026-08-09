@@ -51,8 +51,8 @@ the `postgresql-rls` skill (`.claude/skills/postgresql-rls.md`) for the full mec
 
 | Environment | Database | User | Auth source | Purpose | RLS validated |
 |---|---|---|---|---|---|
-| Native PostgreSQL | `mycondo` | `dev_user` | .NET User Secrets | Daily development, debugging, EF migrations, manual testing | ❌ No — superuser connection |
-| Docker Compose | `mycondo_dev` | `mycondo_migrator` (bootstrap/DDL) / `mycondo_app` (runtime) | `.env` (Compose) | Canonical local architecture validation (ADR-016 model) | ✅ Yes |
+| Native PostgreSQL | `mycondo` | `dev_user` | `appsettings.Development.json` (MVP, see ADR-023) | Daily development, debugging, EF migrations, manual testing | ❌ No — superuser connection |
+| Docker Compose | `mycondo_dev` | `mycondo_migrator` (bootstrap/DDL) / `mycondo_app` (runtime) | `.env` (Compose) + connection-string override | Canonical local architecture validation (ADR-016 model) | ✅ Yes |
 | Testcontainers | Ephemeral (`mycondo_test` / `mycondo_rls_test`) | Ephemeral `mycondo_migrator`/`mycondo_app`, created per run | Generated in-process | Automated integration tests (`MultiTenancyTests`, `Api.IntegrationTests`) | ✅ Yes |
 | Production | Managed DB (not yet provisioned) | Restricted runtime role (TBD when RDS is provisioned) | Deployment secret manager | Production traffic | ✅ Yes (by design; not yet provisioned — see ADR-016's production note) |
 
@@ -76,18 +76,22 @@ PostgreSQL 18 server (e.g. the native Windows service, or any other local instal
 database and a `dev_user` role already created — this repo doesn't script that bootstrap, since it's
 a pre-existing local server, not something Compose provisions.
 
+**No `dotnet user-secrets` and no environment variables are required for this path.** The connection
+string and JWT signing key are already set directly in `appsettings.Development.json` — this is a
+deliberate, temporary MVP decision (see `mycondo-docs` ADR-023, "Temporary MVP Development Credential
+Strategy"), not the intended production credential architecture. Create the local role/database to
+match that committed value exactly:
+
+```sql
+-- Run once against your local PostgreSQL 18 server (e.g. via psql):
+CREATE ROLE dev_user WITH LOGIN SUPERUSER PASSWORD 'PgDev@1357#';
+CREATE DATABASE mycondo OWNER dev_user;
+```
+
 ```powershell
 # Clone
 git clone https://github.com/afm-ahsan/mycondo-api.git
 cd mycondo-api
-
-# Set required user-secrets (never commit real credentials — appsettings.json only holds a
-# non-functional placeholder password)
-dotnet user-secrets init --project src/MyCondo.Api
-dotnet user-secrets set --project src/MyCondo.Api `
-  "Jwt:SigningKey" "<your-32-char-or-longer-key>"
-dotnet user-secrets set --project src/MyCondo.Api `
-  "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=mycondo;Username=dev_user;Password=<your-local-password>"
 
 # Apply migrations (dev_user is sufficient here — see "Whether table owners bypass RLS" caveat in
 # the Developer Environment Matrix above; this is a convenience path, not a least-privilege one)
@@ -109,6 +113,11 @@ dotnet run --project src/MyCondo.Api
 # → Scalar UI at https://localhost:7219/scalar
 ```
 
+`PgDev@1357#` is a development-only credential committed to this repository by deliberate MVP
+decision. It must never be reused for Staging/Production or any other service, and must be rotated
+(not merely deleted from config) before this repository is used against a shared/production database
+— see ADR-023.
+
 ### Option B — Docker Compose (RLS-validating, ADR-016 model)
 
 Slower to set up, but the one local path that actually exercises RLS and least-privilege the way
@@ -127,23 +136,25 @@ cp .env.example .env
 docker compose up -d
 docker compose ps   # wait for postgres to report healthy
 
-# Set required user-secrets — migrator role (DDL/owner), NOT mycondo_app (restricted runtime role;
-# it can't CREATE TABLE by design, so migrations must run as mycondo_migrator)
-dotnet user-secrets init --project src/MyCondo.Api
-dotnet user-secrets set --project src/MyCondo.Api `
-  "Jwt:SigningKey" "<your-32-char-or-longer-key>"
-dotnet user-secrets set --project src/MyCondo.Api `
-  "ConnectionStrings:Default" "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_migrator;Password=<same value as .env's POSTGRES_PASSWORD>"
+# Jwt:SigningKey is already set in appsettings.Development.json — nothing to configure for it here.
+# Override just the connection string for this path — migrator role (DDL/owner), NOT mycondo_app
+# (restricted runtime role; it can't CREATE TABLE by design, so migrations must run as
+# mycondo_migrator). This path's password is whatever you chose for .env's POSTGRES_PASSWORD (not the
+# fixed MVP value from Option A), so it can't live in a committed appsettings file — set it for the
+# current shell session instead of via user-secrets:
+$env:ConnectionStrings__Default = "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_migrator;Password=<same value as .env's POSTGRES_PASSWORD>"
 
 dotnet ef database update `
   --project src/MyCondo.Infrastructure `
   --startup-project src/MyCondo.Api
 
-# Before running the API day-to-day against this path, switch the user-secrets connection string to
-# the restricted mycondo_app role instead (Password=mycondo_dev, set by db/init/01_create_app_role.sql
-# on first container boot) — running as mycondo_migrator long-term would own the tables and bypass RLS.
+# Before running the API day-to-day against this path, switch the override to the restricted
+# mycondo_app role instead (Password=mycondo_dev, set by db/init/01_create_app_role.sql on first
+# container boot) — running as mycondo_migrator long-term would own the tables and bypass RLS.
+$env:ConnectionStrings__Default = "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev"
 
 dotnet run --project src/MyCondo.Api
+Remove-Item Env:\ConnectionStrings__Default
 ```
 
 The companion frontend (`mycondo-web`) reads `VITE_MYCONDO_API_BASE_URL=https://localhost:7219`.

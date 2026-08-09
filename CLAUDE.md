@@ -154,7 +154,8 @@ dotnet run --project src/MyCondo.Api
 
 **Native PostgreSQL path:** `dev_user` can already `CREATE TABLE` (it's a superuser on that instance —
 see "Multi-tenancy" below), so `dotnet ef database update` works directly against the connection
-string already set in user-secrets, no override needed.
+string already in `appsettings.Development.json` (see "Credential Configuration (MVP)" below) — no
+user-secrets, no override needed.
 
 **Docker Compose path:** `dotnet ef database update` needs the `mycondo_migrator` (DDL/owner) role,
 not the `mycondo_app` role the app runs as day-to-day — `mycondo_app` is intentionally restricted to
@@ -181,23 +182,38 @@ docker compose logs -f api
 docker compose down -v                # WIPES volumes — destructive
 ```
 
-## Required user-secrets (backend)
+## Credential Configuration (MVP)
 
-Values differ by which local path you're using — see README.md's Developer Environment Matrix and
-Quickstart for the full walkthrough of both.
+**For the first MVP, no `dotnet user-secrets` and no environment variables are required to run the
+backend locally.** This is a deliberate, temporary decision — see mycondo-docs ADR-023 ("Temporary
+MVP Development Credential Strategy") for the full rationale, boundary, and expiration trigger (must
+be revisited before Staging/Production or external customer onboarding).
+
+- **`Jwt:SigningKey`** is already set directly in `appsettings.Development.json` (a dev-only value,
+  never used outside local development) — nothing to configure.
+- **Native PostgreSQL path** (day-to-day, does not validate RLS — see "Multi-tenancy" above): the
+  connection string is already set directly in `appsettings.Development.json`
+  (`Host=localhost;Port=5432;Database=mycondo;Username=dev_user;Password=PgDev@1357#`). Nothing to
+  configure — just have a local PostgreSQL 18 server with a `mycondo` database and `dev_user` role
+  already created (this repo doesn't script that bootstrap; see README.md Option A).
+- **Docker Compose path** (ADR-016 model, validates RLS — note port 5433, not 5432): its connection
+  string depends on whatever password you choose for `.env`'s `POSTGRES_PASSWORD` (see
+  `.env.example`), so it still needs an explicit override at the point you run migrations/the API
+  against it:
 
 ```powershell
-dotnet user-secrets set --project src/MyCondo.Api `
-  "Jwt:SigningKey" "<32-or-more-character-key>"
-
-# Native PostgreSQL path (day-to-day, does not validate RLS):
-dotnet user-secrets set --project src/MyCondo.Api `
-  "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=mycondo;Username=dev_user;Password=<your-local-password>"
-
-# Docker Compose path (ADR-016 model, validates RLS) — note port 5433, not 5432:
-dotnet user-secrets set --project src/MyCondo.Api `
-  "ConnectionStrings:Default" "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev"
+$env:ConnectionStrings__Default = "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev"
+dotnet run --project src/MyCondo.Api
+Remove-Item Env:\ConnectionStrings__Default
 ```
+
+**This MVP credential (`PgDev@1357#`) must never be reused for Staging/Production/any other service,
+and must be rotated — not merely deleted from config — before this repository is used against a
+shared or production database.** `MyCondo.Api.csproj` still carries a `UserSecretsId` (harmless,
+optional — a developer may still use `dotnet user-secrets` for a personal override), but nothing in
+this repo *requires* it anymore; if you set one up under the old convention, clear it
+(`dotnet user-secrets clear --project src/MyCondo.Api`) so it doesn't silently shadow the
+`appsettings.Development.json` value above.
 
 ## Mandatory Git Branch Policy
 
@@ -227,7 +243,12 @@ Branch creation is mandatory pre-flight work, not optional — but it does not b
 
 ## Never Do
 
-- **Never commit secrets.** Use user-secrets / GitHub Secrets / env vars (`MYCONDO_*`).
+- **Never commit real/production secrets** (third-party API keys, production DB credentials, signing
+  keys used outside local dev). Use GitHub Secrets / env vars (`MYCONDO_*`) / the future secret
+  manager (ADR-023) for those. The one documented, temporary exception is the MVP-only local
+  PostgreSQL dev credential in `appsettings.Development.json` (see "Credential Configuration (MVP)"
+  above) — that credential is development-only, never guards anything beyond a local dev database,
+  and must be rotated before Staging/Production.
 - **Never `Task.Result` or `.Wait()`.** Always `await`.
 - **Never `dynamic`.**
 - **Never inline `modelBuilder.Entity<T>()`** in `OnModelCreating`. Use `IEntityTypeConfiguration<T>`.
@@ -240,6 +261,10 @@ These deviate from the conventions library; an ADR will be added to `docs/decisi
 - **Two-repo layout** (this repo + `mycondo-web`) instead of the convention's monorepo with sibling `MyCondo.Core/` + `MyCondo.Client/` folders. Per proposal §03 ("two clean repos, lowercase, hyphenated, role-based, independent deployment").
 - **Schema-per-module** (19 schemas as of the ADR-004 addendum adding `operations` for Slice H) instead of the convention's single `app` schema default. Per proposal §06 / MyCondo.md §06: surfaces module ownership at the DB layer and eases future microservice extraction.
 - **PostgreSQL 18 + Redis 8.6** instead of the convention's PG 16 / Redis 7 mention. Per proposal §06 — current stable releases.
+- **Development database credentials live directly in `appsettings.Development.json`**, not
+  `dotnet user-secrets`, instead of the convention library's default (`docs/conventions/05-security/
+  02-secrets-and-configuration.md` §2/§4). Per mycondo-docs ADR-023 — temporary for the first MVP,
+  must be reviewed and rotated before Staging/Production.
 
 ## Module Implementation Order
 

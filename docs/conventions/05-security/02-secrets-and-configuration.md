@@ -2,6 +2,17 @@
 
 This document covers how secrets and configuration values are stored, accessed, and rotated. **No secret is ever committed to Git.**
 
+> **MyCondo-specific MVP exception (temporary):** during the first MVP and local-development phase,
+> MyCondo stores its development-only PostgreSQL credential directly in `appsettings.Development.json`
+> instead of `dotnet user-secrets` — see `mycondo-docs` ADR-023 ("Temporary MVP Development Credential
+> Strategy") and `CLAUDE.md`'s "Credential Configuration (MVP)" section. This is a deliberate,
+> temporary development convention, not the intended production credential-management architecture —
+> it must not be treated as a template for Staging/Production, and the rest of this document (User
+> Secrets, environment variables, provider secret stores) remains the target architecture this project
+> will move toward before Staging/Production or external customer onboarding. Everything below this
+> notice describes that target/general architecture, not MyCondo's current MVP database-credential
+> exception.
+
 ---
 
 ## 1. Configuration Sources (in precedence order)
@@ -68,6 +79,8 @@ The .NET configuration system merges these. Later sources override earlier ones.
 ### Rules
 
 - **Connection strings have placeholder values** in committed files — real values come from secrets.
+  (MyCondo's current MVP exception for its local PostgreSQL dev credential only — see the notice at
+  the top of this document.)
 - **Secrets like `Jwt:SigningKey` are absent** in committed files. They must be present in user-secrets or production secret stores.
 - **Strict shape**: production startup fails if a required secret is missing (`ValidateOnStart()`).
 
@@ -276,7 +289,7 @@ builder.ConfigureAppConfiguration((_, cfg) =>
 
 | Mistake                                                          | Fix                                                              |
 |------------------------------------------------------------------|------------------------------------------------------------------|
-| Connection string committed in `appsettings.json`                | Placeholder; real value via user-secrets / env var               |
+| Connection string committed in `appsettings.json`                | Placeholder; real value via user-secrets / env var (general rule — MyCondo's MVP dev-only PostgreSQL credential in `appsettings.Development.json` is a documented, temporary, ADR-023 exception) |
 | Reading `IConfiguration["Jwt:SigningKey"]` in business code      | `IOptions<JwtSettings>`                                          |
 | `Console.WriteLine(jwtSigningKey)` for "debugging"                | Never log secrets                                               |
 | Same JWT signing key across environments                         | Per-environment, generated independently                         |
