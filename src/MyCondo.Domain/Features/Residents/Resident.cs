@@ -19,6 +19,15 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
     public string? Phone { get; private set; }
     public string? Email { get; private set; }
     public ResidentType ResidentType { get; private set; }
+
+    /// <summary>
+    /// Bridges this party record to a portal <see cref="Identity.Users.User"/> account (Phase 3,
+    /// mycondo-docs ADR-021) — null for every resident until an admin explicitly links one. Never set
+    /// automatically: no email/phone/name matching, no guessing. Existing residents with no portal
+    /// account remain valid indefinitely with this left null; nothing in the system requires it.
+    /// </summary>
+    public Guid? UserId { get; private set; }
+
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -78,6 +87,25 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
     {
         Phone = phone?.Trim();
         Email = email?.Trim();
+        Version++;
+    }
+
+    /// <summary>Explicit admin action bridging this resident record to a portal User account — the
+    /// caller (LinkResidentToUserCommandHandler) is responsible for having already verified the User
+    /// belongs to the same Tenant; this method only guards against a no-op re-link.</summary>
+    public void LinkToUser(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("UserId is required.", nameof(userId));
+        }
+
+        if (UserId == userId)
+        {
+            return;
+        }
+
+        UserId = userId;
         Version++;
     }
 

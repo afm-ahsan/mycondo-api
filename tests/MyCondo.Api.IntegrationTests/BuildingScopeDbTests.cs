@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using MyCondo.Application.Features.Auth.DTOs;
+using MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
 using MyCondo.Application.Features.Roles.Commands.CreateRole;
 using MyCondo.Application.Features.Roles.Queries.GetPermissionCatalogue;
 using MyCondo.Domain.Abstractions;
@@ -20,7 +21,6 @@ namespace MyCondo.Api.IntegrationTests;
 public class BuildingScopeDbTests : IClassFixture<PostgresApiFactory>
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-    private static readonly Guid TargetBuilding = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private const string ScopedPermission = "complaint.manage";
 
     private readonly PostgresApiFactory _factory;
@@ -71,6 +71,16 @@ public class BuildingScopeDbTests : IClassFixture<PostgresApiFactory>
         AuthTokensDto superAdminTokens = await RegisterAsync(client, tenantId, "owner@example.com");
         AuthTokensDto staffTokens = await RegisterAsync(client, tenantId, "staff@example.com");
 
+        using HttpRequestMessage createBuildingRequest = new(HttpMethod.Post, "/api/v1/properties/buildings")
+        {
+            Content = JsonContent.Create(new CreateBuildingCommand("Target Building", "TGT", Address: null)),
+        };
+        createBuildingRequest.Headers.Authorization = new("Bearer", superAdminTokens.AccessToken);
+        HttpResponseMessage createBuildingResponse = await client.SendAsync(createBuildingRequest);
+        createBuildingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        CreateBuildingResult? building = await createBuildingResponse.Content.ReadFromJsonAsync<CreateBuildingResult>(JsonOptions);
+        Guid targetBuilding = building!.BuildingId;
+
         using HttpRequestMessage createRoleRequest = new(HttpMethod.Post, "/api/v1/roles")
         {
             Content = JsonContent.Create(new { name = "Building Staff", description = "Scoped ops" }),
@@ -96,7 +106,7 @@ public class BuildingScopeDbTests : IClassFixture<PostgresApiFactory>
 
         using HttpRequestMessage assignRequest = new(HttpMethod.Post, $"/api/v1/roles/{role.RoleId}/assignments")
         {
-            Content = JsonContent.Create(new { userId = staffTokens.User.UserId, buildingId = TargetBuilding }),
+            Content = JsonContent.Create(new { userId = staffTokens.User.UserId, buildingId = targetBuilding }),
         };
         assignRequest.Headers.Authorization = new("Bearer", superAdminTokens.AccessToken);
         (await client.SendAsync(assignRequest)).StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -114,7 +124,7 @@ public class BuildingScopeDbTests : IClassFixture<PostgresApiFactory>
         List<string> bpermClaims = jwt.Claims.Where(c => c.Type == "bperm").Select(c => c.Value).ToList();
         List<string> permClaims = jwt.Claims.Where(c => c.Type == "perm").Select(c => c.Value).ToList();
 
-        bpermClaims.Should().Contain($"{TargetBuilding}|{ScopedPermission}");
+        bpermClaims.Should().Contain($"{targetBuilding}|{ScopedPermission}");
         permClaims.Should().NotContain(ScopedPermission,
             "a building-scoped grant must never appear as a tenant-wide `perm` claim");
     }

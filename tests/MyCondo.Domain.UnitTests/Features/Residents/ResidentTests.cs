@@ -63,4 +63,46 @@ public class ResidentTests
 
         resident.DeletedAtUtc.Should().Be(Now.AddDays(1));
     }
+
+    [Fact]
+    public void New_Resident_Has_No_UserId_Until_Explicitly_Linked()
+    {
+        Resident resident = Resident.Register(TenantId, FlatId, "Jane Doe", null, null, ResidentType.Owner, Now);
+
+        resident.UserId.Should().BeNull();
+    }
+
+    [Fact]
+    public void LinkToUser_Sets_UserId_And_Increments_Version()
+    {
+        Resident resident = Resident.Register(TenantId, FlatId, "Jane Doe", null, null, ResidentType.Owner, Now);
+        Guid userId = Guid.NewGuid();
+
+        resident.LinkToUser(userId);
+
+        resident.UserId.Should().Be(userId);
+        resident.Version.Should().Be(2);
+    }
+
+    [Fact]
+    public void LinkToUser_Is_A_NoOp_When_Already_Linked_To_The_Same_User()
+    {
+        Resident resident = Resident.Register(TenantId, FlatId, "Jane Doe", null, null, ResidentType.Owner, Now);
+        Guid userId = Guid.NewGuid();
+        resident.LinkToUser(userId);
+
+        resident.LinkToUser(userId);
+
+        resident.Version.Should().Be(2, "re-linking to the same User must not bump the version");
+    }
+
+    [Fact]
+    public void LinkToUser_Throws_When_UserId_Is_Empty()
+    {
+        Resident resident = Resident.Register(TenantId, FlatId, "Jane Doe", null, null, ResidentType.Owner, Now);
+
+        Action act = () => resident.LinkToUser(Guid.Empty);
+
+        act.Should().Throw<ArgumentException>();
+    }
 }

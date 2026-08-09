@@ -19,5 +19,10 @@ public interface IResidentRepository
     Task<Resident?> FindByFlatAndNameAsync(
         Guid tenantId, FlatId flatId, string fullName, CancellationToken cancellationToken);
 
+    /// <summary>Every resident party record bridged to a given portal User (Phase 3, mycondo-docs
+    /// ADR-021) — a User can be resident of record for more than one Flat (e.g. owner-occupier in one,
+    /// primary occupant in another), so this returns a list, not a single row.</summary>
+    Task<List<Resident>> GetByUserIdAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
+
     void Add(Resident resident);
 }

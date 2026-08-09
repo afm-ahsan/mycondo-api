@@ -125,6 +125,7 @@ public class ArpDevelopmentBootstrapSeederDbTests : IClassFixture<PostgresApiFac
         [
             "OrganizationAdmin", "BuildingAdmin", "Treasurer", "Secretary", "SecurityHead", "Owner", "Renter", "Auditor",
             "CondoAdmin", "Manager", "Accountant", "SecurityOfficer", "FacilityManager",
+            "FlatOwner", "Tenant",
         ]);
     }
 
@@ -140,6 +141,6 @@ public class ArpDevelopmentBootstrapSeederDbTests : IClassFixture<PostgresApiFac
 
         await using MyCondoDbContext db = _factory.CreateDbContextForTenant(arp.Id.Value);
         List<Role> tenantRoles = await db.Set<Role>().Where(r => r.TenantId == arp.Id.Value).ToListAsync();
-        tenantRoles.Should().HaveCount(13);
+        tenantRoles.Should().HaveCount(15);
     }
 }
