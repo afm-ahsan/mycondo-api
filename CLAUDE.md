@@ -18,13 +18,13 @@ the case.
 - **Persistence**: EF Core 10 · PostgreSQL 18 · Npgsql.EntityFrameworkCore.PostgreSQL 10.x
 - **Cache & real-time**: Redis 8.6 · StackExchange.Redis · SignalR (Redis backplane)
 - **Background jobs**: Hangfire (PostgreSQL-backed)
-- **In-process messaging**: MediatR
+- **In-process messaging**: `Mediator` (martinothamar, MIT) — not the commercially-licensed `MediatR` (ADR-002)
 - **Validation**: FluentValidation 11
 - **Auth**: ASP.NET Core Identity 10 + Argon2id (Konscious) + JWT Bearer (RS256, 15-min access / 7-day rotating refresh)
 - **API docs**: `Microsoft.AspNetCore.OpenApi` (OpenAPI 3.1) + Scalar UI
 - **Logging**: Serilog (structured JSON) → Seq (dev) / CloudWatch (prod)
 - **Telemetry**: OpenTelemetry (.NET 10 native)
-- **Tests**: xUnit + FluentAssertions + NetArchTest
+- **Tests**: xUnit + `AwesomeAssertions` (not `FluentAssertions`, ADR-003) + NetArchTest
 
 ## Project Structure
 
@@ -90,6 +90,47 @@ Clean Architecture: Domain → Application → Infrastructure → Api. Domain ha
 - `TenantContextConnectionInterceptor` sets `app.current_tenant_id` on every connection open (reads and writes alike), not just in `SaveChangesAsync` — this closes the read-path sequencing risk that `mycondo-docs/02-architecture/TARGET_ARCHITECTURE.md` §4 previously flagged as a blocker.
 - Composite indexes on tenant-scoped tables always lead with `tenant_id`.
 - `MyCondo.MultiTenancyTests` has real cross-tenant tests (Testcontainers-backed), executed against a real Docker daemon and passing against the restricted `mycondo_app` role — not just compile-verified.
+
+## Seed Data & Bootstrap Architecture (non-negotiable)
+
+- **Migrations are for schema evolution and genuine migration-time data transformations** (e.g. a
+  backfill on existing rows during a schema change). **Ordinary application seed data — permissions,
+  role catalogues, role-permission mappings, SuperAdmin/platform bootstrap, development/demo data —
+  belongs in dedicated seeders under `src/MyCondo.Infrastructure/Seed/` and
+  `src/MyCondo.Application/Common/Services/*CatalogueSeeder.cs`, never in EF Core `InsertData`/`HasData`.**
+  The global permission catalogue was migration-seeded through 14 historical migrations
+  (`Seed_Permission_Catalogue` and its successors); those files are preserved as historical record and
+  are **not** edited — going forward, new permissions are added to
+  `MyCondo.Application.Common.Authorization.PermissionCatalogue` and reconciled by `PermissionSeeder`,
+  never via a new seed migration.
+- **Every seeder reconciles by a stable natural key** — a permission's `Name`, a role's `Code` — never
+  a database-generated ID, and never the classic `if (await X.AnyAsync()) return;` short-circuit (that
+  pattern permanently blocks a catalogue entry added later from ever reaching an already-bootstrapped
+  environment; see `docs/conventions/03-database/02-ef-core-and-migrations.md` §7 for the full
+  rationale). Reconciliation only ever creates what's missing — it never deletes or alters an existing
+  row not in the current catalogue.
+- **One explicit orchestration entry point**: `await app.Services.SeedDatabaseAsync(app.Environment)` in
+  `Program.cs` (`MyCondo.Infrastructure.Seed.DatabaseSeederExtensions`). Order: (1) the global
+  permission catalogue, every environment; (2) Development-only bootstrap/demo seeders
+  (`PlatformBootstrapSeeder`, `ArpDevelopmentBootstrapSeeder`, `DevelopmentTenantSeeder`), behind a hard
+  runtime `IHostEnvironment.IsDevelopment()` check — not just conditional DI registration — so a future
+  change can't accidentally let dev/demo data run in Production. `MyCondo.DbMigrator`'s tenant-bootstrap
+  CLI command seeds permissions the same way, since it may run against a database the API has never
+  started against yet.
+- **Tenant-scoped catalogue seeding needs an explicit tenant context**, since it runs outside any HTTP
+  request. The established pattern is a small, private `ITenantContextAccessor` implementation fixed to
+  one tenant ID, wired into a purpose-built `MyCondoDbContext` (see `ArpDevelopmentBootstrapSeeder`,
+  `MyCondo.DbMigrator`, and the test suites' `PostgresApiFactory.CreateDbContextForTenant`) — RLS stays
+  fully enforced; the seeder is just correctly told which tenant it's writing as. Genuinely global,
+  tenant-less tables (`identity.permissions`, `platform.*`, `tenancy.tenants` — no `tenant_id`, no RLS
+  policy) need no tenant context at all.
+- **Concurrent startup**: `SeedDatabaseAsync` wraps its sequence in a Postgres session-level advisory
+  lock so multiple API instances starting at once serialize through seeding rather than racing.
+- **Bootstrap identities are not catalogues.** A SuperAdmin/platform-administrator identity is a true
+  singleton (guarded by an existence check on its own unique identity, e.g. email) — but any *grants*
+  attached to it (e.g. the Platform SuperAdmin's `platform.*` permissions) still reconcile by natural
+  key on every run, so a permission added to the catalogue later still reaches an already-bootstrapped
+  SuperAdmin.
 
 ## Financial integrity (non-negotiable)
 

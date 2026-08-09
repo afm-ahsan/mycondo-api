@@ -137,6 +137,13 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MyCondoDbContext>());
 
+        // Development-only seeders — cheap, inert classes; DatabaseSeederExtensions.SeedDatabaseAsync
+        // is the only thing that actually calls them, gated on IHostEnvironment.IsDevelopment(). See
+        // that class for why they're registered unconditionally here rather than conditionally.
+        services.AddScoped<Seed.PlatformBootstrapSeeder>();
+        services.AddScoped<Seed.ArpDevelopmentBootstrapSeeder>();
+        services.AddScoped<Seed.DevelopmentTenantSeeder>();
+
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();

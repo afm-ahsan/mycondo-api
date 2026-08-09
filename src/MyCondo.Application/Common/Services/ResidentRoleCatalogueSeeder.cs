@@ -31,16 +31,43 @@ public sealed class ResidentRoleCatalogueSeeder(
         ]),
     ];
 
+    /// <summary>
+    /// Reconciles by <c>Code</c>/<c>PermissionId</c> rather than unconditionally creating — safe to
+    /// call on every tenant-bootstrap run (not just the first), so a role or permission added to the
+    /// catalogue after a tenant already exists still reaches it. Never removes an existing role or
+    /// grant not in the catalogue — in particular, never grants FlatOwner/Tenant anything beyond what's
+    /// listed above regardless of how many times this runs.
+    /// </summary>
     public async Task SeedAsync(Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken)
     {
         List<Permission> catalogue = await permissions.GetAllAsync(cancellationToken);
         Dictionary<string, PermissionId> permissionIdsByName = catalogue.ToDictionary(p => p.Name, p => p.Id);
 
+        List<Role> existingRoles = await roles.GetAllForTenantAsync(tenantId, cancellationToken);
+        Dictionary<string, Role> existingByCode = existingRoles
+            .Where(r => r.Code is not null)
+            .ToDictionary(r => r.Code!, StringComparer.Ordinal);
+
+        int rolesCreated = 0;
+        int grantsCreated = 0;
+
         foreach ((string name, string code, string description, string[] permissionNames) in ResidentRoles)
         {
-            Role role = Role.CreateSystem(
-                RoleId.New(), tenantId, name, description, nowUtc, code: code, requiresBuildingScope: true);
-            roles.Add(role);
+            Role role;
+            if (existingByCode.TryGetValue(code, out Role? found))
+            {
+                role = found;
+            }
+            else
+            {
+                role = Role.CreateSystem(
+                    RoleId.New(), tenantId, name, description, nowUtc, code: code, requiresBuildingScope: true);
+                roles.Add(role);
+                rolesCreated++;
+            }
+
+            List<RolePermission> existingGrants = await rolePermissions.GetForRoleAsync(role.Id, cancellationToken);
+            HashSet<PermissionId> grantedIds = existingGrants.Select(g => g.PermissionId).ToHashSet();
 
             foreach (string permissionName in permissionNames)
             {
@@ -50,12 +77,17 @@ public sealed class ResidentRoleCatalogueSeeder(
                         $"Resident role '{name}' references unknown permission '{permissionName}'.");
                 }
 
-                rolePermissions.Add(new RolePermission(tenantId, role.Id, permissionId, nowUtc, grantedBy: null));
+                if (grantedIds.Add(permissionId))
+                {
+                    rolePermissions.Add(new RolePermission(tenantId, role.Id, permissionId, nowUtc, grantedBy: null));
+                    grantsCreated++;
+                }
             }
         }
 
         logger.LogInformation(
-            "Resident role catalogue seeded for tenant {TenantId}: {RoleCount} roles",
-            tenantId, ResidentRoles.Length);
+            "[DatabaseSeed] Resident role catalogue for tenant {TenantId}: {RoleCount} roles expected, " +
+            "{RolesCreated} created, {GrantsCreated} grants created",
+            tenantId, ResidentRoles.Length, rolesCreated, grantsCreated);
     }
 }

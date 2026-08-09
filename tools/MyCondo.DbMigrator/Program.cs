@@ -77,6 +77,17 @@ public static class Program
 
         ILogger logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("MyCondo.DbMigrator");
 
+        // The global permission catalogue is system-wide reference data (identity.permissions has no
+        // tenant_id/RLS) — reconciled here, unconditionally, before the first tenant's role catalogues
+        // are seeded below, since those resolve permission names against this table. Safe to run even
+        // if the API has already seeded permissions on this same database (reconciled by Name).
+        IPermissionSeeder permissionSeeder = sp.GetRequiredService<IPermissionSeeder>();
+        await permissionSeeder.SeedAsync(CancellationToken.None);
+        // Flushed immediately, separately from the tenant-bootstrap SaveChanges below — the role
+        // catalogue seeders query permissions by Name via a fresh (server-side) query, which would not
+        // see a just-added-but-unsaved permission row otherwise.
+        await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync(CancellationToken.None);
+
         ITenantRepository tenants = sp.GetRequiredService<ITenantRepository>();
         bool anyTenantExists = await tenants.AnyAsync(CancellationToken.None);
         if (anyTenantExists)

@@ -10,4 +10,8 @@ public interface IPermissionRepository
 
     Task<Permission?> GetByIdAsync(PermissionId id, CancellationToken cancellationToken);
     Task<bool> ExistsAsync(PermissionId id, CancellationToken cancellationToken);
+
+    /// <summary>Used by PermissionSeeder to add catalogue entries missing from identity.permissions.
+    /// Never used to update or remove an existing row — reconciliation is additive-only.</summary>
+    void Add(Permission permission);
 }

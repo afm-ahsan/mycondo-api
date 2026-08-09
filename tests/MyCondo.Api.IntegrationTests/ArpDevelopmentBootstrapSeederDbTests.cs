@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
+using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Tenancy;
@@ -43,7 +45,7 @@ public class ArpDevelopmentBootstrapSeederDbTests : IClassFixture<PostgresApiFac
         ArpDevelopmentBootstrapSeeder seeder = new(
             scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
             NullLoggerFactory.Instance);
-        await seeder.StartAsync(CancellationToken.None);
+        await seeder.SeedAsync(CancellationToken.None);
     }
 
     private async Task<Tenant> GetArpTenantAsync()
@@ -130,17 +132,59 @@ public class ArpDevelopmentBootstrapSeederDbTests : IClassFixture<PostgresApiFac
     }
 
     [Fact]
-    public async Task Seeder_Is_Idempotent()
+    public async Task Seeder_Is_Idempotent_No_Duplicates_On_Rerun()
     {
         await RunSeederAsync();
         await RunSeederAsync();
 
-        // SlugExistsAsync-gated seeder: a second run is a full no-op, so re-fetching by slug still
-        // resolves to exactly the one tenant created the first time — no duplicate-key violation.
+        // Tenant/admin creation is SlugExistsAsync-gated (a one-time bootstrap event); the role
+        // catalogues reconcile by Code every run — either way, rerunning must not duplicate anything.
         Tenant arp = await GetArpTenantAsync();
 
         await using MyCondoDbContext db = _factory.CreateDbContextForTenant(arp.Id.Value);
         List<Role> tenantRoles = await db.Set<Role>().Where(r => r.TenantId == arp.Id.Value).ToListAsync();
         tenantRoles.Should().HaveCount(15);
+    }
+
+    [Fact]
+    public async Task Seeder_Restores_A_Manually_Removed_Grant_On_Rerun_But_Preserves_Custom_Data()
+    {
+        await RunSeederAsync();
+        Tenant arp = await GetArpTenantAsync();
+
+        Guid removedPermissionId;
+        Guid customRoleId;
+        await using (MyCondoDbContext db = _factory.CreateDbContextForTenant(arp.Id.Value))
+        {
+            Role buildingAdmin = await db.Set<Role>()
+                .SingleAsync(r => r.TenantId == arp.Id.Value && r.Code == "default.building-admin");
+            RolePermission grant = await db.Set<RolePermission>()
+                .FirstAsync(rp => rp.RoleId == buildingAdmin.Id);
+            removedPermissionId = grant.PermissionId.Value;
+            db.Set<RolePermission>().Remove(grant);
+
+            // A hand-inserted role outside any catalogue — reconciliation must never touch this.
+            Role custom = Role.CreateCustom(arp.Id.Value, "OnCallJanitor", "Ad-hoc tenant-created role.", DateTimeOffset.UtcNow);
+            db.Set<Role>().Add(custom);
+            customRoleId = custom.Id.Value;
+
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await RunSeederAsync();
+
+        await using MyCondoDbContext verifyDb = _factory.CreateDbContextForTenant(arp.Id.Value);
+        Role buildingAdminAfter = await verifyDb.Set<Role>()
+            .SingleAsync(r => r.TenantId == arp.Id.Value && r.Code == "default.building-admin");
+        bool grantRestored = await verifyDb.Set<RolePermission>()
+            .AnyAsync(rp => rp.RoleId == buildingAdminAfter.Id
+                && rp.PermissionId == new PermissionId(removedPermissionId));
+        grantRestored.Should().BeTrue("reconciliation must re-add a grant the catalogue still expects");
+
+        bool customRoleSurvived = await verifyDb.Set<Role>().AnyAsync(r => r.Id == new RoleId(customRoleId));
+        customRoleSurvived.Should().BeTrue("reconciliation must never remove a role outside the catalogue");
+
+        List<Role> tenantRoles = await verifyDb.Set<Role>().Where(r => r.TenantId == arp.Id.Value).ToListAsync();
+        tenantRoles.Should().HaveCount(16, "15 catalogue roles plus the one hand-inserted custom role");
     }
 }
