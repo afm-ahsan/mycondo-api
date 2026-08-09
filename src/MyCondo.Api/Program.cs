@@ -5,6 +5,7 @@ using MyCondo.Api.HealthChecks;
 using MyCondo.Api.Middleware;
 using MyCondo.Application;
 using MyCondo.Infrastructure;
+using MyCondo.Infrastructure.Persistence.Seeding;
 using MyCondo.Infrastructure.Seed;
 using Scalar.AspNetCore;
 using Serilog;
@@ -24,8 +25,16 @@ builder.Services
 
 if (builder.Environment.IsDevelopment())
 {
-    // Local-only bootstrap so there's a real tenant to register against — see
-    // DevelopmentTenantSeeder's doc comment. Not a production provisioning mechanism.
+    // Registered first so the ARP dev bootstrap dataset (org/SuperAdmin/Admin/TestOwner) exists
+    // before DevelopmentTenantSeeder's "if any tenant exists, do nothing" check runs — see
+    // DatabaseSeeder's doc comment. IHostedService.StartAsync calls are awaited in registration
+    // order, so this fully completes before the next one starts. Not a production provisioning
+    // mechanism — see mycondo-seed-data-architecture-refactor-v2.md.
+    builder.Services.AddHostedService<DatabaseSeeder>();
+
+    // Local-only fallback so there's still a real tenant to register against even if the seeder
+    // above is ever removed — see DevelopmentTenantSeeder's doc comment. Not a production
+    // provisioning mechanism.
     builder.Services.AddHostedService<DevelopmentTenantSeeder>();
 }
 

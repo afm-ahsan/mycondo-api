@@ -12,6 +12,10 @@ namespace MyCondo.Api.Authentication;
 /// RLS's `WITH CHECK` still independently rejects any write whose row doesn't match. See
 /// mycondo-docs ADR-013 for the bug this fixes (Login/Register/RefreshToken silently failed once RLS
 /// was enabled, because their pre-auth requests had no other way to establish tenant context).
+///
+/// A third fallback, <see cref="AmbientTenantScope"/>, covers code with no HTTP request at all —
+/// startup <c>IHostedService</c> seeding. It is a no-op (null) for every real request, since nothing
+/// in the request pipeline ever calls <see cref="AmbientTenantScope.Begin"/>.
 /// </summary>
 public sealed class TenantContextAccessor(
     ICurrentUserProvider currentUser,
@@ -21,7 +25,7 @@ public sealed class TenantContextAccessor(
     public const string RequestedTenantItemKey = "MyCondo.RequestedTenantId";
 
     public Guid? CurrentTenantId =>
-        currentUser.TenantId ?? GetRequestedTenantId();
+        currentUser.TenantId ?? GetRequestedTenantId() ?? AmbientTenantScope.Current;
 
     private Guid? GetRequestedTenantId()
     {

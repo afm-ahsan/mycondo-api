@@ -28,4 +28,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Lets tests exercise the internal Seeding extension methods without making them public API. -->
+    <InternalsVisibleTo Include="MyCondo.Infrastructure.IntegrationTests" />
+  </ItemGroup>
+
 </Project>
