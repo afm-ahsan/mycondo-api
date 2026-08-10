@@ -108,6 +108,7 @@ public static class DependencyInjection
         services.AddScoped<SoftDeleteInterceptor>();
         services.AddScoped<DispatchDomainEventsInterceptor>();
         services.AddScoped<TenantContextConnectionInterceptor>();
+        services.AddScoped<ITenantScopedUnitOfWorkFactory, TenantScopedUnitOfWorkFactory>();
 
         // DbContext
         services.AddDbContext<MyCondoDbContext>((sp, options) =>
@@ -149,6 +150,7 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<ITenantModuleRepository, TenantModuleRepository>();
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();

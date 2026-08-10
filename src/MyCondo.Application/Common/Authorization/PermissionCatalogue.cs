@@ -181,6 +181,7 @@ public static class PermissionCatalogue
         ("platform.organization.suspend", "Suspend organizations", "platform", false),
         ("platform.organization.activate", "Activate a newly provisioned organization", "platform", false),
         ("platform.organization.reactivate", "Reactivate a suspended organization", "platform", false),
+        ("platform.organization.features.manage", "Enable/disable product modules for an organization", "platform", false),
         ("platform.subscription.read", "View subscription/plan information", "platform", false),
         ("platform.subscription.manage", "Manage subscriptions/plans", "platform", false),
         ("platform.support.access", "Perform controlled cross-tenant support operations", "platform", false),

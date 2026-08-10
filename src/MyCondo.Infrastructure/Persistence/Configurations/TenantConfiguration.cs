@@ -17,7 +17,12 @@ public sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(200);
         builder.Property(x => x.Slug).IsRequired().HasMaxLength(63);
+        builder.Property(x => x.Code).HasMaxLength(30);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+
+        builder.Property(x => x.PrimaryAdministratorUserId);
+        builder.Property(x => x.PrimaryAdministratorFullName).HasMaxLength(200);
+        builder.Property(x => x.PrimaryAdministratorEmail).HasMaxLength(320);
 
         builder.Property(x => x.CreatedAtUtc);
         builder.Property(x => x.CreatedBy);
@@ -27,6 +32,11 @@ public sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.HasIndex(x => x.Slug)
             .IsUnique()
             .HasDatabaseName("ux_tenants_slug");
+
+        builder.HasIndex(x => x.Code)
+            .IsUnique()
+            .HasFilter("code IS NOT NULL")
+            .HasDatabaseName("ux_tenants_code");
 
         builder.Ignore(x => x.DomainEvents);
     }

@@ -5,11 +5,13 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Auth.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Tenancy;
 
 namespace MyCondo.Application.Features.Auth.Commands.Login;
 
 public sealed class LoginCommandHandler(
     IUserRepository users,
+    ITenantRepository tenants,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -21,6 +23,18 @@ public sealed class LoginCommandHandler(
 {
     public async ValueTask<AuthTokensDto> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
+        // Organization status is not secret — the tenant-resolution endpoint the sign-in page calls
+        // before this already returns it — so this can fail fast with a clear message before even
+        // looking up the user, unlike the email/password check below (which must not leak whether the
+        // email exists).
+        Tenant? tenant = await tenants.GetByIdAsync(command.TenantId, cancellationToken);
+        if (tenant is null || tenant.Status != TenantStatus.Active)
+        {
+            logger.LogInformation(
+                "Login blocked: tenant {TenantId} is not active", command.TenantId);
+            throw new ForbiddenException("Organization is not active.");
+        }
+
         string normalizedEmail = command.Email.Trim().ToLowerInvariant();
         User? user = await users.GetByEmailAsync(command.TenantId, normalizedEmail, cancellationToken);
 

@@ -1,30 +1,30 @@
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
+using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
+using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
+using MyCondo.Application.Features.Platform.Commands.UpdateOrganization;
+using MyCondo.Application.Features.Platform.DTOs;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationById;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationSummaryStats;
 using MyCondo.Application.Features.Platform.Queries.ListOrganizations;
 using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
-using MyCondo.Application.Features.Tenancy.Commands.ProvisionTenant;
 using MyCondo.Application.Features.Tenancy.Commands.SuspendTenant;
-using MyCondo.Application.Features.Tenancy.Queries.GetTenantBySlug;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Platform.PlatformAudit;
 
 namespace MyCondo.Api.Endpoints;
 
 /// <summary>
-/// Platform-scope organization (Tenant) administration — Phase 1 metadata operations only. Reuses the
-/// EXISTING ProvisionTenant/SuspendTenant/ActivateTenant Application-layer commands verbatim (same
-/// domain calls the tenant-side /api/v1/tenants endpoints already make) rather than duplicating
-/// business logic; only the Api-layer route, authentication scheme, and permission boundary differ.
-/// See mycondo-docs ADR-019 and the approved Phase 1 blueprint §7/§12.
-///
-/// Deliberately does NOT expose "reactivate" (Suspended -> Active) or "update": Tenant.Activate()
-/// today explicitly rejects that transition (see Tenant.cs), and there is no domain method for
-/// renaming/updating a Tenant. Inventing either would be a tenant-lifecycle domain change, which is
-/// out of scope for Phase 1 — see the Phase 1 completion report's "Explicitly deferred operations"
-/// section. The platform.organization.reactivate and platform.organization.update permission codes
-/// are still seeded (for forward compatibility) but no endpoint checks them yet.
+/// Platform-scope organization (Tenant) administration. Organization creation now provisions the
+/// tenant AND its founding administrator atomically (<see cref="ProvisionOrganizationWithAdminCommand"/>)
+/// rather than leaving a new organization stuck in PendingActivation with no admin until someone
+/// self-registers against it. Suspend/Activate reuse the existing tenant-lifecycle domain commands
+/// verbatim; Reactivate/Update/Modules are new, first-time wiring for permissions that were seeded in
+/// Phase 1 but never implemented. See mycondo-docs ADR-019 for the Platform/tenant isolation model
+/// this endpoint group must preserve.
 /// </summary>
 public static class PlatformOrganizationEndpoints
 {
@@ -32,24 +32,35 @@ public static class PlatformOrganizationEndpoints
     {
         RouteGroupBuilder group = app.MapGroup("/api/v1/platform/organizations").WithTags("Platform Organizations");
 
-        group.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        group.MapGet("/", async (
+                int page, int pageSize, string? search, string? status, ISender sender, CancellationToken ct) =>
             {
-                IReadOnlyList<TenantSummaryDto> result = await sender.Send(new ListOrganizationsQuery(), ct);
+                PagedResult<OrganizationListItemDto> result = await sender.Send(
+                    new ListOrganizationsQuery(page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize, search, status),
+                    ct);
                 return Results.Ok(result);
             })
             .RequirePlatformPermission("platform.organization.read")
-            .Produces<IReadOnlyList<TenantSummaryDto>>(StatusCodes.Status200OK);
+            .Produces<PagedResult<OrganizationListItemDto>>(StatusCodes.Status200OK);
+
+        group.MapGet("/stats", async (ISender sender, CancellationToken ct) =>
+            {
+                OrganizationSummaryStatsDto result = await sender.Send(new GetOrganizationSummaryStatsQuery(), ct);
+                return Results.Ok(result);
+            })
+            .RequirePlatformPermission("platform.organization.read")
+            .Produces<OrganizationSummaryStatsDto>(StatusCodes.Status200OK);
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
             {
-                TenantSummaryDto result = await sender.Send(new GetOrganizationByIdQuery(id), ct);
+                OrganizationDetailDto result = await sender.Send(new GetOrganizationByIdQuery(id), ct);
                 return Results.Ok(result);
             })
             .RequirePlatformPermission("platform.organization.read")
-            .Produces<TenantSummaryDto>(StatusCodes.Status200OK);
+            .Produces<OrganizationDetailDto>(StatusCodes.Status200OK);
 
         group.MapPost("/", async (
-                ProvisionTenantCommand command,
+                ProvisionOrganizationWithAdminCommand command,
                 ISender sender,
                 ICurrentPlatformUserProvider currentUser,
                 IPlatformAuditLogRepository auditLog,
@@ -57,7 +68,7 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
-                ProvisionTenantResult result = await sender.Send(command, ct);
+                ProvisionOrganizationResult result = await sender.Send(command, ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
                     clock.UtcNow,
@@ -71,7 +82,33 @@ public static class PlatformOrganizationEndpoints
                 return Results.Ok(result);
             })
             .RequirePlatformPermission("platform.organization.create")
-            .Produces<ProvisionTenantResult>(StatusCodes.Status200OK);
+            .Produces<ProvisionOrganizationResult>(StatusCodes.Status200OK);
+
+        group.MapPatch("/{id:guid}", async (
+                Guid id,
+                UpdateOrganizationRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new UpdateOrganizationCommand(id, request.Name, request.Code), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.organization.updated",
+                    targetType: "Tenant",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.organization.update")
+            .Produces(StatusCodes.Status204NoContent);
 
         group.MapPost("/{id:guid}/suspend", async (
                 Guid id,
@@ -98,12 +135,6 @@ public static class PlatformOrganizationEndpoints
             .RequirePlatformPermission("platform.organization.suspend")
             .Produces(StatusCodes.Status204NoContent);
 
-        // Not one of the blueprint's illustrative permission codes, but required plumbing: without it,
-        // "create organization" alone would leave every new organization permanently stuck in
-        // PendingActivation with no reachable way to activate it (the existing tenant-side
-        // /api/v1/tenants/{id}/activate endpoint requires tenant.manage, which nothing is seeded to
-        // hold). This reuses the existing, already-safe ActivateTenantCommand/Tenant.Activate() domain
-        // behavior verbatim — it is wiring, not new domain logic. See the Phase 1 completion report.
         group.MapPost("/{id:guid}/activate", async (
                 Guid id,
                 ISender sender,
@@ -129,6 +160,61 @@ public static class PlatformOrganizationEndpoints
             .RequirePlatformPermission("platform.organization.activate")
             .Produces(StatusCodes.Status204NoContent);
 
+        group.MapPost("/{id:guid}/reactivate", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new ReactivateOrganizationCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.organization.reactivated",
+                    targetType: "Tenant",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.organization.reactivate")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPut("/{id:guid}/modules", async (
+                Guid id,
+                ReplaceOrganizationModulesRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new ReplaceOrganizationModulesCommand(id, request.ModuleKeys), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.organization.modules.replaced",
+                    targetType: "Tenant",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.organization.features.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
         return app;
     }
 }
+
+public sealed record UpdateOrganizationRequest(string Name, string? Code);
+
+public sealed record ReplaceOrganizationModulesRequest(IReadOnlyList<string> ModuleKeys);
