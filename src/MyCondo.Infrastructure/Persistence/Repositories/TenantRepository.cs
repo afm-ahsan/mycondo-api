@@ -14,6 +14,9 @@ public sealed class TenantRepository(MyCondoDbContext db) : ITenantRepository
     public Task<Tenant?> GetBySlugAsync(string slug, CancellationToken cancellationToken) =>
         db.Set<Tenant>().FirstOrDefaultAsync(t => t.Slug == slug, cancellationToken);
 
+    public Task<Tenant?> GetByNameAsync(string name, CancellationToken cancellationToken) =>
+        db.Set<Tenant>().FirstOrDefaultAsync(t => EF.Functions.ILike(t.Name, name), cancellationToken);
+
     public Task<bool> SlugExistsAsync(string slug, CancellationToken cancellationToken) =>
         db.Set<Tenant>().AnyAsync(t => t.Slug == slug, cancellationToken);
 
