@@ -84,17 +84,31 @@ public static class DependencyInjection
             // UX-6 production-hardening discovery. Partitions by IP only (not by attempted
             // username/email), since the whole point is to limit an anonymous caller regardless
             // of which account(s) they're probing.
+            //
+            // Thresholds are read from IConfiguration on every request (not captured once above)
+            // so PostgresApiFactory can raise them for the Testing environment: a real
+            // Testcontainers-backed test host is a single shared HttpClient partition ("anon"/one
+            // IP) reused by every test method in a *DbTests class, so the production 10/minute
+            // would otherwise starve unrelated authorization tests after their 10th Register call.
+            // A value captured once at AddApiServices-call time would miss WebApplicationFactory's
+            // ConfigureAppConfiguration override, which merges in later, after Program.cs's own
+            // configuration reads — see JwtBearerSetup's identical lazy-read pattern for
+            // Jwt:SigningKey. Never override these in appsettings.json for Development/Production —
+            // only the test host's in-memory configuration should touch them.
             opt.AddPolicy("auth", ctx =>
             {
                 string partitionKey = ctx.Connection.RemoteIpAddress?.ToString() ?? "anon";
+                IConfiguration config = ctx.RequestServices.GetRequiredService<IConfiguration>();
+                int permitLimit = config.GetValue("RateLimiting:Auth:PermitLimit", 10);
+                int windowSeconds = config.GetValue("RateLimiting:Auth:WindowSeconds", 60);
 
                 return System.Threading.RateLimiting.RateLimitPartition
                     .GetFixedWindowLimiter(
                         partitionKey,
                         _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 10,
-                            Window = TimeSpan.FromMinutes(1),
+                            PermitLimit = permitLimit,
+                            Window = TimeSpan.FromSeconds(windowSeconds),
                             QueueLimit = 0,
                         });
             });
@@ -102,18 +116,22 @@ public static class DependencyInjection
             // Stricter than "auth": Platform SuperAdmin is the single highest-blast-radius account in
             // the system (can provision/suspend organizations), so its login/refresh endpoints get a
             // tighter bound — 5/minute per IP — than ordinary tenant credential entry. See the
-            // approved Phase 1 blueprint §4 ("Platform login brute-force" risk).
+            // approved Phase 1 blueprint §4 ("Platform login brute-force" risk). Same lazy-config-read
+            // rationale as the "auth" policy above.
             opt.AddPolicy("platform-auth", ctx =>
             {
                 string partitionKey = ctx.Connection.RemoteIpAddress?.ToString() ?? "anon";
+                IConfiguration config = ctx.RequestServices.GetRequiredService<IConfiguration>();
+                int permitLimit = config.GetValue("RateLimiting:PlatformAuth:PermitLimit", 5);
+                int windowSeconds = config.GetValue("RateLimiting:PlatformAuth:WindowSeconds", 60);
 
                 return System.Threading.RateLimiting.RateLimitPartition
                     .GetFixedWindowLimiter(
                         partitionKey,
                         _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 5,
-                            Window = TimeSpan.FromMinutes(1),
+                            PermitLimit = permitLimit,
+                            Window = TimeSpan.FromSeconds(windowSeconds),
                             QueueLimit = 0,
                         });
             });
