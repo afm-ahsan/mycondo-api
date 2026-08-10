@@ -98,11 +98,23 @@ Clean Architecture: Domain → Application → Infrastructure → Api. Domain ha
   role catalogues, role-permission mappings, SuperAdmin/platform bootstrap, development/demo data —
   belongs in dedicated seeders under `src/MyCondo.Infrastructure/Seed/` and
   `src/MyCondo.Application/Common/Services/*CatalogueSeeder.cs`, never in EF Core `InsertData`/`HasData`.**
-  The global permission catalogue was migration-seeded through 14 historical migrations
-  (`Seed_Permission_Catalogue` and its successors); those files are preserved as historical record and
-  are **not** edited — going forward, new permissions are added to
-  `MyCondo.Application.Common.Authorization.PermissionCatalogue` and reconciled by `PermissionSeeder`,
-  never via a new seed migration.
+  New permissions are added to `MyCondo.Application.Common.Authorization.PermissionCatalogue` and
+  reconciled by `PermissionSeeder`, never via a new seed migration.
+- **Clean migration baseline (2026-08-10, mycondo-docs ADR-024).** The development-era migration
+  history (59 migrations, including 14 `Seed_*` permission-catalogue migrations) was consolidated into
+  three baseline migrations — `InitialPlatformSchema`, `AddTenantRowLevelSecurityPolicies`,
+  `GrantAppRoleRuntimePrivileges` — since the local development database and its migration history had
+  never been applied to any shared/staging/production environment (Scenario A). Every genuine schema
+  object the removed migrations created (all 66 tables including `billing.invoice_sequences`, which has
+  no EF entity mapping; the `btree_gist` extension; the three `EXCLUDE USING gist` overlap-guard
+  constraints; the `amenities.booking_slot_range` function; all 58 RLS policies; all 21 schemas' DML
+  grants to `mycondo_app`) was preserved — none of it was schema loss, only migration-history
+  consolidation. **This is a one-time cutover, not a repeatable operation**: from this baseline forward,
+  applied migrations are immutable — new schema changes create new migrations, they are never rewritten
+  or squashed again once a shared/persistent database exists.
+- **Migration naming describes schema intent, not seed intent** — `Create*`/`Add*`/`Alter*`/`Rename*`/
+  `Drop*`, e.g. `AddTenantRowLevelSecurityPolicies`, never `Seed_*`/`*Seed`/`UpdatePermissions`. A
+  future permission/role/catalogue addition is always a seeder change, never a new migration.
 - **Every seeder reconciles by a stable natural key** — a permission's `Name`, a role's `Code` — never
   a database-generated ID, and never the classic `if (await X.AnyAsync()) return;` short-circuit (that
   pattern permanently blocks a catalogue entry added later from ever reaching an already-bootstrapped

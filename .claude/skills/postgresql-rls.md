@@ -5,11 +5,14 @@ description: MyCondo's Row-Level Security and multi-tenancy approach — impleme
 
 # PostgreSQL RLS & Multi-Tenancy
 
-## Current actual state (2026-07-28, Wave 1 Slice 5)
+## Current actual state (2026-08-10, clean migration baseline — mycondo-docs ADR-024)
 
-RLS is real, not aspirational, on 5 tables: `identity.users`, `roles`, `role_assignments`,
-`refresh_tokens`, `role_permissions` — each has `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL
-SECURITY`, and a `rls_<table>_tenant_isolation` policy (migration `Enable_Tenant_Row_Level_Security`).
+RLS is real, not aspirational, on all 58 tenant-scoped tables across every schema — each has
+`ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and a `rls_<table>_tenant_isolation` policy.
+As of the 2026-08-10 clean migration baseline cutover (ADR-024), all 58 are created by a single
+migration, `AddTenantRowLevelSecurityPolicies` (consolidated from 17 historical `Enable_Rls_*`/
+`Enable_Tenant_Row_Level_Security` migrations — the historical per-slice migration names below no
+longer exist as separate files, but the pattern and every policy they created is unchanged).
 
 **The connecting role matters as much as the policy — this bit us once already.** Postgres
 superusers and `BYPASSRLS` roles always bypass row security, `FORCE` or not. The original setup used
@@ -22,7 +25,9 @@ See the ADR recording this in `mycondo-docs` (follow-up to ADR-009).
 Fixed via the two-role split `docs/kickoff.md` already named (Phase 1 naming): `mycondo_migrator`
 (DDL/owner — the container's bootstrap role, used only for `dotnet ef database update`) and
 `mycondo_app` (runtime — non-superuser, owns nothing, DML-only via `GRANT`/`ALTER DEFAULT PRIVILEGES`
-in migration `Grant_App_Role_Runtime_Privileges`). Since `mycondo_app` doesn't own these tables, RLS
+in the `GrantAppRoleRuntimePrivileges` migration — consolidated from 5 historical
+`Grant_App_Role_Runtime_Privileges*` migrations by the 2026-08-10 clean baseline cutover, ADR-024).
+Since `mycondo_app` doesn't own these tables, RLS
 now applies to it even without `FORCE` — `FORCE` stays in the migration anyway as explicit
 defense-in-depth. **If you ever see the app connecting as a role that owns its own tables or is a
 superuser, RLS is not protecting anything, no matter what the migration history says** — verify the
@@ -87,10 +92,14 @@ lookup by.
 
 ## Adding RLS to a new tenant-scoped table
 
-1. Confirm the table actually has `tenant_id` (add it in its own migration first if not — see
-   `role_permissions`' `Add_TenantId_To_RolePermissions` migration for the pattern when retrofitting).
-2. Add the table name to `TenantScopedTables` in a new migration modeled on
-   `Enable_Tenant_Row_Level_Security` (or extend that array in a follow-up migration).
+1. Confirm the table actually has `tenant_id` (add it in its own migration first if not — an
+   `AddColumn` migration is fine for this on its own; retrofitting a `tenant_id` onto an
+   already-shipped table is exactly the kind of genuine schema change that still belongs in a
+   migration).
+2. Add `(schema, table)` to a new migration's own array following the same shape as
+   `AddTenantRowLevelSecurityPolicies` — do not edit that migration itself once it's applied to any
+   shared/persistent database (see ADR-024's immutability rule); a new table gets its own new RLS
+   migration, e.g. `AddTenantRowLevelSecurityPolicyFor<Table>`.
 3. Add a cross-tenant test in `MyCondo.MultiTenancyTests` before/alongside enabling the policy — don't
    assume it works.
 

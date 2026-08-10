@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyCondo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(MyCondoDbContext))]
-    [Migration("20260809112438_Add_Role_Code_And_RequiresBuildingScope")]
-    partial class Add_Role_Code_And_RequiresBuildingScope
+    [Migration("20260809211357_InitialPlatformSchema")]
+    partial class InitialPlatformSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3286,6 +3286,76 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.ToTable("buildings", "property");
                 });
 
+            modelBuilder.Entity("MyCondo.Domain.Features.Property.FlatOwnerships.FlatOwnership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<Guid>("FlatId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flat_id");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_flat_ownerships");
+
+                    b.HasIndex("TenantId", "FlatId")
+                        .HasDatabaseName("ix_flat_ownerships_tenant_id_flat_id");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .HasDatabaseName("ix_flat_ownerships_tenant_id_user_id");
+
+                    b.HasIndex("TenantId", "UserId", "FlatId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_flat_ownerships_tenant_id_user_id_flat_id_active")
+                        .HasFilter("\"status\" = 'Active'");
+
+                    b.ToTable("flat_ownerships", "property");
+                });
+
             modelBuilder.Entity("MyCondo.Domain.Features.Property.Flats.Flat", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3469,6 +3539,10 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("integer")
@@ -3479,6 +3553,9 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "FlatId")
                         .HasDatabaseName("ix_residents_tenant_id_flat_id");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .HasDatabaseName("ix_residents_tenant_id_user_id");
 
                     b.ToTable("residents", "residents");
                 });

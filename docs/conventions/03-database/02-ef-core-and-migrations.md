@@ -314,11 +314,14 @@ For breaking schema changes (e.g. renaming a column), use three deploys:
 
 Seed data is for **bootstrap data the app cannot start without**: roles, permissions, system users,
 default lookups. It does **not** belong in EF Core migrations (no `InsertData`/`HasData` for evolving
-catalogues — see MyCondo's own migration history, `Seed_Permission_Catalogue` and its successors, which
-did this and were superseded; those files are preserved as historical record, not as a pattern to
-repeat). Migrations define schema and genuine migration-time *data transformations* on existing
-production rows; seed data is application-owned reference/catalogue data, reconciled by a dedicated
-seeder.
+catalogues). MyCondo's own migration history originally did this — 14 `Seed_*` permission-catalogue
+migrations — until the 2026-08-10 clean-baseline cutover (mycondo-docs ADR-024) removed them entirely,
+since that history had never been applied to any shared/persistent database. **That removal was a
+one-time cutover, not a repeatable pattern**: once a database is shared/persistent, applied migrations
+are immutable, full stop — a seed migration discovered later gets fixed by moving its *responsibility*
+forward into the seeder, not by rewriting history again. Migrations define schema and genuine
+migration-time *data transformations* on existing production rows; seed data is application-owned
+reference/catalogue data, reconciled by a dedicated seeder.
 
 **Do not gate a seeder with `if (await db.Roles.AnyAsync(ct)) return;`.** That pattern — checked once,
 short-circuits forever — silently prevents a role or permission added to the catalogue *after* the
@@ -474,3 +477,5 @@ dotnet ef migrations has-pending-model-changes \
 | `EF Core InsertData`/`HasData` for an evolving catalogue         | Dedicated seeder reconciling by natural key, outside migrations   |
 | Seeder gated by `if (await db.X.AnyAsync()) return;`              | Reconcile by natural key — create missing, never touch the rest  |
 | Development/demo seeder guarded only by DI registration           | Add a hard runtime `IHostEnvironment.IsDevelopment()` check too  |
+| Migration named `Seed_*`/`*Seed`/`UpdatePermissions`               | Name describes schema intent (`Add*`/`Alter*`/`Create*`); catalogue changes go in the seeder, not a migration |
+| Rewriting/squashing applied migrations after a database is shared | Immutable from that point on — new schema changes are new migrations, full stop |
