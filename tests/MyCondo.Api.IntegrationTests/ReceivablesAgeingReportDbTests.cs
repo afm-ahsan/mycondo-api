@@ -11,6 +11,8 @@ using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Tenancy;
+using MyCondo.Infrastructure.Persistence;
+using MyCondo.Infrastructure.Persistence.Repositories;
 
 namespace MyCondo.Api.IntegrationTests;
 
@@ -65,15 +67,22 @@ public class ReceivablesAgeingReportDbTests : IClassFixture<PostgresApiFactory>
         return tokens!;
     }
 
+    /// <summary>Buildings/flats/invoices are RLS-<c>FORCE</c>d (tenant_id-scoped) — writing them via a
+    /// DI-resolved scope has no HttpContext/JWT for <c>ITenantContextAccessor</c> to read, so
+    /// <c>WITH CHECK</c> rejects the insert. Use <see cref="PostgresApiFactory.CreateDbContextForTenant"/>'s
+    /// fixed-tenant-context pattern instead — see <c>.claude/skills/postgresql-rls.md</c> "RLS-safe
+    /// seeding". <c>tenancy.tenants</c> itself has no <c>tenant_id</c>/RLS, so <see cref="SeedActiveTenantAsync"/>
+    /// is unaffected.</summary>
     private async Task<(Seeded Seeded, FlatId FlatId)> SeedTenantWithBuildingAsync(string slug)
     {
         Guid tenantId = await SeedActiveTenantAsync(slug);
 
-        using IServiceScope scope = _factory.Services.CreateScope();
-        IBuildingRepository buildings = scope.ServiceProvider.GetRequiredService<IBuildingRepository>();
-        IFlatRepository flats = scope.ServiceProvider.GetRequiredService<IFlatRepository>();
-        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        IClock clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        using IServiceScope clockScope = _factory.Services.CreateScope();
+        IClock clock = clockScope.ServiceProvider.GetRequiredService<IClock>();
+
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
+        BuildingRepository buildings = new(db);
+        FlatRepository flats = new(db);
 
         Building building = Building.Create(tenantId, "Tower A", $"{slug}-A", null, clock.UtcNow);
         buildings.Add(building);
@@ -81,7 +90,7 @@ public class ReceivablesAgeingReportDbTests : IClassFixture<PostgresApiFactory>
         Flat flat = Flat.Create(tenantId, building.Id, "A-101", 1, FlatType.Residential, clock.UtcNow);
         flats.Add(flat);
 
-        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         using HttpClient client = _factory.CreateClient();
         AuthTokensDto tokens = await RegisterAsync(client, tenantId, $"owner-{slug}@example.com");
@@ -93,10 +102,11 @@ public class ReceivablesAgeingReportDbTests : IClassFixture<PostgresApiFactory>
         Guid tenantId, BuildingId buildingId, FlatId flatId, string invoiceNumber, decimal totalAmount, DateOnly dueDate,
         decimal amountPaid = 0m)
     {
-        using IServiceScope scope = _factory.Services.CreateScope();
-        IInvoiceRepository invoices = scope.ServiceProvider.GetRequiredService<IInvoiceRepository>();
-        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        IClock clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        using IServiceScope clockScope = _factory.Services.CreateScope();
+        IClock clock = clockScope.ServiceProvider.GetRequiredService<IClock>();
+
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
+        InvoiceRepository invoices = new(db);
 
         InvoiceLineInput line = new(null, "Service Charge", "Maintenance", "FixedAmount", totalAmount, null, 1, totalAmount, "Test line");
         (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
@@ -110,7 +120,7 @@ public class ReceivablesAgeingReportDbTests : IClassFixture<PostgresApiFactory>
 
         invoices.Add(invoice);
         invoices.AddLines(lines);
-        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        await db.SaveChangesAsync(CancellationToken.None);
     }
 
     private async Task<ReceivablesAgeingReportDto> GetAgeingAsync(string accessToken, DateOnly? asOfDate = null, Guid? buildingId = null)
@@ -164,7 +174,7 @@ public class ReceivablesAgeingReportDbTests : IClassFixture<PostgresApiFactory>
     [Fact]
     public async Task Fully_Paid_Invoice_Is_Excluded_From_Every_Bucket()
     {
-        (Seeded seeded, FlatId flatId) = await SeedTenantWithBuildingAsync("ageing-paid-excluded");
+        (Seeded seeded, FlatId flatId) = await SeedTenantWithBuildingAsync("ageing-paid-excl");
         DateOnly asOfDate = new(2026, 8, 15);
 
         await SeedInvoiceAsync(
@@ -180,7 +190,7 @@ public class ReceivablesAgeingReportDbTests : IClassFixture<PostgresApiFactory>
     [Fact]
     public async Task Omitted_AsOfDate_Defaults_To_The_Servers_Current_Business_Date()
     {
-        (Seeded seeded, FlatId flatId) = await SeedTenantWithBuildingAsync("ageing-default-asof");
+        (Seeded seeded, FlatId flatId) = await SeedTenantWithBuildingAsync("ageing-def-asof");
 
         // Due far in the past relative to "now" (whenever the test runs) -> lands in 91+ regardless.
         await SeedInvoiceAsync(

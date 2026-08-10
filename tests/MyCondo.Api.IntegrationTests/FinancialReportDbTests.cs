@@ -12,6 +12,8 @@ using MyCondo.Domain.Features.Payments.Payments;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Tenancy;
+using MyCondo.Infrastructure.Persistence;
+using MyCondo.Infrastructure.Persistence.Repositories;
 
 namespace MyCondo.Api.IntegrationTests;
 
@@ -74,15 +76,22 @@ public class FinancialReportDbTests : IClassFixture<PostgresApiFactory>
     /// <summary>Seeds an active tenant with two buildings (one flat each) and registers the tenant's
     /// bootstrap user, which is auto-granted every permission including report.financial.view — see
     /// BillingPermissionsDbTests for the same bootstrap convention.</summary>
+    /// <summary>Buildings/flats/invoices/payments are RLS-<c>FORCE</c>d (tenant_id-scoped) — writing
+    /// them via a DI-resolved scope has no HttpContext/JWT for <c>ITenantContextAccessor</c> to read,
+    /// so <c>WITH CHECK</c> rejects the insert. Use <see cref="PostgresApiFactory.CreateDbContextForTenant"/>'s
+    /// fixed-tenant-context pattern instead — see <c>.claude/skills/postgresql-rls.md</c> "RLS-safe
+    /// seeding". <c>tenancy.tenants</c> itself has no <c>tenant_id</c>/RLS, so <see cref="SeedActiveTenantAsync"/>
+    /// is unaffected.</summary>
     private async Task<(Seeded Seeded, FlatId FlatAId, FlatId FlatBId)> SeedTenantWithTwoBuildingsAsync(string slug)
     {
         Guid tenantId = await SeedActiveTenantAsync(slug);
 
-        using IServiceScope scope = _factory.Services.CreateScope();
-        IBuildingRepository buildings = scope.ServiceProvider.GetRequiredService<IBuildingRepository>();
-        IFlatRepository flats = scope.ServiceProvider.GetRequiredService<IFlatRepository>();
-        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        IClock clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        using IServiceScope clockScope = _factory.Services.CreateScope();
+        IClock clock = clockScope.ServiceProvider.GetRequiredService<IClock>();
+
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
+        BuildingRepository buildings = new(db);
+        FlatRepository flats = new(db);
 
         Building buildingA = Building.Create(tenantId, "Tower A", $"{slug}-A", null, clock.UtcNow);
         Building buildingB = Building.Create(tenantId, "Tower B", $"{slug}-B", null, clock.UtcNow);
@@ -94,7 +103,7 @@ public class FinancialReportDbTests : IClassFixture<PostgresApiFactory>
         flats.Add(flatA);
         flats.Add(flatB);
 
-        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         using HttpClient client = _factory.CreateClient();
         AuthTokensDto tokens = await RegisterAsync(client, tenantId, $"owner-{slug}@example.com");
@@ -106,10 +115,11 @@ public class FinancialReportDbTests : IClassFixture<PostgresApiFactory>
         Guid tenantId, BuildingId buildingId, FlatId flatId, string invoiceNumber, decimal amount, DateOnly invoiceDate,
         Action<Invoice>? mutate = null)
     {
-        using IServiceScope scope = _factory.Services.CreateScope();
-        IInvoiceRepository invoices = scope.ServiceProvider.GetRequiredService<IInvoiceRepository>();
-        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        IClock clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        using IServiceScope clockScope = _factory.Services.CreateScope();
+        IClock clock = clockScope.ServiceProvider.GetRequiredService<IClock>();
+
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
+        InvoiceRepository invoices = new(db);
 
         InvoiceLineInput line = new(null, "Service Charge", "Maintenance", "FixedAmount", amount, null, 1, amount, "Test line");
         (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
@@ -120,7 +130,7 @@ public class FinancialReportDbTests : IClassFixture<PostgresApiFactory>
 
         invoices.Add(invoice);
         invoices.AddLines(lines);
-        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return invoice.Id;
     }
@@ -128,10 +138,11 @@ public class FinancialReportDbTests : IClassFixture<PostgresApiFactory>
     private async Task SeedPaymentAsync(
         Guid tenantId, FlatId flatId, decimal amount, DateOnly businessDate, bool reversed = false)
     {
-        using IServiceScope scope = _factory.Services.CreateScope();
-        IPaymentRepository payments = scope.ServiceProvider.GetRequiredService<IPaymentRepository>();
-        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        IClock clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        using IServiceScope clockScope = _factory.Services.CreateScope();
+        IClock clock = clockScope.ServiceProvider.GetRequiredService<IClock>();
+
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(tenantId);
+        PaymentRepository payments = new(db);
 
         Payment payment = Payment.Record(
             tenantId, flatId, amount, PaymentMethod.Cash, "REF-1", businessDate, null, LedgerPostingId.New(), clock.UtcNow);
@@ -142,7 +153,7 @@ public class FinancialReportDbTests : IClassFixture<PostgresApiFactory>
         }
 
         payments.Add(payment);
-        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        await db.SaveChangesAsync(CancellationToken.None);
     }
 
     private async Task<FinancialSummaryDto> GetSummaryAsync(string accessToken, DateOnly fromDate, DateOnly toDate, Guid? buildingId = null)

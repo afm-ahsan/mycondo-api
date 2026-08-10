@@ -2,9 +2,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
+using MyCondo.Infrastructure.Persistence.Repositories;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -72,6 +75,17 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
             {
                 ["Jwt:SigningKey"] = "test-only-signing-key-not-for-any-real-environment",
                 ["ConnectionStrings:Default"] = _appConnectionString,
+
+                // The "auth"/"platform-auth" rate-limit policies partition by client IP, but every
+                // request from this in-memory TestServer shares one partition ("anon") across every
+                // test method in a *DbTests class (IClassFixture reuses one host per class) — the
+                // production-appropriate 10/minute and 5/minute limits would otherwise 429 unrelated
+                // authorization tests once enough Register/Login calls accumulate. Raised here, not in
+                // any appsettings.json, so production/Development keep the real brute-force bound.
+                ["RateLimiting:Auth:PermitLimit"] = "100000",
+                ["RateLimiting:Auth:WindowSeconds"] = "1",
+                ["RateLimiting:PlatformAuth:PermitLimit"] = "100000",
+                ["RateLimiting:PlatformAuth:WindowSeconds"] = "1",
             });
         });
     }
@@ -131,6 +145,19 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
         await using (MyCondoDbContext migrationContext = new(migratorOptions))
         {
             await migrationContext.Database.MigrateAsync();
+
+            // The global permission catalogue is no longer migration-seeded (see mycondo-docs ADR-022/
+            // ADR-024 — moved to PermissionCatalogue/PermissionSeeder, reconciled at app startup by
+            // DatabaseSeederExtensions.SeedDatabaseAsync, which Program.cs skips under the "Testing"
+            // environment this factory boots under). Every test here that registers/logs in or exercises
+            // role/permission endpoints needs identity.permissions populated, so this factory seeds it
+            // explicitly — the same catalogue, reconciled the same way, just invoked directly instead of
+            // through the environment-gated orchestrator. Reuses the already-open migrator connection;
+            // identity.permissions has no RLS, so which role does this is immaterial.
+            PermissionRepository permissionRepository = new(migrationContext);
+            PermissionSeeder permissionSeeder = new(permissionRepository, NullLogger<PermissionSeeder>.Instance);
+            await permissionSeeder.SeedAsync(CancellationToken.None);
+            await migrationContext.SaveChangesAsync();
         }
     }
 

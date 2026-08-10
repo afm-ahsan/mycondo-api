@@ -5,25 +5,17 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 /// <summary>
-/// Grants the restricted `mycondo_app` runtime role DML privileges on every MyCondo schema, without
-/// making it an owner of anything. This migration runs as `mycondo_migrator` (the DDL/owner role —
-/// see docker-compose.yml and README.md's migration instructions), which is what makes the grants and
-/// `ALTER DEFAULT PRIVILEGES` below valid: you can only set default privileges `FOR ROLE` yourself
-/// (or as superuser), and the migrator connection is exactly that role.
-///
-/// This exists because RLS's `FORCE` was previously meaningless in practice: the original single-role
-/// setup ran migrations *and* the app itself as the same role, which — being the initdb bootstrap role
-/// for the container — was also a Postgres superuser. Superusers and BYPASSRLS roles always bypass row
-/// security regardless of FORCE. See mycondo-docs' ADR recording this (follow-up to ADR-009) and
-/// `mycondo-api/.claude/skills/postgresql-rls.md`.
-///
-/// The `ALTER DEFAULT PRIVILEGES` statements are what make this durable across future waves: any table
-/// `mycondo_migrator` creates in these schemas from now on (billing, payments, etc. in later waves)
-/// automatically grants `mycondo_app` the same DML rights, with nothing to remember per migration.
-/// `mycondo_app` will own none of these objects, so RLS applies to it even without FORCE — FORCE stays
-/// in place anyway as documented, explicit defense-in-depth.
+/// Grants the restricted <c>mycondo_app</c> runtime role (ADR-016 — DML-only, non-superuser, owns
+/// nothing) DML privileges on every schema in the clean baseline — consolidated from the 5 historical
+/// <c>Grant_App_Role_Runtime_Privileges*</c> migrations this baseline replaces. Runs as
+/// <c>mycondo_migrator</c> (the DDL/owner role), which is what makes the grants and
+/// <c>ALTER DEFAULT PRIVILEGES</c> below valid — see mycondo-api/CLAUDE.md's Multi-tenancy section for
+/// why the running application never connects as <c>mycondo_migrator</c>. <c>ALTER DEFAULT PRIVILEGES</c>
+/// ensures a table/sequence created by a *later* migration (which also runs as <c>mycondo_migrator</c>)
+/// is automatically grantable to <c>mycondo_app</c> without a follow-up grant migration for routine
+/// schema evolution — mirroring exactly what the historical migrations already did per-schema.
 /// </summary>
-public partial class Grant_App_Role_Runtime_Privileges : Migration
+public partial class GrantAppRoleRuntimePrivileges : Migration
 {
     private static readonly string[] Schemas =
     [
@@ -45,8 +37,12 @@ public partial class Grant_App_Role_Runtime_Privileges : Migration
         "documents",
         "reporting",
         "audit",
+        "operations",
+        "platform",
+        "utilities",
     ];
 
+    /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         foreach (string schema in Schemas)
@@ -64,6 +60,7 @@ public partial class Grant_App_Role_Runtime_Privileges : Migration
         }
     }
 
+    /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         foreach (string schema in Schemas.Reverse())
