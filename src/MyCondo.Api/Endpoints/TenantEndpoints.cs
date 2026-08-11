@@ -1,12 +1,21 @@
 using Mediator;
-using MyCondo.Api.Authorization;
-using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
-using MyCondo.Application.Features.Tenancy.Commands.ProvisionTenant;
-using MyCondo.Application.Features.Tenancy.Commands.SuspendTenant;
 using MyCondo.Application.Features.Tenancy.Queries.GetTenantBySlug;
 
 namespace MyCondo.Api.Endpoints;
 
+/// <summary>
+/// SaaS-tenant (organization) lifecycle management — provisioning, activation, and suspension — lives
+/// exclusively under the isolated Platform Administration surface
+/// (<see cref="PlatformOrganizationEndpoints"/>, gated by <c>platform.organization.*</c> via
+/// <c>RequirePlatformPermission</c>). This group used to also expose Provision/Activate/Suspend here,
+/// gated by the ordinary tenant-scoped <c>tenant.manage</c> permission — a latent cross-boundary
+/// escalation path, since <see cref="MyCondo.Application.Common.Services.OrganizationAdminBootstrapper"/>
+/// grants every non-platform-module permission (including <c>tenant.manage</c>) to a tenant's own
+/// OrganizationAdmin by default. Removed as part of the Administration/Owner/Expense Management audit
+/// (mycondo-docs Create Tenant audit decision) — the Platform endpoints are the only supported path
+/// now. Only the anonymous slug lookup remains here, since the login flow needs it before any tenant
+/// context exists.
+/// </summary>
 public static class TenantEndpoints
 {
     public static IEndpointRouteBuilder MapTenantEndpoints(this IEndpointRouteBuilder app)
@@ -21,34 +30,6 @@ public static class TenantEndpoints
             })
             .AllowAnonymous()
             .Produces<TenantSummaryDto>(StatusCodes.Status200OK);
-
-        // Gated by tenant.manage. As of this slice, no user can hold that permission yet — the
-        // permission catalogue hasn't been seeded (MASTER_BACKLOG.md ID-2). This endpoint establishes
-        // the correct shape now rather than opening it anonymously in the meantime; the local dev
-        // bootstrap path is MyCondo.Infrastructure.Seed.DevelopmentTenantSeeder, not this endpoint.
-        group.MapPost("/", async (ProvisionTenantCommand command, ISender sender, CancellationToken ct) =>
-            {
-                ProvisionTenantResult result = await sender.Send(command, ct);
-                return Results.Ok(result);
-            })
-            .RequirePermission("tenant.manage")
-            .Produces<ProvisionTenantResult>(StatusCodes.Status200OK);
-
-        group.MapPost("/{id:guid}/activate", async (Guid id, ISender sender, CancellationToken ct) =>
-            {
-                await sender.Send(new ActivateTenantCommand(id), ct);
-                return Results.NoContent();
-            })
-            .RequirePermission("tenant.manage")
-            .Produces(StatusCodes.Status204NoContent);
-
-        group.MapPost("/{id:guid}/suspend", async (Guid id, ISender sender, CancellationToken ct) =>
-            {
-                await sender.Send(new SuspendTenantCommand(id), ct);
-                return Results.NoContent();
-            })
-            .RequirePermission("tenant.manage")
-            .Produces(StatusCodes.Status204NoContent);
 
         return app;
     }

@@ -13,6 +13,8 @@ using MyCondo.Domain.Features.Attachments;
 using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Billing.InvoiceSequences;
 using MyCondo.Domain.Features.Billing.ServiceChargeRules;
+using MyCondo.Domain.Features.Expenses.Expenses;
+using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RefreshTokens;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
@@ -165,6 +167,8 @@ public static class DependencyInjection
         services.AddScoped<IFlatOwnershipRepository, FlatOwnershipRepository>();
         services.AddScoped<IGateRepository, GateRepository>();
         services.AddScoped<IResidentRepository, ResidentRepository>();
+        services.AddScoped<IExpenseTypeRepository, ExpenseTypeRepository>();
+        services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();
         services.AddScoped<IGuestProfileRepository, GuestProfileRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();

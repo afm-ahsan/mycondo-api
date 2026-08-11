@@ -129,8 +129,12 @@ public class OrganizationAdminScopeDbTests : IClassFixture<PostgresApiFactory>
             client, HttpMethod.Get, "/api/v1/permissions", ownerTokens.AccessToken);
         List<PermissionDto> catalogue = (await catalogueResponse.Content.ReadFromJsonAsync<List<PermissionDto>>(JsonOptions))!;
 
+        // Excludes module "tenant" (tenant.view/tenant.manage) — SaaS-tenant lifecycle permissions are
+        // Platform-exclusive (mycondo-docs Create Tenant audit decision), not part of what an
+        // OrganizationAdmin is bootstrapped with even though /api/v1/permissions still lists them.
         List<string> grantedPermissions = claims.GetClaimValues("perm");
-        grantedPermissions.Should().BeEquivalentTo(catalogue.Select(p => p.Name));
+        grantedPermissions.Should().BeEquivalentTo(
+            catalogue.Where(p => p.Module != "tenant").Select(p => p.Name));
     }
 
     [Fact]

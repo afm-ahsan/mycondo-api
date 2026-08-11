@@ -45,7 +45,10 @@ public sealed class Tenant : AggregateRoot<TenantId>, IAuditable
     /// <summary>
     /// Provisions a new tenant in PendingActivation status. Caller is responsible for normalizing
     /// and validating the slug's shape (lowercase, hyphenated) before invoking — see
-    /// ProvisionTenantCommandValidator.
+    /// ProvisionOrganizationWithAdminCommandValidator (Platform Administration's HTTP-reachable path;
+    /// see TenantEndpoints.cs's class doc comment for why the equivalent tenant-scoped command was
+    /// removed) or the development seeders (ArpDevelopmentBootstrapSeeder/DevelopmentTenantSeeder),
+    /// which call this factory directly.
     /// </summary>
     public static Tenant Provision(string name, string slug, DateTimeOffset nowUtc) =>
         Provision(TenantId.New(), name, slug, nowUtc);

@@ -3,6 +3,9 @@ using MyCondo.Api.Authorization;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.EndFlatOwnership;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
+using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForUser;
+using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnersForTenant;
+using MyCondo.Domain.Common;
 
 namespace MyCondo.Api.Endpoints;
 
@@ -26,6 +29,33 @@ public static class FlatOwnershipEndpoints
     public static IEndpointRouteBuilder MapFlatOwnershipEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder flatOwnerships = app.MapGroup("/api/v1/properties/flat-ownerships").WithTags("Property");
+
+        // Register-style list, unlike every other endpoint in this file — gated by the standard
+        // RequirePermission filter (not the per-Flat HasPermissionForBuilding pattern above) because
+        // it has no single Flat to resolve a Building from. This matches the same (tenant-wide, not
+        // per-Building-filtered) precedent already used by GetResidentsForTenantQueryHandler for the
+        // sibling Residents register — a pre-existing characteristic of that pattern, not a new gap.
+        flatOwnerships.MapGet("/", async (string? search, string? status, int? page, int? pageSize, ISender sender, CancellationToken ct) =>
+            {
+                PagedResult<FlatOwnerRegisterDto> result = await sender.Send(
+                    new GetFlatOwnersForTenantQuery(
+                        search, status,
+                        page is null or < 1 ? 1 : page.Value,
+                        pageSize is null or < 1 ? 20 : pageSize.Value),
+                    ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("ownership.manage")
+            .Produces<PagedResult<FlatOwnerRegisterDto>>(StatusCodes.Status200OK);
+
+        app.MapGet("/api/v1/properties/owners/{userId:guid}/ownerships", async (Guid userId, ISender sender, CancellationToken ct) =>
+            {
+                List<UserFlatOwnershipDto> result = await sender.Send(new GetFlatOwnershipsForUserQuery(userId), ct);
+                return Results.Ok(result);
+            })
+            .WithTags("Property")
+            .RequirePermission("ownership.manage")
+            .Produces<List<UserFlatOwnershipDto>>(StatusCodes.Status200OK);
 
         flatOwnerships.MapPost("/", async (CreateFlatOwnershipCommand command, ISender sender, CancellationToken ct) =>
             {
