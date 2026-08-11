@@ -327,14 +327,18 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
         (await GrantCountAsync("FlatOwner")).Should().Be(2);
         (await GrantCountAsync("Tenant")).Should().Be(2);
 
-        // OrganizationAdmin gets the entire tenant-usable catalogue — never a hardcoded number, since
-        // it must always equal whatever /api/v1/permissions actually returns (platform.* excluded).
+        // OrganizationAdmin gets the entire tenant-usable catalogue except SaaS-tenant lifecycle
+        // permissions (module "tenant" — tenant.view/tenant.manage), which are Platform-exclusive
+        // (mycondo-docs Create Tenant audit decision) — never a hardcoded number for the rest, since it
+        // must always equal whatever /api/v1/permissions actually returns (platform.* excluded), minus
+        // that one additional carve-out.
         HttpResponseMessage catalogueResponse = await SendAuthedAsync(
             client, HttpMethod.Get, "/api/v1/permissions", tokens.AccessToken);
         List<PermissionDto>? catalogue = await catalogueResponse.Content.ReadFromJsonAsync<List<PermissionDto>>(JsonOptions);
         catalogue.Should().NotBeNull();
         catalogue!.Should().OnlyContain(p => p.Module != "platform");
-        (await GrantCountAsync("OrganizationAdmin")).Should().Be(catalogue.Count);
+        int tenantUsableCount = catalogue.Count(p => p.Module != "tenant");
+        (await GrantCountAsync("OrganizationAdmin")).Should().Be(tenantUsableCount);
     }
 
     private static Guid ParseUserIdFromAccessToken(string accessToken)

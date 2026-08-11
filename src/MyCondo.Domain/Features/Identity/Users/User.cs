@@ -132,6 +132,30 @@ public sealed class User : AggregateRoot<UserId>, IAuditable, ISoftDeletable, IT
         Version++;
     }
 
+    /// <summary>
+    /// Updates the profile fields an administrator may edit after creation. Email is deliberately
+    /// excluded — it is the login identity and changing it is deferred (see mycondo-docs Flat Owner/
+    /// User Administration decision log for the rationale).
+    /// </summary>
+    public void UpdateProfile(string newFullName, string? newPhoneNumber, DateTimeOffset nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newFullName);
+
+        string trimmedName = newFullName.Trim();
+        string? trimmedPhone = newPhoneNumber?.Trim();
+
+        if (string.Equals(FullName, trimmedName, StringComparison.Ordinal)
+            && string.Equals(PhoneNumber, trimmedPhone, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        FullName = trimmedName;
+        PhoneNumber = trimmedPhone;
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
+
     public void ConfirmEmail()
     {
         if (EmailConfirmed)

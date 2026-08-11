@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MyCondo.Application.Features.Auth.DTOs;
 using MyCondo.Application.Features.Users.Queries.GetUsersForTenant;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Tenancy;
 
 namespace MyCondo.Api.IntegrationTests;
@@ -83,9 +84,10 @@ public class UserEndpointsDbTests : IClassFixture<PostgresApiFactory>
             client, HttpMethod.Get, "/api/v1/users", ownerTokens.AccessToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<UserSummaryDto>? users = await response.Content.ReadFromJsonAsync<List<UserSummaryDto>>(JsonOptions);
-        users.Should().NotBeNull();
-        users!.Select(u => u.Email).Should().BeEquivalentTo(["owner@example.com", "member@example.com"]);
+        PagedResult<UserSummaryDto>? page = await response.Content.ReadFromJsonAsync<PagedResult<UserSummaryDto>>(JsonOptions);
+        page.Should().NotBeNull();
+        List<UserSummaryDto> users = page!.Items.ToList();
+        users.Select(u => u.Email).Should().BeEquivalentTo(["owner@example.com", "member@example.com"]);
         users.Should().OnlyContain(u => u.IsActive);
     }
 
@@ -105,9 +107,9 @@ public class UserEndpointsDbTests : IClassFixture<PostgresApiFactory>
 
         HttpResponseMessage listResponse = await SendAuthedAsync(
             client, HttpMethod.Get, "/api/v1/users", ownerTokens.AccessToken);
-        List<UserSummaryDto>? users = await listResponse.Content.ReadFromJsonAsync<List<UserSummaryDto>>(JsonOptions);
+        PagedResult<UserSummaryDto>? page = await listResponse.Content.ReadFromJsonAsync<PagedResult<UserSummaryDto>>(JsonOptions);
 
-        users.Should().ContainSingle(u => u.UserId == memberUserId && !u.IsActive);
+        page!.Items.Should().ContainSingle(u => u.UserId == memberUserId && !u.IsActive);
     }
 
     [Fact]

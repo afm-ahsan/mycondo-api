@@ -25,6 +25,8 @@ public interface IRoleAssignmentRepository
 
     Task<List<RoleAssignment>> GetForRoleAsync(Guid tenantId, RoleId roleId, CancellationToken cancellationToken);
 
+    Task<List<RoleAssignment>> GetForUserAsync(Guid tenantId, UserId userId, CancellationToken cancellationToken);
+
     void Add(RoleAssignment roleAssignment);
     void Remove(RoleAssignment roleAssignment);
 }

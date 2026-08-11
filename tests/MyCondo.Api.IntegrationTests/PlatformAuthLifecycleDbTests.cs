@@ -5,6 +5,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MyCondo.Api.Endpoints;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Platform.DTOs;
 using MyCondo.Domain.Abstractions;

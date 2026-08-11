@@ -69,17 +69,6 @@ public class AuthEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Provision_Tenant_Without_Token_Returns_401()
-    {
-        using HttpClient client = _factory.CreateClient();
-
-        HttpResponseMessage response = await client.PostAsJsonAsync(
-            "/api/v1/tenants", new { name = "ARP", slug = "arp" });
-
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
     public void Auth_And_Tenant_Routes_Are_Registered()
     {
         // Was previously asserted by fetching /openapi/v1.json over HTTP, but that endpoint is now
@@ -96,6 +85,10 @@ public class AuthEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
 
         routePatterns.Should().Contain("/api/v1/auth/login");
         routePatterns.Should().Contain("/api/v1/auth/register");
-        routePatterns.Should().Contain("/api/v1/tenants/");
+        // Only the anonymous slug lookup remains under /api/v1/tenants — Provision/Activate/Suspend
+        // were removed (Create Tenant audit; see TenantEndpoints.cs's class doc comment) and now live
+        // exclusively under /api/v1/platform/organizations, gated by RequirePlatformPermission.
+        routePatterns.Should().Contain("/api/v1/tenants/by-slug/{slug}");
+        routePatterns.Should().NotContain("/api/v1/tenants/");
     }
 }

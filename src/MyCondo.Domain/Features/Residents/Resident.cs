@@ -90,6 +90,19 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         Version++;
     }
 
+    /// <summary>Admin edit of this resident's own profile fields — not the ownership relationship
+    /// (<c>FlatOwnership</c>) and not the linked User account.</summary>
+    public void UpdateProfile(string newFullName, string? phone, string? email, DateTimeOffset nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newFullName);
+
+        FullName = newFullName.Trim();
+        Phone = phone?.Trim();
+        Email = email?.Trim();
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
+
     /// <summary>Explicit admin action bridging this resident record to a portal User account — the
     /// caller (LinkResidentToUserCommandHandler) is responsible for having already verified the User
     /// belongs to the same Tenant; this method only guards against a no-op re-link.</summary>

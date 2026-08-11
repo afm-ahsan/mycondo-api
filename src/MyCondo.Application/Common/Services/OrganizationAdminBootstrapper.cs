@@ -26,6 +26,15 @@ public sealed class OrganizationAdminBootstrapper(
     // SuperAdminBootstrapper, which granted the unfiltered catalogue).
     private const string PlatformPermissionModule = "platform";
 
+    // tenant.view/tenant.manage govern SaaS-tenant (organization) lifecycle — provisioning,
+    // activation, suspension — which belongs exclusively to Platform Administration
+    // (platform.organization.*, checked via RequirePlatformPermission). Excluded from the
+    // OrganizationAdmin's blanket grant for the same reason as "platform" above: this was the root
+    // cause of a latent cross-boundary escalation (every tenant's OrganizationAdmin held tenant.manage
+    // by default, and a since-removed tenant-side endpoint accepted it) — see mycondo-docs Create
+    // Tenant audit decision. Defense in depth even with that endpoint gone.
+    private const string TenantLifecyclePermissionModule = "tenant";
+
     public async Task BootstrapAsync(
         Guid tenantId, User user, DateTimeOffset nowUtc, CancellationToken cancellationToken)
     {
@@ -42,7 +51,8 @@ public sealed class OrganizationAdminBootstrapper(
 
         List<Permission> catalogue = await permissions.GetAllAsync(cancellationToken);
         List<Permission> tenantPermissions = catalogue
-            .Where(p => !string.Equals(p.Module, PlatformPermissionModule, StringComparison.Ordinal))
+            .Where(p => !string.Equals(p.Module, PlatformPermissionModule, StringComparison.Ordinal)
+                && !string.Equals(p.Module, TenantLifecyclePermissionModule, StringComparison.Ordinal))
             .ToList();
 
         foreach (Permission permission in tenantPermissions)
