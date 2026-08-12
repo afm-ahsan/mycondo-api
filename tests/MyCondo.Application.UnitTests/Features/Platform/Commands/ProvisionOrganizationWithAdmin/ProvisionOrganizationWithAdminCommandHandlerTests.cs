@@ -5,6 +5,7 @@ using MyCondo.Application.Common.Authorization;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
@@ -41,6 +42,7 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
     private readonly IRolePermissionRepository _uowRolePermissions = Substitute.For<IRolePermissionRepository>();
     private readonly IRoleAssignmentRepository _uowRoleAssignments = Substitute.For<IRoleAssignmentRepository>();
     private readonly ITenantModuleRepository _uowTenantModules = Substitute.For<ITenantModuleRepository>();
+    private readonly IExpenseTypeRepository _uowExpenseTypes = Substitute.For<IExpenseTypeRepository>();
 
     public ProvisionOrganizationWithAdminCommandHandlerTests()
     {
@@ -52,6 +54,7 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         _uowPermissions.GetAllAsync(Arg.Any<CancellationToken>()).Returns(FullPermissionCatalogue());
         _uowRoles.GetAllForTenantAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns([]);
         _uowRolePermissions.GetForRoleAsync(Arg.Any<RoleId>(), Arg.Any<CancellationToken>()).Returns([]);
+        _uowExpenseTypes.GetAllForTenantAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns([]);
 
         _uow.Tenants.Returns(_uowTenants);
         _uow.Users.Returns(_uowUsers);
@@ -60,6 +63,7 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         _uow.RolePermissions.Returns(_uowRolePermissions);
         _uow.RoleAssignments.Returns(_uowRoleAssignments);
         _uow.TenantModules.Returns(_uowTenantModules);
+        _uow.ExpenseTypes.Returns(_uowExpenseTypes);
 
         _uowFactory.Create(Arg.Any<Guid>()).Returns(_uow);
     }
@@ -135,6 +139,14 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         // non-platform grant was added is enough to prove the real bootstrapper ran (not a stub).
         _uowRolePermissions.Received().Add(Arg.Any<RolePermission>());
         _uowRoleAssignments.Received(1).Add(Arg.Any<RoleAssignment>());
+    }
+
+    [Fact]
+    public async Task Seeds_The_Default_Expense_Type_Catalogue_For_The_New_Tenant()
+    {
+        await CreateHandler().Handle(ValidCommand(), CancellationToken.None);
+
+        _uowExpenseTypes.Received(11).Add(Arg.Any<ExpenseType>());
     }
 
     [Fact]

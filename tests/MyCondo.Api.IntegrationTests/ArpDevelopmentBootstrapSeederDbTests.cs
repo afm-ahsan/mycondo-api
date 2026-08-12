@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
@@ -144,6 +145,53 @@ public class ArpDevelopmentBootstrapSeederDbTests : IClassFixture<PostgresApiFac
         await using MyCondoDbContext db = _factory.CreateDbContextForTenant(arp.Id.Value);
         List<Role> tenantRoles = await db.Set<Role>().Where(r => r.TenantId == arp.Id.Value).ToListAsync();
         tenantRoles.Should().HaveCount(15);
+    }
+
+    [Fact]
+    public async Task Seeder_Also_Seeds_The_Default_Expense_Type_Catalogue()
+    {
+        await RunSeederAsync();
+
+        Tenant arp = await GetArpTenantAsync();
+
+        await using MyCondoDbContext db = _factory.CreateDbContextForTenant(arp.Id.Value);
+        List<ExpenseType> expenseTypes = await db.Set<ExpenseType>()
+            .Where(e => e.TenantId == arp.Id.Value).ToListAsync();
+
+        // Checks presence/shape rather than an exact set/all-active, since this class shares one
+        // Postgres container across its tests (see class doc comment) and
+        // Seeder_Preserves_A_Tenant_Deactivated_Expense_Type_On_Rerun deliberately deactivates one of
+        // these rows on the same ARP tenant.
+        expenseTypes.Select(e => e.Code).Should().Contain(
+        [
+            "CLEANING", "SECURITY", "GENFUEL", "LIFTMAINT", "PLUMBING", "ELECTRICAL",
+            "PESTCTRL", "OFFICESUPPLY", "LEGALPROF", "REPAIRMAINT", "MISC",
+        ]);
+        expenseTypes.Should().ContainSingle(e => e.Code == "MISC" && e.IsActive);
+    }
+
+    [Fact]
+    public async Task Seeder_Preserves_A_Tenant_Deactivated_Expense_Type_On_Rerun()
+    {
+        await RunSeederAsync();
+        Tenant arp = await GetArpTenantAsync();
+
+        await using (MyCondoDbContext db = _factory.CreateDbContextForTenant(arp.Id.Value))
+        {
+            ExpenseType cleaning = await db.Set<ExpenseType>()
+                .SingleAsync(e => e.TenantId == arp.Id.Value && e.Code == "CLEANING");
+            cleaning.Deactivate(DateTimeOffset.UtcNow);
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await RunSeederAsync();
+
+        await using MyCondoDbContext verifyDb = _factory.CreateDbContextForTenant(arp.Id.Value);
+        List<ExpenseType> cleaningRows = await verifyDb.Set<ExpenseType>()
+            .Where(e => e.TenantId == arp.Id.Value && e.Code == "CLEANING").ToListAsync();
+
+        cleaningRows.Should().ContainSingle("reconciliation must never recreate a type the tenant deactivated");
+        cleaningRows.Single().IsActive.Should().BeFalse();
     }
 
     [Fact]

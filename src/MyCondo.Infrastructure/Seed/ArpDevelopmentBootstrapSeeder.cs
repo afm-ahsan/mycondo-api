@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Services;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
@@ -22,7 +23,8 @@ namespace MyCondo.Infrastructure.Seed;
 /// "Akter Residence Park" (slug <c>arp</c>) with its first user (<c>admin@mycondo.com</c>), seeded the
 /// same way any real tenant's first user would be: <see cref="IOrganizationAdminBootstrapper"/> grants
 /// OrganizationAdmin, then <see cref="IDefaultRoleCatalogueSeeder"/>, <see cref="ICondominiumRoleCatalogueSeeder"/>,
-/// and <see cref="IResidentRoleCatalogueSeeder"/> (Phase 3, mycondo-docs ADR-021) seed the rest of the catalogue.
+/// <see cref="IResidentRoleCatalogueSeeder"/> (Phase 3, mycondo-docs ADR-021), and
+/// <see cref="IExpenseTypeCatalogueSeeder"/> seed the rest of the catalogue.
 ///
 /// Unlike <see cref="PlatformBootstrapSeeder"/>/<see cref="DevelopmentTenantSeeder"/> (which write to
 /// tables with no RLS at all — <c>platform.*</c> and <c>tenancy.tenants</c> respectively), this seeder
@@ -97,7 +99,7 @@ public sealed class ArpDevelopmentBootstrapSeeder(
         {
             // ARP already exists: only reconcile the role catalogues, in their own transaction — a
             // role/permission added to a catalogue after ARP was first created still reaches it here.
-            await ReconcileRoleCataloguesAsync(sp, connectionString, tenantId, nowUtc, cancellationToken);
+            await ReconcileCataloguesAsync(sp, connectionString, tenantId, nowUtc, cancellationToken);
         }
 
         loggerFactory.CreateLogger<ArpDevelopmentBootstrapSeeder>().LogInformation(
@@ -129,6 +131,7 @@ public sealed class ArpDevelopmentBootstrapSeeder(
         PermissionRepository permissions = new(db);
         RolePermissionRepository rolePermissions = new(db);
         RoleAssignmentRepository roleAssignments = new(db);
+        ExpenseTypeRepository expenseTypes = new(db);
         ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
         OrganizationAdminBootstrapper organizationAdminBootstrapper = new(
@@ -136,14 +139,15 @@ public sealed class ArpDevelopmentBootstrapSeeder(
             loggerFactory.CreateLogger<OrganizationAdminBootstrapper>());
         await organizationAdminBootstrapper.BootstrapAsync(tenant.Id.Value, admin, nowUtc, cancellationToken);
 
-        await SeedRoleCataloguesAsync(roles, permissions, rolePermissions, loggerFactory, tenant.Id.Value, nowUtc, cancellationToken);
+        await SeedCataloguesAsync(
+            roles, permissions, rolePermissions, expenseTypes, loggerFactory, tenant.Id.Value, nowUtc, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 
         return tenant.Id.Value;
     }
 
-    private static async Task ReconcileRoleCataloguesAsync(
+    private static async Task ReconcileCataloguesAsync(
         IServiceProvider sp, string connectionString, Guid tenantId, DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
@@ -153,16 +157,19 @@ public sealed class ArpDevelopmentBootstrapSeeder(
         RoleRepository roles = new(db);
         PermissionRepository permissions = new(db);
         RolePermissionRepository rolePermissions = new(db);
+        ExpenseTypeRepository expenseTypes = new(db);
         ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
-        await SeedRoleCataloguesAsync(roles, permissions, rolePermissions, loggerFactory, tenantId, nowUtc, cancellationToken);
+        await SeedCataloguesAsync(
+            roles, permissions, rolePermissions, expenseTypes, loggerFactory, tenantId, nowUtc, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task SeedRoleCataloguesAsync(
+    private static async Task SeedCataloguesAsync(
         RoleRepository roles, PermissionRepository permissions, RolePermissionRepository rolePermissions,
-        ILoggerFactory loggerFactory, Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken)
+        ExpenseTypeRepository expenseTypes, ILoggerFactory loggerFactory, Guid tenantId, DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
     {
         DefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder = new(
             roles, permissions, rolePermissions, loggerFactory.CreateLogger<DefaultRoleCatalogueSeeder>());
@@ -170,10 +177,13 @@ public sealed class ArpDevelopmentBootstrapSeeder(
             roles, permissions, rolePermissions, loggerFactory.CreateLogger<CondominiumRoleCatalogueSeeder>());
         ResidentRoleCatalogueSeeder residentRoleCatalogueSeeder = new(
             roles, permissions, rolePermissions, loggerFactory.CreateLogger<ResidentRoleCatalogueSeeder>());
+        ExpenseTypeCatalogueSeeder expenseTypeCatalogueSeeder = new(
+            expenseTypes, loggerFactory.CreateLogger<ExpenseTypeCatalogueSeeder>());
 
         await defaultRoleCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
         await condominiumRoleCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
         await residentRoleCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
+        await expenseTypeCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
     }
 
     private static MyCondoDbContext BuildDbContext(

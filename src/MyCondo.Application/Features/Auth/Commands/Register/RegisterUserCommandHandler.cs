@@ -16,6 +16,7 @@ public sealed class RegisterUserCommandHandler(
     IDefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder,
     ICondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder,
     IResidentRoleCatalogueSeeder residentRoleCatalogueSeeder,
+    IExpenseTypeCatalogueSeeder expenseTypeCatalogueSeeder,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -77,6 +78,11 @@ public sealed class RegisterUserCommandHandler(
             await defaultRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
             await condominiumRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
             await residentRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
+
+            // Same "new tenant needs a sensible starting point" rationale as the role catalogues above
+            // — a practical default expense category set (mycondo-docs expense-management task) instead
+            // of an empty picker on the new tenant's first visit to Finance › Expense Types.
+            await expenseTypeCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

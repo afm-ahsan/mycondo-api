@@ -62,5 +62,12 @@ public sealed class ExpenseTypeRepository(MyCondoDbContext db) : IExpenseTypeRep
             .OrderBy(x => x.DisplayOrder).ThenBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
+    public Task<List<ExpenseType>> GetAllForTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
+        db.Set<ExpenseType>()
+            .AsNoTracking()
+            .Where(x => x.TenantId == tenantId)
+            .OrderBy(x => x.DisplayOrder).ThenBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+
     public void Add(ExpenseType expenseType) => db.Set<ExpenseType>().Add(expenseType);
 }

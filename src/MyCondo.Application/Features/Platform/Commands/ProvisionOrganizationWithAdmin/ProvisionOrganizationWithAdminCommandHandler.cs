@@ -79,10 +79,13 @@ public sealed class ProvisionOrganizationWithAdminCommandHandler(
             uow.Roles, uow.Permissions, uow.RolePermissions, loggerFactory.CreateLogger<CondominiumRoleCatalogueSeeder>());
         ResidentRoleCatalogueSeeder residentRoleCatalogueSeeder = new(
             uow.Roles, uow.Permissions, uow.RolePermissions, loggerFactory.CreateLogger<ResidentRoleCatalogueSeeder>());
+        ExpenseTypeCatalogueSeeder expenseTypeCatalogueSeeder = new(
+            uow.ExpenseTypes, loggerFactory.CreateLogger<ExpenseTypeCatalogueSeeder>());
 
         await defaultRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, cancellationToken);
         await condominiumRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, cancellationToken);
         await residentRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, cancellationToken);
+        await expenseTypeCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, cancellationToken);
 
         await uow.TenantModules.ReplaceForTenantAsync(
             tenant.Id.Value, command.EnabledModuleKeys, nowUtc, currentPlatformUser.PlatformUserId, cancellationToken);

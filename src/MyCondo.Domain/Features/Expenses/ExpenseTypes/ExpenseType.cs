@@ -4,11 +4,11 @@ namespace MyCondo.Domain.Features.Expenses.ExpenseTypes;
 
 /// <summary>
 /// A tenant's expense category catalogue entry (e.g. Cleaning, Security, Generator Fuel). Tenant-
-/// created data, not a global platform catalogue like <c>PermissionCatalogue</c> — every condominium
-/// defines its own categories, so there is no application-level seeder for this (see mycondo-docs
-/// expense-management domain decision). Once referenced by an <see cref="Expenses.Expense"/>, disable
-/// rather than delete — enforced by the application layer, not here, since this aggregate has no way
-/// to know whether it's referenced.
+/// owned, editable data — every condominium can rename, add, or deactivate its own categories — but a
+/// practical default set is application-seeded per tenant at bootstrap time by
+/// <c>ExpenseTypeCatalogueSeeder</c>, reconciled by <c>Code</c> the same way role catalogues are.
+/// Once referenced by an <see cref="Expenses.Expense"/>, disable rather than delete — enforced by the
+/// application layer, not here, since this aggregate has no way to know whether it's referenced.
 /// </summary>
 public sealed class ExpenseType : AggregateRoot<ExpenseTypeId>, IAuditable, ITenantScoped
 {

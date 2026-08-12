@@ -134,6 +134,9 @@ public static class Program
         IResidentRoleCatalogueSeeder residentRoleCatalogueSeeder = sp.GetRequiredService<IResidentRoleCatalogueSeeder>();
         await residentRoleCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, CancellationToken.None);
 
+        IExpenseTypeCatalogueSeeder expenseTypeCatalogueSeeder = sp.GetRequiredService<IExpenseTypeCatalogueSeeder>();
+        await expenseTypeCatalogueSeeder.SeedAsync(tenant.Id.Value, nowUtc, CancellationToken.None);
+
         IUnitOfWork unitOfWork = sp.GetRequiredService<IUnitOfWork>();
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 

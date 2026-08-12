@@ -22,5 +22,10 @@ public interface IExpenseTypeRepository
     /// one page of them (mirrors <c>IFlatRepository.GetAllForBuildingAsync</c>'s rationale).</summary>
     Task<List<ExpenseType>> GetAllActiveForTenantAsync(Guid tenantId, CancellationToken cancellationToken);
 
+    /// <summary>Unpaginated, active and inactive — used by <c>ExpenseTypeCatalogueSeeder</c> to
+    /// reconcile the default catalogue by <c>Code</c> (mirrors <c>IRoleRepository.GetAllForTenantAsync</c>'s
+    /// rationale for catalogue reconciliation).</summary>
+    Task<List<ExpenseType>> GetAllForTenantAsync(Guid tenantId, CancellationToken cancellationToken);
+
     void Add(ExpenseType expenseType);
 }

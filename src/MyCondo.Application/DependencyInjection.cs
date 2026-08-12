@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
         services.AddScoped<IResidentRoleCatalogueSeeder, ResidentRoleCatalogueSeeder>();
+        services.AddScoped<IExpenseTypeCatalogueSeeder, ExpenseTypeCatalogueSeeder>();
         services.AddScoped<IFlatAccessAuthorizer, FlatAccessAuthorizer>();
 
         // Domain-event dispatch bypasses Mediator (see IDomainEventHandler comment for why).
