@@ -1,12 +1,17 @@
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
+using MyCondo.Application.Features.Property.Buildings.Commands.DeactivateBuilding;
+using MyCondo.Application.Features.Property.Buildings.Commands.UpdateBuilding;
 using MyCondo.Application.Features.Property.Buildings.DTOs;
 using MyCondo.Application.Features.Property.Buildings.Queries.GetBuildingById;
 using MyCondo.Application.Features.Property.Buildings.Queries.GetBuildingsForTenant;
 using MyCondo.Application.Features.Property.Flats.Commands.CreateFlat;
+using MyCondo.Application.Features.Property.Flats.Commands.DeactivateFlat;
+using MyCondo.Application.Features.Property.Flats.Commands.UpdateFlat;
 using MyCondo.Application.Features.Property.Flats.Commands.UpdateFlatArea;
 using MyCondo.Application.Features.Property.Flats.DTOs;
+using MyCondo.Application.Features.Property.Flats.Queries.GetFlatById;
 using MyCondo.Application.Features.Property.Flats.Queries.GetFlatsForBuilding;
 using MyCondo.Application.Features.Property.Gates.Commands.CreateGate;
 using MyCondo.Application.Features.Property.Gates.DTOs;
@@ -43,8 +48,24 @@ public static class PropertyEndpoints
                 BuildingDto result = await sender.Send(new GetBuildingByIdQuery(id), ct);
                 return Results.Ok(result);
             })
-            .RequirePermission("property.view")
+            .RequireBuildingPermission("property.view", "id")
             .Produces<BuildingDto>(StatusCodes.Status200OK);
+
+        buildings.MapPut("/{id:guid}", async (Guid id, UpdateBuildingRequest body, ISender sender, CancellationToken ct) =>
+            {
+                BuildingDto result = await sender.Send(new UpdateBuildingCommand(id, body.Name, body.Code, body.Address), ct);
+                return Results.Ok(result);
+            })
+            .RequireBuildingPermission("property.update", "id")
+            .Produces<BuildingDto>(StatusCodes.Status200OK);
+
+        buildings.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new DeactivateBuildingCommand(id), ct);
+                return Results.NoContent();
+            })
+            .RequireBuildingPermission("property.delete", "id")
+            .Produces(StatusCodes.Status204NoContent);
 
         buildings.MapPost("/{buildingId:guid}/flats", async (Guid buildingId, CreateFlatRequest body, ISender sender, CancellationToken ct) =>
             {
@@ -52,7 +73,7 @@ public static class PropertyEndpoints
                     new CreateFlatCommand(buildingId, body.FlatNumber, body.FloorNumber, body.FlatType), ct);
                 return Results.Ok(result);
             })
-            .RequirePermission("property.create")
+            .RequireBuildingPermission("property.create")
             .Produces<FlatDto>(StatusCodes.Status200OK);
 
         buildings.MapGet("/{buildingId:guid}/flats", async (Guid buildingId, string? search, int page, int pageSize, ISender sender, CancellationToken ct) =>
@@ -61,15 +82,39 @@ public static class PropertyEndpoints
                     new GetFlatsForBuildingQuery(buildingId, search, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
                 return Results.Ok(result);
             })
-            .RequirePermission("property.view")
+            .RequireBuildingPermission("property.view")
             .Produces<PagedResult<FlatDto>>(StatusCodes.Status200OK);
+
+        buildings.MapGet("/{buildingId:guid}/flats/{flatId:guid}", async (Guid buildingId, Guid flatId, ISender sender, CancellationToken ct) =>
+            {
+                FlatDto result = await sender.Send(new GetFlatByIdQuery(flatId), ct);
+                return Results.Ok(result);
+            })
+            .RequireBuildingPermission("property.view")
+            .Produces<FlatDto>(StatusCodes.Status200OK);
+
+        buildings.MapPut("/{buildingId:guid}/flats/{flatId:guid}", async (Guid buildingId, Guid flatId, UpdateFlatRequest body, ISender sender, CancellationToken ct) =>
+            {
+                FlatDto result = await sender.Send(new UpdateFlatCommand(flatId, body.FlatNumber, body.FloorNumber, body.FlatType), ct);
+                return Results.Ok(result);
+            })
+            .RequireBuildingPermission("property.update")
+            .Produces<FlatDto>(StatusCodes.Status200OK);
+
+        buildings.MapDelete("/{buildingId:guid}/flats/{flatId:guid}", async (Guid buildingId, Guid flatId, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new DeactivateFlatCommand(flatId), ct);
+                return Results.NoContent();
+            })
+            .RequireBuildingPermission("property.delete")
+            .Produces(StatusCodes.Status204NoContent);
 
         buildings.MapPatch("/{buildingId:guid}/flats/{flatId:guid}/area", async (Guid buildingId, Guid flatId, UpdateFlatAreaRequest body, ISender sender, CancellationToken ct) =>
             {
                 FlatDto result = await sender.Send(new UpdateFlatAreaCommand(flatId, body.AreaSqFt), ct);
                 return Results.Ok(result);
             })
-            .RequirePermission("property.update")
+            .RequireBuildingPermission("property.update")
             .Produces<FlatDto>(StatusCodes.Status200OK);
 
         buildings.MapPost("/{buildingId:guid}/gates", async (Guid buildingId, CreateGateRequest body, ISender sender, CancellationToken ct) =>
@@ -77,7 +122,7 @@ public static class PropertyEndpoints
                 GateDto result = await sender.Send(new CreateGateCommand(buildingId, body.Name), ct);
                 return Results.Ok(result);
             })
-            .RequirePermission("property.create")
+            .RequireBuildingPermission("property.create")
             .Produces<GateDto>(StatusCodes.Status200OK);
 
         buildings.MapGet("/{buildingId:guid}/gates", async (Guid buildingId, ISender sender, CancellationToken ct) =>
@@ -85,14 +130,18 @@ public static class PropertyEndpoints
                 List<GateDto> result = await sender.Send(new GetGatesForBuildingQuery(buildingId), ct);
                 return Results.Ok(result);
             })
-            .RequirePermission("property.view")
+            .RequireBuildingPermission("property.view")
             .Produces<List<GateDto>>(StatusCodes.Status200OK);
 
         return app;
     }
 }
 
+public sealed record UpdateBuildingRequest(string Name, string Code, string? Address);
+
 public sealed record CreateFlatRequest(string FlatNumber, int? FloorNumber, string FlatType);
+
+public sealed record UpdateFlatRequest(string FlatNumber, int? FloorNumber, string FlatType);
 
 public sealed record UpdateFlatAreaRequest(decimal? AreaSqFt);
 
