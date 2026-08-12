@@ -1,298 +1,730 @@
-# MyCondo — API
+# MyCondo API — Claude Code Instructions
 
-## Project Overview
+This file contains **repository-specific, durable backend engineering rules** for `mycondo-api`.
 
-MyCondo is a multi-tenant SaaS building automation and property management platform delivered to ARP Flat Owner's Association under proposal MC-PROP-2026-001 (fixed-price BDT 2,50,000, 24 weeks). This repo is the **backend**: a Clean Architecture + modular monolith .NET 10 API serving 14+ modules across 19 PostgreSQL schemas (18 approved 2026-07-28 per ADR-004, plus `operations` added 2026-08-07 for Slice H — see the ADR-004 addendum), with strict tenant isolation via Row-Level Security.
+Global workflow, Git, token-efficiency, communication, verification, and architecture-governance rules are defined in the root `../CLAUDE.md` and apply here.
 
-The companion frontend repo is at https://github.com/afm-ahsan/mycondo-web.
+Load additional documentation only when required by the current task.
 
-**Governance baseline:** see `../mycondo-docs/02-architecture/CURRENT_STATE_ASSESSMENT.md`,
-`TARGET_ARCHITECTURE.md`, and `Architecture_Decision_Register.md` (established 2026-07-28, Wave 0)
-for the current verified state of this repo, open architecture decisions, and the delivery backlog.
-Several items below reflect the *target* state, not the current one — each is annotated where that's
-the case.
+---
 
-## Tech Stack
+## 1. Repository Responsibility
 
-- **Runtime**: .NET 10 LTS · C# 14 · ASP.NET Core 10 (Minimal APIs)
-- **Persistence**: EF Core 10 · PostgreSQL 18 · Npgsql.EntityFrameworkCore.PostgreSQL 10.x
-- **Cache & real-time**: Redis 8.6 · StackExchange.Redis · SignalR (Redis backplane)
-- **Background jobs**: Hangfire (PostgreSQL-backed)
-- **In-process messaging**: `Mediator` (martinothamar, MIT) — not the commercially-licensed `MediatR` (ADR-002)
-- **Validation**: FluentValidation 11
-- **Auth**: ASP.NET Core Identity 10 + Argon2id (Konscious) + JWT Bearer (RS256, 15-min access / 7-day rotating refresh)
-- **API docs**: `Microsoft.AspNetCore.OpenApi` (OpenAPI 3.1) + Scalar UI
-- **Logging**: Serilog (structured JSON) → Seq (dev) / CloudWatch (prod)
-- **Telemetry**: OpenTelemetry (.NET 10 native)
-- **Tests**: xUnit + `AwesomeAssertions` (not `FluentAssertions`, ADR-003) + NetArchTest
+`mycondo-api` is the authoritative backend for MyCondo.
 
-## Project Structure
+Backend ownership includes:
 
+- business rules;
+- tenant isolation;
+- authorization and permissions;
+- financial calculations;
+- lifecycle/state transitions;
+- validation;
+- persistence;
+- API contracts;
+- integration boundaries.
+
+Do not move authoritative business behavior into `mycondo-web`.
+
+When frontend requirements conflict with backend rules, preserve backend correctness and surface the conflict.
+
+---
+
+## 2. Technology Baseline
+
+Use the existing repository stack and versions unless an approved architectural decision changes them.
+
+Core technologies:
+
+- .NET 10 / C# 14
+- ASP.NET Core Minimal APIs
+- EF Core + PostgreSQL
+- Redis
+- SignalR
+- Hangfire
+- FluentValidation
+- ASP.NET Core Identity
+- JWT authentication
+- OpenAPI
+- Serilog
+- OpenTelemetry
+- xUnit
+- NetArchTest
+
+Do not introduce competing frameworks for capabilities already standardized by the project.
+
+---
+
+## 3. Approved Core Libraries & OSS Dependency Policy
+
+MyCondo prefers **actively maintained, widely adopted, community-accessible open-source libraries with permissive licensing**.
+
+For established capabilities, use the project's approved libraries:
+
+- In-process messaging / CQRS dispatch: `Mediator` by martinothamar — MIT licensed.
+- Fluent test assertions: `AwesomeAssertions` — Apache-2.0 licensed.
+
+Do not introduce alternative libraries for these capabilities without an explicit architectural decision.
+
+### Dependency Selection
+
+Before introducing any new third-party dependency, verify that it provides meaningful value not already available through:
+
+- the .NET / ASP.NET Core platform;
+- an existing MyCondo dependency;
+- a small maintainable implementation using platform capabilities.
+
+When an external dependency is justified, prefer libraries that are:
+
+1. open source and community-accessible;
+2. permissively licensed;
+3. actively maintained;
+4. sufficiently adopted and proven;
+5. compatible with the current .NET ecosystem;
+6. reasonably lightweight;
+7. low in vendor or ecosystem lock-in;
+8. suitable for commercial SaaS usage without unexpected licensing obligations.
+
+Preferred permissive licenses include:
+
+- MIT;
+- Apache-2.0;
+- BSD-2-Clause;
+- BSD-3-Clause.
+
+Libraries with copyleft, source-available, dual-commercial, usage-restricted, or otherwise materially different licensing require explicit evaluation before adoption.
+
+Do not replace an approved dependency merely because another library is more familiar or popular.
+
+Do not add dependencies for trivial functionality already supported adequately by the platform or existing stack.
+
+Licensing rationale and long-term dependency decisions belong in ADRs rather than being expanded in this file.
+
+---
+
+## 4. Architecture Boundaries
+
+Follow Clean Architecture dependency direction:
+
+`Domain → Application → Infrastructure → Api`
+
+### Domain
+
+Contains:
+
+- aggregates/entities;
+- value objects;
+- domain rules;
+- domain events.
+
+Domain must not depend on Infrastructure or Api concerns.
+
+### Application
+
+Contains feature-oriented:
+
+- commands;
+- queries;
+- handlers;
+- validators;
+- DTOs;
+- application services;
+- authorization abstractions.
+
+Application depends on Domain, not Infrastructure implementation details.
+
+### Infrastructure
+
+Contains:
+
+- EF Core;
+- PostgreSQL;
+- Redis;
+- external service adapters;
+- persistence configuration;
+- migrations;
+- seed infrastructure.
+
+### Api
+
+Contains:
+
+- Minimal API endpoints;
+- middleware;
+- authentication/authorization composition;
+- SignalR hubs;
+- request/response transport concerns.
+
+Endpoints orchestrate application behavior. They do not contain authoritative business logic.
+
+---
+
+## 5. Feature-First Vertical Slices
+
+All feature-specific Application code must live beneath its owning feature.
+
+Correct:
+
+```text
+Features/
+└── Residents/
+    ├── Commands/
+    │   └── CreateResident/
+    └── Queries/
+        └── GetResidentById/
 ```
-mycondo-api/
-├── MyCondo.sln
-├── Directory.Build.props
-├── Directory.Packages.props
-├── global.json
-├── .editorconfig
-├── Dockerfile
-├── docker-compose.yml
-├── .github/
-│   └── workflows/
-├── src/
-│   ├── MyCondo.Domain/                     # Entities, value objects, domain events. Zero deps.
-│   ├── MyCondo.Application/                # MediatR handlers, DTOs, validators. Depends on Domain.
-│   ├── MyCondo.Infrastructure/             # EF Core, Redis, S3, email/SMS adapters.
-│   ├── MyCondo.Api/                        # ASP.NET Core entry, SignalR hubs, middleware.
-│   ├── MyCondo.Shared/                     # Cross-cutting types (no business logic).
-│   └── (later) MyCondo.Modules.<Module>/   # Each module added in its own phase.
-├── tests/
-│   ├── MyCondo.Domain.UnitTests/
-│   ├── MyCondo.Application.UnitTests/
-│   ├── MyCondo.Infrastructure.IntegrationTests/
-│   ├── MyCondo.Api.IntegrationTests/
-│   ├── MyCondo.MultiTenancyTests/          # RLS isolation validation
-│   └── MyCondo.ArchitectureTests/          # NetArchTest enforces module boundaries
-├── tools/
-│   └── MyCondo.DbMigrator/                 # Standalone migration runner
-└── docs/
-    ├── conventions/                         # Convention library (duplicated from template)
-    ├── architecture/
-    ├── decisions/                           # ADRs
-    └── runbooks/
+
+Do not create global dumping grounds such as:
+
+```text
+Commands/
+Queries/
+Dtos/
+Validators/
 ```
 
-## Conventions
+Keep commands, queries, DTOs, validators, mappings, specifications, and related application behavior with their owning business feature.
 
-**This project follows the convention library at `docs/conventions/`. Read it before generating, modifying, or reviewing code.**
+Prefer existing feature structure over introducing new organizational patterns.
 
-Most relevant files:
-- Foundation: `docs/conventions/00-foundation/`
-- Backend: `docs/conventions/01-backend/`
-- Database: `docs/conventions/03-database/`
-- API Design: `docs/conventions/04-api-design/`
-- Security: `docs/conventions/05-security/`
-- DevOps: `docs/conventions/06-devops/`
-- Standards: `docs/conventions/07-standards/`
+---
 
-When the conventions specify a rule, **follow it**. Project-specific overrides are listed below.
+## 6. CQRS & Messaging
 
-## Architecture (one-paragraph summary)
+Use the project's approved in-process messaging library and established CQRS conventions.
 
-Clean Architecture: Domain → Application → Infrastructure → Api. Domain has zero external deps. Application uses CQRS via `Mediator` (martinothamar, MIT — not the commercially-licensed `MediatR`, see ADR-002) with FluentValidation pipeline behavior. Infrastructure uses EF Core 10 + PostgreSQL 18 with **schema-per-module** (19 schemas, snake_case naming — see ADR-004 and its 2026-08-07 addendum). Api exposes Minimal API endpoints, one group per aggregate, every endpoint declares `[RequirePermission(...)]` or `[AllowAnonymous]`. Modules communicate **only** via domain events — no direct cross-module project references (enforced by NetArchTest).
+Commands represent mutations.
 
-## Multi-tenancy (non-negotiable)
+Queries represent reads.
 
-- Every tenant-scoped table has a `tenant_id UUID NOT NULL` — implemented today in the `identity` schema tables.
-- **RLS is enabled and forced, as of 2026-07-28 (Wave 1 Slice 2).** `rls_<table>_tenant_isolation` policies enforce `tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid` (note the `NULLIF` — a direct cast raises a Postgres error when the GUC is `''`) on `users`, `roles`, `role_assignments`, `refresh_tokens`, and `role_permissions`, with RLS `ENABLED` and `FORCED`. See `mycondo-api/.claude/skills/postgresql-rls.md` for the exact pattern to copy when a new tenant-scoped table needs it — RLS is per-table, not automatic.
-- **The connecting role matters as much as the policy.** Postgres superusers and `BYPASSRLS` roles always bypass RLS, `FORCE` or not. Under the Docker Compose / Testcontainers / production model (ADR-016), the app runs as `mycondo_app` — non-superuser, non-owner (owns nothing; DML-only privileges granted via `Grant_App_Role_Runtime_Privileges`) — never as `mycondo_migrator` (the DDL/owner role, used only for `dotnet ef database update`). This split exists *because* the original single-role setup used a Postgres superuser for everything, which silently defeated RLS end-to-end until the first real Testcontainers run caught it (see ADR-016 in `mycondo-docs`). If you ever see the app connecting with a role that owns its own tables or is a superuser, RLS is not actually protecting anything, regardless of what the migration history says.
-- **Native PostgreSQL local dev is a separate, explicitly non-RLS-proving path.** It connects as `dev_user`, a superuser on that instance — convenient for day-to-day work, but RLS/tenant-isolation must never be considered validated by anything run against it. See README.md's Developer Environment Matrix for the full comparison across Native/Docker Compose/Testcontainers/Production.
-- `TenantContextConnectionInterceptor` sets `app.current_tenant_id` on every connection open (reads and writes alike), not just in `SaveChangesAsync` — this closes the read-path sequencing risk that `mycondo-docs/02-architecture/TARGET_ARCHITECTURE.md` §4 previously flagged as a blocker.
-- Composite indexes on tenant-scoped tables always lead with `tenant_id`.
-- `MyCondo.MultiTenancyTests` has real cross-tenant tests (Testcontainers-backed), executed against a real Docker daemon and passing against the restricted `mycondo_app` role — not just compile-verified.
+Keep handlers focused on one application use case.
 
-## Seed Data & Bootstrap Architecture (non-negotiable)
+Cross-module interaction must respect existing module boundaries and established event/integration patterns.
 
-- **Migrations are for schema evolution and genuine migration-time data transformations** (e.g. a
-  backfill on existing rows during a schema change). **Ordinary application seed data — permissions,
-  role catalogues, role-permission mappings, SuperAdmin/platform bootstrap, development/demo data —
-  belongs in dedicated seeders under `src/MyCondo.Infrastructure/Seed/` and
-  `src/MyCondo.Application/Common/Services/*CatalogueSeeder.cs`, never in EF Core `InsertData`/`HasData`.**
-  New permissions are added to `MyCondo.Application.Common.Authorization.PermissionCatalogue` and
-  reconciled by `PermissionSeeder`, never via a new seed migration.
-- **Clean migration baseline (2026-08-10, mycondo-docs ADR-024).** The development-era migration
-  history (59 migrations, including 14 `Seed_*` permission-catalogue migrations) was consolidated into
-  three baseline migrations — `InitialPlatformSchema`, `AddTenantRowLevelSecurityPolicies`,
-  `GrantAppRoleRuntimePrivileges` — since the local development database and its migration history had
-  never been applied to any shared/staging/production environment (Scenario A). Every genuine schema
-  object the removed migrations created (all 66 tables including `billing.invoice_sequences`, which has
-  no EF entity mapping; the `btree_gist` extension; the three `EXCLUDE USING gist` overlap-guard
-  constraints; the `amenities.booking_slot_range` function; all 58 RLS policies; all 21 schemas' DML
-  grants to `mycondo_app`) was preserved — none of it was schema loss, only migration-history
-  consolidation. **This is a one-time cutover, not a repeatable operation**: from this baseline forward,
-  applied migrations are immutable — new schema changes create new migrations, they are never rewritten
-  or squashed again once a shared/persistent database exists.
-- **Migration naming describes schema intent, not seed intent** — `Create*`/`Add*`/`Alter*`/`Rename*`/
-  `Drop*`, e.g. `AddTenantRowLevelSecurityPolicies`, never `Seed_*`/`*Seed`/`UpdatePermissions`. A
-  future permission/role/catalogue addition is always a seeder change, never a new migration.
-- **Every seeder reconciles by a stable natural key** — a permission's `Name`, a role's `Code` — never
-  a database-generated ID, and never the classic `if (await X.AnyAsync()) return;` short-circuit (that
-  pattern permanently blocks a catalogue entry added later from ever reaching an already-bootstrapped
-  environment; see `docs/conventions/03-database/02-ef-core-and-migrations.md` §7 for the full
-  rationale). Reconciliation only ever creates what's missing — it never deletes or alters an existing
-  row not in the current catalogue.
-- **One explicit orchestration entry point**: `await app.Services.SeedDatabaseAsync(app.Environment)` in
-  `Program.cs` (`MyCondo.Infrastructure.Seed.DatabaseSeederExtensions`). Order: (1) the global
-  permission catalogue, every environment; (2) Development-only bootstrap/demo seeders
-  (`PlatformBootstrapSeeder`, `ArpDevelopmentBootstrapSeeder`, `DevelopmentTenantSeeder`), behind a hard
-  runtime `IHostEnvironment.IsDevelopment()` check — not just conditional DI registration — so a future
-  change can't accidentally let dev/demo data run in Production. `MyCondo.DbMigrator`'s tenant-bootstrap
-  CLI command seeds permissions the same way, since it may run against a database the API has never
-  started against yet.
-- **Tenant-scoped catalogue seeding needs an explicit tenant context**, since it runs outside any HTTP
-  request. The established pattern is a small, private `ITenantContextAccessor` implementation fixed to
-  one tenant ID, wired into a purpose-built `MyCondoDbContext` (see `ArpDevelopmentBootstrapSeeder`,
-  `MyCondo.DbMigrator`, and the test suites' `PostgresApiFactory.CreateDbContextForTenant`) — RLS stays
-  fully enforced; the seeder is just correctly told which tenant it's writing as. Genuinely global,
-  tenant-less tables (`identity.permissions`, `platform.*`, `tenancy.tenants` — no `tenant_id`, no RLS
-  policy) need no tenant context at all.
-- **Concurrent startup**: `SeedDatabaseAsync` wraps its sequence in a Postgres session-level advisory
-  lock so multiple API instances starting at once serialize through seeding rather than racing.
-- **Bootstrap identities are not catalogues.** A SuperAdmin/platform-administrator identity is a true
-  singleton (guarded by an existence check on its own unique identity, e.g. email) — but any *grants*
-  attached to it (e.g. the Platform SuperAdmin's `platform.*` permissions) still reconcile by natural
-  key on every run, so a permission added to the catalogue later still reaches an already-bootstrapped
-  SuperAdmin.
+Do not introduce direct cross-module coupling merely for convenience.
 
-## Financial integrity (non-negotiable)
+If a task appears to require violating a module boundary, inspect the applicable ADR before proceeding.
 
-- Append-only double-entry ledger in `payments.ledger_entries`. **No deletes** — voids create reversing entries.
-- All financial mutations (POST on billing/payments) require `X-Idempotency-Key`; validated against `payments.idempotency_keys`.
-- Payment allocation = FIFO with `SELECT … FOR UPDATE` row locking.
+---
 
-## Common Commands
+## 7. Validation
 
-### Build, test, run
+Every command that accepts external or user-controlled data must have appropriate FluentValidation coverage.
+
+Validation belongs in validators rather than endpoints.
+
+Use domain rules for invariants that must remain true regardless of entry point.
+
+Do not duplicate the same authoritative rule across endpoint, validator, and domain layers without justification.
+
+---
+
+## 8. Identity & Strong Types
+
+Follow existing domain typing conventions.
+
+- Prefer strongly typed IDs where the domain already uses them.
+- Do not replace established strongly typed identifiers with raw `Guid`.
+- Use `Guid.CreateVersion7()` for new aggregate identifiers where consistent with the existing model.
+- Use `IClock` for domain/application time instead of direct `DateTime.UtcNow`.
+- Avoid `dynamic`.
+- Avoid sync-over-async (`.Result`, `.Wait()`).
+
+Follow existing patterns before introducing new primitives or abstractions.
+
+---
+
+## 9. Multi-Tenancy — Non-Negotiable
+
+Tenant isolation is enforced by both application context and PostgreSQL Row-Level Security.
+
+For tenant-scoped persistence:
+
+- every tenant-scoped table must carry `tenant_id`;
+- tenant-aware indexes should lead with `tenant_id` where appropriate;
+- new tenant-scoped tables require an explicit RLS policy;
+- RLS must be both enabled and forced according to the established repository pattern;
+- tenant context must be applied consistently to reads and writes;
+- authorization must not be used as a substitute for database tenant isolation.
+
+Never bypass RLS to make a test or feature pass.
+
+Never weaken tenant predicates or tenant context handling for convenience.
+
+### PostgreSQL Role Model
+
+The runtime application role must remain a restricted non-superuser/non-owner role.
+
+Migration/DDL responsibilities and runtime/DML responsibilities remain separated.
+
+Do not configure the normal application runtime to use:
+
+- a PostgreSQL superuser;
+- a `BYPASSRLS` role;
+- the migration/owner role.
+
+A successful test using a superuser connection does **not** prove RLS isolation.
+
+For RLS-specific implementation or verification, consult the existing PostgreSQL RLS documentation and applicable ADRs rather than reconstructing the pattern.
+
+---
+
+## 10. Tenant Context
+
+Tenant context must be established before tenant-scoped database access.
+
+Follow the existing `TenantContextConnectionInterceptor` and tenant-context conventions.
+
+Background processes, bootstrap operations, and seeders that operate on tenant-scoped data must establish an explicit tenant context.
+
+Do not rely on an HTTP request context when execution occurs outside HTTP.
+
+Global tables without `tenant_id` do not require artificial tenant scoping.
+
+---
+
+## 11. Database & EF Core
+
+Use EF Core migrations for schema evolution.
+
+### Entity Configuration
+
+Use `IEntityTypeConfiguration<T>`.
+
+Do not accumulate entity mappings inline in `OnModelCreating`.
+
+### Naming
+
+Follow existing PostgreSQL naming conventions and schema-per-module architecture.
+
+Do not introduce a new schema or change module ownership without checking the applicable architecture decision.
+
+### Migrations
+
+Migrations are for:
+
+- schema evolution;
+- constraints;
+- indexes;
+- RLS/DCL changes;
+- unavoidable migration-time data transformations.
+
+Do not use migrations for ordinary application catalogue/bootstrap seed data.
+
+After a migration has reached a shared or persistent environment, treat it as immutable.
+
+New schema changes create new migrations.
+
+Do not rewrite migration history unless explicitly performing an approved baseline/cutover operation.
+
+Migration names should describe structural intent, for example:
+
+```text
+Create...
+Add...
+Alter...
+Rename...
+Drop...
+```
+
+Do not create `Seed_*`, `*Seed`, or permission-catalogue migrations.
+
+---
+
+## 12. Seed Data & Bootstrap
+
+Application seed data belongs in the established seeding architecture, not EF migration `InsertData` / `HasData`.
+
+Examples include:
+
+- permissions;
+- role catalogues;
+- role-permission mappings;
+- platform bootstrap;
+- development/demo bootstrap.
+
+### Catalogue Reconciliation
+
+Catalogue seeders must reconcile using stable natural keys such as:
+
+- permission `Name`;
+- role `Code`.
+
+Do not use generated database IDs as catalogue identity.
+
+Do not use broad short-circuit patterns such as:
+
+```csharp
+if (await query.AnyAsync())
+{
+    return;
+}
+```
+
+when doing so would prevent future catalogue additions from being reconciled.
+
+Catalogue reconciliation should add missing catalogue entries without blindly deleting existing rows.
+
+### Bootstrap
+
+Use the established explicit database-seeding orchestration.
+
+Development/demo seeders must remain protected by an actual runtime Development-environment check.
+
+Do not allow development bootstrap data to execute in Production.
+
+Tenant-scoped seed operations must establish the correct tenant context instead of bypassing RLS.
+
+Preserve existing concurrency protection around startup seeding.
+
+Consult the seed-data architecture documentation when modifying orchestration or bootstrap semantics.
+
+---
+
+## 13. Authorization
+
+Every protected endpoint must use the established permission model.
+
+Do not:
+
+- rely only on UI visibility;
+- replace permission checks with role-name checks when permissions are authoritative;
+- broaden permissions to fix access problems;
+- silently grant administrative capability to resident/user roles.
+
+When adding a capability:
+
+1. reuse an existing permission when semantically correct;
+2. otherwise add it to the application permission catalogue;
+3. seed/reconcile it through the established permission seeder;
+4. assign it only to appropriate roles;
+5. protect the endpoint;
+6. test authorized and unauthorized access.
+
+Tenant isolation and permission authorization are separate defenses; preserve both.
+
+---
+
+## 14. Minimal API Endpoints
+
+Endpoints should remain thin.
+
+Typical endpoint responsibilities:
+
+- parse/bind transport input;
+- obtain required request context;
+- dispatch command/query;
+- map result to HTTP response.
+
+Do not put:
+
+- domain rules;
+- financial calculations;
+- persistence queries;
+- state-machine logic;
+- tenant-isolation logic
+
+directly in endpoint definitions.
+
+Follow existing endpoint-group and OpenAPI conventions.
+
+Do not silently change public request/response contracts.
+
+---
+
+## 15. OpenAPI Contract
+
+Backend OpenAPI is the authoritative client contract.
+
+When an API contract changes:
+
+1. implement and verify the backend change;
+2. ensure OpenAPI reflects it;
+3. regenerate/update the frontend client using the established workflow;
+4. update frontend usage rather than hand-maintaining divergent contracts.
+
+Avoid unnecessary contract churn.
+
+Treat breaking contract changes as explicit design decisions.
+
+---
+
+## 16. Financial Integrity — Non-Negotiable
+
+Financial behavior requires stronger verification than ordinary CRUD.
+
+Preserve these established invariants:
+
+- posted ledger entries are append-only;
+- corrections/voids use reversing entries rather than mutation/deletion;
+- financial mutation endpoints use the established idempotency mechanism;
+- payment allocation follows the established locking/allocation behavior;
+- concurrent financial operations must preserve consistency.
+
+Do not simplify locking, idempotency, or ledger behavior without explicit architectural approval.
+
+For financial changes, inspect the applicable billing/payment implementation and ADRs before modifying behavior.
+
+---
+
+## 17. Logging & Observability
+
+Use structured logging.
+
+Correct:
+
+```csharp
+logger.LogInformation(
+    "Resident {ResidentId} activated for tenant {TenantId}",
+    residentId,
+    tenantId);
+```
+
+Avoid interpolated logging:
+
+```csharp
+logger.LogInformation($"Resident {residentId} activated");
+```
+
+Never log:
+
+- passwords;
+- signing keys;
+- tokens;
+- sensitive identity values;
+- secrets;
+- unnecessary personally identifiable information.
+
+Follow existing telemetry conventions instead of introducing parallel observability mechanisms.
+
+---
+
+## 18. Security & Credentials
+
+Never commit real production/shared-environment secrets.
+
+The repository currently has an approved temporary MVP development-credential strategy. Treat it as a narrowly scoped development exception, not a general security convention.
+
+Do not:
+
+- copy development credentials into staging/production configuration;
+- reuse development passwords for shared environments;
+- broaden the temporary MVP exception;
+- remove or weaken production secret-management expectations.
+
+When a task concerns credentials, deployment, staging, production, or onboarding, consult the applicable current ADR rather than relying on remembered values from this file.
+
+Do not repeat credentials in Claude output unless explicitly necessary for the requested task.
+
+---
+
+## 19. Testing Strategy
+
+Follow the root progressive-verification strategy.
+
+Choose tests according to the change.
+
+### Domain / Application
+
+Run affected unit tests first.
+
+Use the project's approved assertion library and existing test conventions.
+
+### Infrastructure / Persistence
+
+Run relevant integration tests when changing:
+
+- EF mappings;
+- migrations;
+- constraints;
+- transaction behavior;
+- seeders;
+- database interactions.
+
+### Multi-Tenancy
+
+Run real multi-tenancy/RLS verification when changing:
+
+- tenant-scoped entities;
+- tenant context;
+- RLS policies;
+- runtime DB roles;
+- cross-tenant queries;
+- seed behavior affecting tenant-scoped tables.
+
+Do not consider RLS proven by a superuser-backed local database.
+
+### Architecture
+
+Run architecture tests when changing:
+
+- project dependencies;
+- feature structure;
+- module boundaries;
+- architectural conventions.
+
+### API
+
+Run relevant API integration tests when changing endpoints, authentication, authorization, contracts, or middleware.
+
+Expand to the broader test suite only when scope/risk justifies it or at the final verification gate.
+
+---
+
+## 20. Migration Verification
+
+When adding or modifying persistence structures, verify more than compilation.
+
+As applicable, inspect:
+
+- generated migration;
+- model snapshot;
+- schema/table ownership;
+- constraints;
+- indexes;
+- tenant columns;
+- RLS policy;
+- grants/runtime-role access;
+- rollback/down behavior;
+- compatibility with existing data.
+
+Do not assume EF-generated output is correct merely because generation succeeded.
+
+---
+
+## 21. Implementation Order
+
+For a new backend capability, prefer this sequence when applicable:
+
+1. domain model/invariants;
+2. application command/query;
+3. validator;
+4. handler/application behavior;
+5. persistence configuration;
+6. migration;
+7. authorization/permission;
+8. API endpoint;
+9. targeted tests;
+10. OpenAPI/client-impact verification;
+11. broader verification as justified.
+
+Do not rigidly perform irrelevant steps for small changes.
+
+Reuse existing patterns from the closest comparable feature.
+
+---
+
+## 22. Repository Documentation
+
+Do not automatically read the entire convention library.
+
+Consult only documentation relevant to the task.
+
+Typical categories include:
+
+- backend conventions;
+- database/migrations;
+- API design;
+- security;
+- architecture decisions;
+- module-specific requirements.
+
+If implementation and documentation disagree materially:
+
+1. verify the implementation;
+2. identify whether the document is stale or the code violates an approved decision;
+3. report the discrepancy;
+4. do not silently choose whichever is more convenient.
+
+Do not create duplicate architecture documents.
+
+---
+
+## 23. Local Development & Commands
+
+Use repository-defined commands and current configuration.
+
+Typical backend verification commands include:
 
 ```powershell
 dotnet restore
 dotnet build
 dotnet test
 dotnet run --project src/MyCondo.Api
-# → https://localhost:7219 (HTTP fallback http://localhost:5219) — see docs/local-development-ports.md
 ```
 
-### Migrations
-
-**Native PostgreSQL path:** `dev_user` can already `CREATE TABLE` (it's a superuser on that instance —
-see "Multi-tenancy" below), so `dotnet ef database update` works directly against the connection
-string already in `appsettings.Development.json` (see "Credential Configuration (MVP)" below) — no
-user-secrets, no override needed.
-
-**Docker Compose path:** `dotnet ef database update` needs the `mycondo_migrator` (DDL/owner) role,
-not the `mycondo_app` role the app runs as day-to-day — `mycondo_app` is intentionally restricted to
-DML and cannot `CREATE TABLE`. Override the connection string just for this command (port `5433`, not
-`5432`):
+Typical migration commands include:
 
 ```powershell
-dotnet ef migrations add Add_<Subject> `
+dotnet ef migrations add <MigrationName> `
   --project src/MyCondo.Infrastructure `
   --startup-project src/MyCondo.Api
 
-$env:ConnectionStrings__Default = "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_migrator;Password=<same value as .env's POSTGRES_PASSWORD>"
 dotnet ef database update `
   --project src/MyCondo.Infrastructure `
   --startup-project src/MyCondo.Api
-Remove-Item Env:\ConnectionStrings__Default
 ```
 
-### Local infra
+Do not automatically run every command for every task.
 
-```powershell
-docker compose up -d                  # postgres + redis + mailhog
-docker compose logs -f api
-docker compose down -v                # WIPES volumes — destructive
-```
+Use targeted tests/builds first and escalate verification proportionately.
 
-## Credential Configuration (MVP)
+Before destructive infrastructure commands such as volume deletion, follow the root destructive-operation rule.
 
-**For the first MVP, no `dotnet user-secrets` and no environment variables are required to run the
-backend locally.** This is a deliberate, temporary decision — see mycondo-docs ADR-023 ("Temporary
-MVP Development Credential Strategy") for the full rationale, boundary, and expiration trigger (must
-be revisited before Staging/Production or external customer onboarding).
+For environment-specific connection strings, roles, ports, or credential procedures, inspect the current README/ADR/configuration rather than relying on hard-coded historical instructions here.
 
-- **`Jwt:SigningKey`** is already set directly in `appsettings.Development.json` (a dev-only value,
-  never used outside local development) — nothing to configure.
-- **Native PostgreSQL path** (day-to-day, does not validate RLS — see "Multi-tenancy" above): the
-  connection string is already set directly in `appsettings.Development.json`
-  (`Host=localhost;Port=5432;Database=mycondo;Username=dev_user;Password=PgDev@1357#`). Nothing to
-  configure — just have a local PostgreSQL 18 server with a `mycondo` database and `dev_user` role
-  already created (this repo doesn't script that bootstrap; see README.md Option A).
-- **Docker Compose path** (ADR-016 model, validates RLS — note port 5433, not 5432): its connection
-  string depends on whatever password you choose for `.env`'s `POSTGRES_PASSWORD` (see
-  `.env.example`), so it still needs an explicit override at the point you run migrations/the API
-  against it:
+---
 
-```powershell
-$env:ConnectionStrings__Default = "Host=localhost;Port=5433;Database=mycondo_dev;Username=mycondo_app;Password=mycondo_dev"
-dotnet run --project src/MyCondo.Api
-Remove-Item Env:\ConnectionStrings__Default
-```
+## 24. Do Not
 
-**This MVP credential (`PgDev@1357#`) must never be reused for Staging/Production/any other service,
-and must be rotated — not merely deleted from config — before this repository is used against a
-shared or production database.** `MyCondo.Api.csproj` still carries a `UserSecretsId` (harmless,
-optional — a developer may still use `dotnet user-secrets` for a personal override), but nothing in
-this repo *requires* it anymore; if you set one up under the old convention, clear it
-(`dotnet user-secrets clear --project src/MyCondo.Api`) so it doesn't silently shadow the
-`appsettings.Development.json` value above.
+Do not:
 
-## Mandatory Git Branch Policy
+- replace approved core libraries without an explicit architectural decision;
+- introduce third-party dependencies without evaluating necessity, maintenance, licensing, and lock-in;
+- bypass or disable RLS to make functionality work;
+- run the application with a privileged migration/superuser DB role;
+- place business logic in Minimal API endpoints;
+- place backend business rules in React;
+- add ordinary seed data through EF migrations;
+- mutate posted ledger entries;
+- silently broaden permissions;
+- use `.Result` or `.Wait()`;
+- use `dynamic` without an exceptional, documented reason;
+- inline entity configuration into a growing `OnModelCreating`;
+- silently break API contracts;
+- introduce generic repositories without justification;
+- create cross-module coupling merely for convenience;
+- create broad abstractions for a single use case;
+- rewrite existing shared migration history;
+- perform unrelated refactoring;
+- duplicate existing architecture documentation.
 
-Before modifying code for any new feature, bug fix, refactor, architecture change, or other meaningful development task:
+---
 
-1. Inspect `git status`, current branch, and recent history.
-2. Preserve unrelated/uncommitted work.
-3. Fetch the latest remote state.
-4. Create or switch to a dedicated task branch from the latest appropriate `main`.
-5. Verify the branch and base before editing code.
+## 25. Prefer
 
-Never develop directly on `main` unless explicitly instructed. Never use an unrelated currently checked-out feature branch as the base for new work — the branch that happens to be checked out is not automatically the correct one.
+Prefer:
 
-Branch from something other than `main` only when the task has a genuine unmerged dependency; report `DEPENDENT BRANCH REQUIRED` and explain the dependency before proceeding, rather than silently stacking a new branch on top of unmerged work.
+- permissively licensed, community-accessible OSS dependencies;
+- platform capabilities before additional packages;
+- existing approved libraries over competing alternatives;
+- existing patterns over new abstractions;
+- vertical slices over horizontal dumping grounds;
+- explicit domain rules over implicit behavior;
+- strongly typed domain concepts over primitives;
+- backend enforcement over frontend assumptions;
+- database isolation plus application authorization;
+- targeted inspection over repository-wide exploration;
+- targeted tests over repeated full-suite runs;
+- evidence over assumptions;
+- concise reports over implementation narration.
 
-Branch creation is mandatory pre-flight work, not optional — but it does not by itself authorize commit, push, merge, rebase, force-push, branch deletion, or PR creation. Those require task-specific authorization.
+---
 
-## Always Do
+## 26. Task Execution Principle
 
-- Run **tests** before pushing.
-- Use **structured logging** (`logger.LogInformation("... {Field}", value)`), never string interpolation.
-- Add a **FluentValidation validator** for every command.
-- Use **strongly-typed IDs** (`CustomerId`), not raw `Guid`.
-- Use **`IClock`** instead of `DateTime.UtcNow` in domain code.
-- Use **`Guid.CreateVersion7()`** for aggregate IDs.
-- Run **migrations from EF Core**, never write SQL DDL by hand.
+For each API task:
 
-## Never Do
+> **Find the narrowest relevant backend surface, reuse the established pattern, preserve tenant/security/financial invariants, minimize unnecessary dependencies, implement the smallest correct change, verify according to risk, and report only meaningful results.**
 
-- **Never commit real/production secrets** (third-party API keys, production DB credentials, signing
-  keys used outside local dev). Use GitHub Secrets / env vars (`MYCONDO_*`) / the future secret
-  manager (ADR-023) for those. The one documented, temporary exception is the MVP-only local
-  PostgreSQL dev credential in `appsettings.Development.json` (see "Credential Configuration (MVP)"
-  above) — that credential is development-only, never guards anything beyond a local dev database,
-  and must be rotated before Staging/Production.
-- **Never `Task.Result` or `.Wait()`.** Always `await`.
-- **Never `dynamic`.**
-- **Never inline `modelBuilder.Entity<T>()`** in `OnModelCreating`. Use `IEntityTypeConfiguration<T>`.
-- **Never bundle multiple concerns in one PR.** Split.
-
-## Project-Specific Overrides
-
-These deviate from the conventions library; an ADR will be added to `docs/decisions/` before Phase 2 work begins.
-
-- **Two-repo layout** (this repo + `mycondo-web`) instead of the convention's monorepo with sibling `MyCondo.Core/` + `MyCondo.Client/` folders. Per proposal §03 ("two clean repos, lowercase, hyphenated, role-based, independent deployment").
-- **Schema-per-module** (19 schemas as of the ADR-004 addendum adding `operations` for Slice H) instead of the convention's single `app` schema default. Per proposal §06 / MyCondo.md §06: surfaces module ownership at the DB layer and eases future microservice extraction.
-- **PostgreSQL 18 + Redis 8.6** instead of the convention's PG 16 / Redis 7 mention. Per proposal §06 — current stable releases.
-- **Development database credentials live directly in `appsettings.Development.json`**, not
-  `dotnet user-secrets`, instead of the convention library's default (`docs/conventions/05-security/
-  02-secrets-and-configuration.md` §2/§4). Per mycondo-docs ADR-023 — temporary for the first MVP,
-  must be reviewed and rotated before Staging/Production.
-
-## Module Implementation Order
-
-When adding a new module, follow `docs/conventions/08-templates/module-implementation-checklist.md`. Phased order locked in `docs/kickoff.md` (companion document, lives separately):
-
-1. Domain (entity, value objects, events)
-2. Application (commands, queries, validators, handlers, DTOs)
-3. Infrastructure (EF config, repository, migration)
-4. Api (endpoint group, requests/responses)
-5. Frontend (in `mycondo-web` — RTK Query slice, schemas, components, pages, route)
-6. Tests (unit + integration + multi-tenancy + E2E happy path)
-
-## Useful Links
-
-- Frontend repo: https://github.com/afm-ahsan/mycondo-web
-- API contract: `/scalar` (when API is running locally)
-- Architecture overview: `docs/architecture/solution-overview.md` (TODO)
-- ADRs: `docs/decisions/` (TODO)
-- Runbooks: `docs/runbooks/` (TODO)
+Do not spend context rediscovering facts already encoded in the repository unless the current task depends on validating them.
