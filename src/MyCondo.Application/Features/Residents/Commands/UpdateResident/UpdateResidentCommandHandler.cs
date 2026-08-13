@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Residents.DTOs;
+using MyCondo.Application.Features.Residents.Mappings;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Residents;
 
@@ -37,8 +38,6 @@ public sealed class UpdateResidentCommandHandler(
 
         logger.LogInformation("Resident {ResidentId} updated for tenant {TenantId}", residentId, tenantId);
 
-        return new ResidentDto(
-            resident.Id.Value, resident.FlatId.Value, resident.FullName, resident.Phone, resident.Email,
-            resident.ResidentType.ToString());
+        return resident.ToDto();
     }
 }

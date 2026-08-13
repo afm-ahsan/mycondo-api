@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Residents.DTOs;
+using MyCondo.Application.Features.Residents.Mappings;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Residents;
@@ -45,8 +46,6 @@ public sealed class CreateResidentCommandHandler(
             "Resident {ResidentId} '{FullName}' registered for flat {FlatId}, tenant {TenantId}",
             resident.Id, resident.FullName, flatId, tenantId);
 
-        return new ResidentDto(
-            resident.Id.Value, resident.FlatId.Value, resident.FullName, resident.Phone, resident.Email,
-            resident.ResidentType.ToString());
+        return resident.ToDto();
     }
 }

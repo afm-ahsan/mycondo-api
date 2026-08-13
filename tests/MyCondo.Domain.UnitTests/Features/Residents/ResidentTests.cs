@@ -105,4 +105,49 @@ public class ResidentTests
 
         act.Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void UpdateOwnerDetails_Sets_Extended_Profile_Fields_And_Increments_Version()
+    {
+        Resident resident = Resident.Register(TenantId, FlatId, "Jane Doe", null, null, ResidentType.Owner, Now);
+        DateOnly dob = new(1990, 1, 1);
+
+        resident.UpdateOwnerDetails(
+            "01799999999", "1234567890123", "P1234567", dob, "Female", "123 Present St", "456 Permanent Rd",
+            "John Doe Sr.", "Mary Doe", "Married", "Engineer", "Acme Corp", "789 Office Ave", "Emergency Contact",
+            "01788888888", Now.AddDays(1));
+
+        resident.AlternatePhone.Should().Be("01799999999");
+        resident.NationalIdNumber.Should().Be("1234567890123");
+        resident.PassportNumber.Should().Be("P1234567");
+        resident.DateOfBirth.Should().Be(dob);
+        resident.Gender.Should().Be("Female");
+        resident.PresentAddress.Should().Be("123 Present St");
+        resident.PermanentAddress.Should().Be("456 Permanent Rd");
+        resident.FatherName.Should().Be("John Doe Sr.");
+        resident.MotherName.Should().Be("Mary Doe");
+        resident.MaritalStatus.Should().Be("Married");
+        resident.Profession.Should().Be("Engineer");
+        resident.Employer.Should().Be("Acme Corp");
+        resident.OfficeAddress.Should().Be("789 Office Ave");
+        resident.EmergencyContactName.Should().Be("Emergency Contact");
+        resident.EmergencyContactPhone.Should().Be("01788888888");
+        resident.Version.Should().Be(2);
+    }
+
+    [Fact]
+    public void UpdateOwnerDetails_Does_Not_Clear_NationalIdNumber_When_Blank_Value_Is_Submitted()
+    {
+        Resident resident = Resident.Register(TenantId, FlatId, "Jane Doe", null, null, ResidentType.Owner, Now);
+        resident.UpdateOwnerDetails(
+            null, "1234567890123", "P1234567", null, null, null, null, null, null, null, null, null, null, null,
+            null, Now);
+
+        resident.UpdateOwnerDetails(
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, Now.AddDays(1));
+
+        resident.NationalIdNumber.Should().Be(
+            "1234567890123", "an empty submission means 'not retyped', not 'clear it' — matching OccupancyRegistration's masking convention");
+        resident.PassportNumber.Should().Be("P1234567");
+    }
 }

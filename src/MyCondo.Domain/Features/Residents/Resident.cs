@@ -20,6 +20,24 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
     public string? Email { get; private set; }
     public ResidentType ResidentType { get; private set; }
 
+    // Extended profile — populated by Flat Owner Registration (and optionally by other registers);
+    // all nullable since Occupant/FamilyMember rows and pre-existing residents never need them.
+    public string? AlternatePhone { get; private set; }
+    public string? NationalIdNumber { get; private set; }
+    public string? PassportNumber { get; private set; }
+    public DateOnly? DateOfBirth { get; private set; }
+    public string? Gender { get; private set; }
+    public string? PresentAddress { get; private set; }
+    public string? PermanentAddress { get; private set; }
+    public string? FatherName { get; private set; }
+    public string? MotherName { get; private set; }
+    public string? MaritalStatus { get; private set; }
+    public string? Profession { get; private set; }
+    public string? Employer { get; private set; }
+    public string? OfficeAddress { get; private set; }
+    public string? EmergencyContactName { get; private set; }
+    public string? EmergencyContactPhone { get; private set; }
+
     /// <summary>
     /// Bridges this party record to a portal <see cref="Identity.Users.User"/> account (Phase 3,
     /// mycondo-docs ADR-021) — null for every resident until an admin explicitly links one. Never set
@@ -99,6 +117,49 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         FullName = newFullName.Trim();
         Phone = phone?.Trim();
         Email = email?.Trim();
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    /// <summary>
+    /// Sets the extended owner-profile fields captured by Flat Owner Registration (Steps 2-3: identity,
+    /// contact, and family/professional details). Kept as a distinct operation from
+    /// <see cref="UpdateProfile"/> so the base resident-profile edit used by every register (Residents
+    /// directory, Tenant Registration's linked resident, etc.) is never forced to reason about
+    /// owner-only fields. <paramref name="nationalIdNumber"/>/<paramref name="passportNumber"/> follow
+    /// the same "empty submission means not retyped, not cleared" convention as
+    /// OccupancyRegistration.PrimaryNationalIdNumber — masked values are never round-tripped back
+    /// through an edit form, so only a non-blank value overwrites what's on file.
+    /// </summary>
+    public void UpdateOwnerDetails(
+        string? alternatePhone, string? nationalIdNumber, string? passportNumber, DateOnly? dateOfBirth,
+        string? gender, string? presentAddress, string? permanentAddress, string? fatherName, string? motherName,
+        string? maritalStatus, string? profession, string? employer, string? officeAddress,
+        string? emergencyContactName, string? emergencyContactPhone, DateTimeOffset nowUtc)
+    {
+        AlternatePhone = alternatePhone?.Trim();
+        if (!string.IsNullOrWhiteSpace(nationalIdNumber))
+        {
+            NationalIdNumber = nationalIdNumber.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(passportNumber))
+        {
+            PassportNumber = passportNumber.Trim();
+        }
+
+        DateOfBirth = dateOfBirth;
+        Gender = gender?.Trim();
+        PresentAddress = presentAddress?.Trim();
+        PermanentAddress = permanentAddress?.Trim();
+        FatherName = fatherName?.Trim();
+        MotherName = motherName?.Trim();
+        MaritalStatus = maritalStatus?.Trim();
+        Profession = profession?.Trim();
+        Employer = employer?.Trim();
+        OfficeAddress = officeAddress?.Trim();
+        EmergencyContactName = emergencyContactName?.Trim();
+        EmergencyContactPhone = emergencyContactPhone?.Trim();
         Version++;
         UpdatedAtUtc = nowUtc;
     }

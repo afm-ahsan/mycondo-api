@@ -17,7 +17,7 @@ public sealed class FlatOwnershipConfiguration : IEntityTypeConfiguration<FlatOw
             .ValueGeneratedNever();
 
         builder.Property(x => x.TenantId).IsRequired();
-        builder.Property(x => x.UserId).IsRequired();
+        builder.Property(x => x.ResidentId).IsRequired();
         builder.Property(x => x.FlatId)
             .HasConversion(id => id.Value, value => new FlatId(value))
             .IsRequired();
@@ -25,18 +25,18 @@ public sealed class FlatOwnershipConfiguration : IEntityTypeConfiguration<FlatOw
         builder.Property(x => x.StartDate).IsRequired();
         builder.Property(x => x.Version).IsConcurrencyToken();
 
-        builder.HasIndex(x => new { x.TenantId, x.UserId })
-            .HasDatabaseName("ix_flat_ownerships_tenant_id_user_id");
+        builder.HasIndex(x => new { x.TenantId, x.ResidentId })
+            .HasDatabaseName("ix_flat_ownerships_tenant_id_resident_id");
 
         builder.HasIndex(x => new { x.TenantId, x.FlatId })
             .HasDatabaseName("ix_flat_ownerships_tenant_id_flat_id");
 
-        // Partial/filtered: only one Active ownership row per (User, Flat) at a time — re-granting
+        // Partial/filtered: only one Active ownership row per (Resident, Flat) at a time — re-granting
         // after a prior ownership ended is still allowed (a new row, old one stays Ended for history).
-        builder.HasIndex(x => new { x.TenantId, x.UserId, x.FlatId })
+        builder.HasIndex(x => new { x.TenantId, x.ResidentId, x.FlatId })
             .IsUnique()
             .HasFilter("\"status\" = 'Active'")
-            .HasDatabaseName("ux_flat_ownerships_tenant_id_user_id_flat_id_active");
+            .HasDatabaseName("ux_flat_ownerships_tenant_id_resident_id_flat_id_active");
 
         builder.Ignore(x => x.DomainEvents);
     }

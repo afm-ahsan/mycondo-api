@@ -2,9 +2,10 @@ namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOw
 
 public sealed record FlatOwnerRegisterDto(
     Guid FlatOwnershipId,
-    Guid UserId,
+    Guid ResidentId,
     string OwnerFullName,
-    string OwnerEmail,
+    string? OwnerEmail,
+    string? OwnerPhone,
     Guid FlatId,
     string FlatNumber,
     Guid BuildingId,

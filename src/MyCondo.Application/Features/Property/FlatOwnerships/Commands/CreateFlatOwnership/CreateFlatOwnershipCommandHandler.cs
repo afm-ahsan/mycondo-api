@@ -3,16 +3,16 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Domain.Abstractions;
-using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
+using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 
 public sealed class CreateFlatOwnershipCommandHandler(
     IFlatOwnershipRepository flatOwnerships,
     IFlatRepository flats,
-    IUserRepository users,
+    IResidentRepository residents,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -42,31 +42,31 @@ public sealed class CreateFlatOwnershipCommandHandler(
             throw new ForbiddenException("You do not have permission to manage ownership for this Building.");
         }
 
-        UserId userId = new(command.UserId);
-        User user = await users.GetByIdAsync(userId, cancellationToken)
-            ?? throw new NotFoundException(nameof(User), command.UserId);
+        ResidentId residentId = new(command.ResidentId);
+        Resident resident = await residents.GetByIdAsync(residentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Resident), command.ResidentId);
 
-        if (user.TenantId != tenantId)
+        if (resident.TenantId != tenantId)
         {
-            throw new NotFoundException(nameof(User), command.UserId);
+            throw new NotFoundException(nameof(Resident), command.ResidentId);
         }
 
-        bool alreadyActive = await flatOwnerships.ExistsActiveForUserAndFlatAsync(
-            tenantId, command.UserId, flatId, cancellationToken);
+        bool alreadyActive = await flatOwnerships.ExistsActiveForResidentAndFlatAsync(
+            tenantId, command.ResidentId, flatId, cancellationToken);
         if (alreadyActive)
         {
-            throw new ConflictException("This user already has an active ownership relationship with this flat.");
+            throw new ConflictException("This resident already has an active ownership relationship with this flat.");
         }
 
-        FlatOwnership ownership = FlatOwnership.Grant(tenantId, command.UserId, flatId, command.StartDate, clock.UtcNow);
+        FlatOwnership ownership = FlatOwnership.Grant(tenantId, command.ResidentId, flatId, command.StartDate, clock.UtcNow);
 
         flatOwnerships.Add(ownership);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "FlatOwnership {FlatOwnershipId} granted: user {UserId} owns flat {FlatId} for tenant {TenantId}",
-            ownership.Id, command.UserId, command.FlatId, tenantId);
+            "FlatOwnership {FlatOwnershipId} granted: resident {ResidentId} owns flat {FlatId} for tenant {TenantId}",
+            ownership.Id, command.ResidentId, command.FlatId, tenantId);
 
-        return new CreateFlatOwnershipResult(ownership.Id.Value, command.UserId, command.FlatId, command.StartDate);
+        return new CreateFlatOwnershipResult(ownership.Id.Value, command.ResidentId, command.FlatId, command.StartDate);
     }
 }

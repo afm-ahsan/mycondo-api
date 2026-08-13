@@ -2,9 +2,12 @@ using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.EndFlatOwnership;
+using MyCondo.Application.Features.Property.FlatOwnerships.Commands.RegisterFlatOwner;
+using MyCondo.Application.Features.Property.FlatOwnerships.Commands.UpdateFlatOwnerProfile;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
-using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForUser;
+using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForOwner;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnersForTenant;
+using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Domain.Common;
 
 namespace MyCondo.Api.Endpoints;
@@ -48,14 +51,14 @@ public static class FlatOwnershipEndpoints
             .RequirePermission("ownership.manage")
             .Produces<PagedResult<FlatOwnerRegisterDto>>(StatusCodes.Status200OK);
 
-        app.MapGet("/api/v1/properties/owners/{userId:guid}/ownerships", async (Guid userId, ISender sender, CancellationToken ct) =>
+        app.MapGet("/api/v1/properties/owners/{residentId:guid}/ownerships", async (Guid residentId, ISender sender, CancellationToken ct) =>
             {
-                List<UserFlatOwnershipDto> result = await sender.Send(new GetFlatOwnershipsForUserQuery(userId), ct);
+                List<OwnerFlatOwnershipDto> result = await sender.Send(new GetFlatOwnershipsForOwnerQuery(residentId), ct);
                 return Results.Ok(result);
             })
             .WithTags("Property")
             .RequirePermission("ownership.manage")
-            .Produces<List<UserFlatOwnershipDto>>(StatusCodes.Status200OK);
+            .Produces<List<OwnerFlatOwnershipDto>>(StatusCodes.Status200OK);
 
         flatOwnerships.MapPost("/", async (CreateFlatOwnershipCommand command, ISender sender, CancellationToken ct) =>
             {
@@ -64,6 +67,28 @@ public static class FlatOwnershipEndpoints
             })
             .RequireAuthorization()
             .Produces<CreateFlatOwnershipResult>(StatusCodes.Status200OK);
+
+        flatOwnerships.MapPost("/register", async (RegisterFlatOwnerCommand command, ISender sender, CancellationToken ct) =>
+            {
+                RegisterFlatOwnerResult result = await sender.Send(command, ct);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization()
+            .Produces<RegisterFlatOwnerResult>(StatusCodes.Status200OK);
+
+        flatOwnerships.MapPut("/owners/{residentId:guid}/profile", async (Guid residentId, UpdateFlatOwnerProfileRequest body, ISender sender, CancellationToken ct) =>
+            {
+                ResidentDto result = await sender.Send(
+                    new UpdateFlatOwnerProfileCommand(
+                        residentId, body.FullName, body.Phone, body.Email, body.AlternatePhone, body.NationalIdNumber,
+                        body.PassportNumber, body.DateOfBirth, body.Gender, body.PresentAddress, body.PermanentAddress,
+                        body.FatherName, body.MotherName, body.MaritalStatus, body.Profession, body.Employer,
+                        body.OfficeAddress, body.EmergencyContactName, body.EmergencyContactPhone),
+                    ct);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization()
+            .Produces<ResidentDto>(StatusCodes.Status200OK);
 
         flatOwnerships.MapDelete("/{id:guid}", async (Guid id, DateOnly endDate, ISender sender, CancellationToken ct) =>
             {
@@ -85,3 +110,23 @@ public static class FlatOwnershipEndpoints
         return app;
     }
 }
+
+public sealed record UpdateFlatOwnerProfileRequest(
+    string FullName,
+    string? Phone,
+    string? Email,
+    string? AlternatePhone,
+    string? NationalIdNumber,
+    string? PassportNumber,
+    DateOnly? DateOfBirth,
+    string? Gender,
+    string? PresentAddress,
+    string? PermanentAddress,
+    string? FatherName,
+    string? MotherName,
+    string? MaritalStatus,
+    string? Profession,
+    string? Employer,
+    string? OfficeAddress,
+    string? EmergencyContactName,
+    string? EmergencyContactPhone);

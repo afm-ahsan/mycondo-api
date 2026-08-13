@@ -5,7 +5,7 @@ using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
-using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnersForTenant;
 
@@ -13,7 +13,7 @@ public sealed class GetFlatOwnersForTenantQueryHandler(
     IFlatOwnershipRepository flatOwnerships,
     IFlatRepository flats,
     IBuildingRepository buildings,
-    IUserRepository users,
+    IResidentRepository residents,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetFlatOwnersForTenantQuery, PagedResult<FlatOwnerRegisterDto>>
 {
@@ -33,19 +33,19 @@ public sealed class GetFlatOwnersForTenantQueryHandler(
             tenantId, query.Search, status, query.Page, query.PageSize, cancellationToken);
 
         // Small-tenant scale (a single condominium's owner register) — an in-memory join per unique
-        // User/Flat/Building on this page, matching the pattern already used by
+        // Resident/Flat/Building on this page, matching the pattern already used by
         // GetRoleAssignmentsQueryHandler, rather than a bespoke multi-join repository query.
-        Dictionary<Guid, User?> ownersById = [];
+        Dictionary<Guid, Resident?> ownersById = [];
         Dictionary<Guid, Flat?> flatsById = [];
         Dictionary<Guid, Building?> buildingsById = [];
 
         List<FlatOwnerRegisterDto> items = [];
         foreach (FlatOwnership ownership in page.Items)
         {
-            if (!ownersById.TryGetValue(ownership.UserId, out User? owner))
+            if (!ownersById.TryGetValue(ownership.ResidentId, out Resident? owner))
             {
-                owner = await users.GetByIdAsync(new UserId(ownership.UserId), cancellationToken);
-                ownersById[ownership.UserId] = owner;
+                owner = await residents.GetByIdAsync(new ResidentId(ownership.ResidentId), cancellationToken);
+                ownersById[ownership.ResidentId] = owner;
             }
 
             if (!flatsById.TryGetValue(ownership.FlatId.Value, out Flat? flat))
@@ -70,6 +70,7 @@ public sealed class GetFlatOwnersForTenantQueryHandler(
                 owner.Id.Value,
                 owner.FullName,
                 owner.Email,
+                owner.Phone,
                 flat.Id.Value,
                 flat.FlatNumber,
                 flat.BuildingId.Value,
