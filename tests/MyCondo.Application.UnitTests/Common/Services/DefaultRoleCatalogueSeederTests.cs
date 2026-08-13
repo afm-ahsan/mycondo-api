@@ -10,7 +10,7 @@ namespace MyCondo.Application.UnitTests.Common.Services;
 
 public class DefaultRoleCatalogueSeederTests
 {
-    // Mirrors the 47 names actually seeded by Seed_Permission_Catalogue — using the same set here
+    // Mirrors the 49 names actually referenced by the default role catalogue below — using the same set here
     // means a typo in DefaultRoleCatalogueSeeder's permission lists fails this test the same way it
     // would fail against the real catalogue.
     private static readonly string[] FullCatalogueNames =
@@ -18,6 +18,7 @@ public class DefaultRoleCatalogueSeederTests
         "audit.view", "billing.generate", "billing.rule.manage", "billing.rule.view",
         "complaint.assign", "complaint.create", "complaint.manage", "complaint.view",
         "document.delete", "document.upload", "document.view", "expense.manage", "expense.view",
+        "expensetype.manage", "expensetype.view",
         "invoice.view", "invoice.void", "lease.manage", "lease.view", "notification.manage",
         "notification.view", "ownership.manage", "ownership.view", "payment.record",
         "payment.reverse", "payment.view", "permission.view", "property.create", "property.delete",
@@ -70,7 +71,7 @@ public class DefaultRoleCatalogueSeederTests
         addedRoles.Should().OnlyContain(r => r.Code != null && r.Code.StartsWith("default."));
         addedRoles.Should().NotContain(r => r.Name == "Vendor" || r.Name == "Guard");
 
-        addedGrants.Should().HaveCount(77);
+        addedGrants.Should().HaveCount(81);
         addedGrants.Should().OnlyContain(g => g.TenantId == tenantId);
     }
 
