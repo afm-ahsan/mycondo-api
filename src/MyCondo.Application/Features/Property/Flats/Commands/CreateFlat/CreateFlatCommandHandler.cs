@@ -51,6 +51,6 @@ public sealed class CreateFlatCommandHandler(
             "Flat {FlatId} '{FlatNumber}' created in building {BuildingId} for tenant {TenantId}",
             flat.Id, flat.FlatNumber, buildingId, tenantId);
 
-        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt);
+        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt, flat.PrimaryPhotoAttachmentId);
     }
 }

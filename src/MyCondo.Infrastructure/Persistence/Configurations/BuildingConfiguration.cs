@@ -19,6 +19,7 @@ public sealed class BuildingConfiguration : IEntityTypeConfiguration<Building>
         builder.Property(x => x.Name).IsRequired().HasMaxLength(200);
         builder.Property(x => x.Code).IsRequired().HasMaxLength(20);
         builder.Property(x => x.Address).HasMaxLength(400);
+        builder.Property(x => x.PrimaryPhotoAttachmentId);
         builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.HasIndex(x => new { x.TenantId, x.Name })

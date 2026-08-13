@@ -9,4 +9,6 @@ public enum AttachmentOwnerType
 {
     Resident = 0,
     OccupancyRegistration = 1,
+    Building = 2,
+    Flat = 3,
 }

@@ -6,6 +6,8 @@ using MyCondo.Application.Features.Attachments.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Attachments;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
+using MyCondo.Domain.Features.Property.Buildings;
+using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Application.Features.Attachments.Commands.RecordAttachment;
@@ -14,6 +16,8 @@ public sealed class RecordAttachmentCommandHandler(
     IAttachmentRepository attachments,
     IResidentRepository residents,
     IOccupancyRegistrationRepository occupancyRegistrations,
+    IBuildingRepository buildings,
+    IFlatRepository flats,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -68,6 +72,24 @@ public sealed class RecordAttachmentCommandHandler(
                 if (registration.TenantId != tenantId)
                 {
                     throw new NotFoundException(nameof(OccupancyRegistration), ownerId);
+                }
+
+                break;
+            case AttachmentOwnerType.Building:
+                Building building = await buildings.GetByIdAsync(new BuildingId(ownerId), cancellationToken)
+                    ?? throw new NotFoundException(nameof(Building), ownerId);
+                if (building.TenantId != tenantId)
+                {
+                    throw new NotFoundException(nameof(Building), ownerId);
+                }
+
+                break;
+            case AttachmentOwnerType.Flat:
+                Flat flat = await flats.GetByIdAsync(new FlatId(ownerId), cancellationToken)
+                    ?? throw new NotFoundException(nameof(Flat), ownerId);
+                if (flat.TenantId != tenantId)
+                {
+                    throw new NotFoundException(nameof(Flat), ownerId);
                 }
 
                 break;

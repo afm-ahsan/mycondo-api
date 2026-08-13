@@ -6,4 +6,5 @@ public sealed record FlatDto(
     string FlatNumber,
     int? FloorNumber,
     string FlatType,
-    decimal? AreaSqFt);
+    decimal? AreaSqFt,
+    Guid? PrimaryPhotoAttachmentId);

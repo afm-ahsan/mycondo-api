@@ -50,6 +50,6 @@ public sealed class UpdateBuildingCommandHandler(
 
         logger.LogInformation("Building {BuildingId} updated for tenant {TenantId}", buildingId, tenantId);
 
-        return new BuildingDto(building.Id.Value, building.Name, building.Code, building.Address);
+        return new BuildingDto(building.Id.Value, building.Name, building.Code, building.Address, building.PrimaryPhotoAttachmentId);
     }
 }

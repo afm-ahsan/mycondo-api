@@ -8,6 +8,7 @@ public sealed class Building : AggregateRoot<BuildingId>, IAuditable, ISoftDelet
     public string Name { get; private set; }
     public string Code { get; private set; }
     public string? Address { get; private set; }
+    public Guid? PrimaryPhotoAttachmentId { get; private set; }
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -65,6 +66,11 @@ public sealed class Building : AggregateRoot<BuildingId>, IAuditable, ISoftDelet
         Code = code.Trim().ToUpperInvariant();
         Address = address?.Trim();
         Version++;
+    }
+
+    public void SetPrimaryPhoto(Guid? photoAttachmentId)
+    {
+        PrimaryPhotoAttachmentId = photoAttachmentId;
     }
 
     /// <summary>

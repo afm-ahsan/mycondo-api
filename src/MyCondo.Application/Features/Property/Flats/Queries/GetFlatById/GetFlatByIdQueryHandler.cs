@@ -27,6 +27,6 @@ public sealed class GetFlatByIdQueryHandler(
             throw new NotFoundException(nameof(Flat), query.FlatId);
         }
 
-        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt);
+        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt, flat.PrimaryPhotoAttachmentId);
     }
 }

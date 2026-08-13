@@ -35,6 +35,6 @@ public sealed class UpdateFlatAreaCommandHandler(
 
         logger.LogInformation("Flat {FlatId} area set to {AreaSqFt}, tenant {TenantId}", flatId, command.AreaSqFt, tenantId);
 
-        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt);
+        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt, flat.PrimaryPhotoAttachmentId);
     }
 }

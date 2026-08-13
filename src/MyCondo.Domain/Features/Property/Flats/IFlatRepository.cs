@@ -18,6 +18,16 @@ public interface IFlatRepository
         int pageSize,
         CancellationToken cancellationToken);
 
+    /// <summary>Tenant-wide search backing the global Administration flat directory — <paramref name="buildingId"/>
+    /// filters to one building when supplied, otherwise every building in the tenant is searched.</summary>
+    Task<PagedResult<Flat>> SearchForTenantAsync(
+        Guid tenantId,
+        BuildingId? buildingId,
+        string? search,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken);
+
     /// <summary>Flats a PerSquareFoot service-charge rule cannot bill yet — see billing readiness check.</summary>
     Task<PagedResult<Flat>> SearchMissingAreaSqFtAsync(
         Guid tenantId,

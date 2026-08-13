@@ -23,7 +23,7 @@ public sealed class GetBuildingsForTenantQueryHandler(
             tenantId, query.Search, query.Page, query.PageSize, cancellationToken);
 
         List<BuildingDto> items = result.Items
-            .Select(b => new BuildingDto(b.Id.Value, b.Name, b.Code, b.Address))
+            .Select(b => new BuildingDto(b.Id.Value, b.Name, b.Code, b.Address, b.PrimaryPhotoAttachmentId))
             .ToList();
 
         return new PagedResult<BuildingDto>(items, result.Page, result.PageSize, result.Total);

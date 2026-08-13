@@ -17,6 +17,7 @@ public sealed class Flat : AggregateRoot<FlatId>, IAuditable, ISoftDeletable, IT
     public int? FloorNumber { get; private set; }
     public FlatType FlatType { get; private set; }
     public decimal? AreaSqFt { get; private set; }
+    public Guid? PrimaryPhotoAttachmentId { get; private set; }
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -91,6 +92,11 @@ public sealed class Flat : AggregateRoot<FlatId>, IAuditable, ISoftDeletable, IT
 
         AreaSqFt = areaSqFt;
         Version++;
+    }
+
+    public void SetPrimaryPhoto(Guid? photoAttachmentId)
+    {
+        PrimaryPhotoAttachmentId = photoAttachmentId;
     }
 
     public void Deactivate(DateTimeOffset nowUtc, Guid? deactivatedBy)

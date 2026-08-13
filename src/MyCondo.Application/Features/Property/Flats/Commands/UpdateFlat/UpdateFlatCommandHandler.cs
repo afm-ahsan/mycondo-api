@@ -43,6 +43,6 @@ public sealed class UpdateFlatCommandHandler(
 
         logger.LogInformation("Flat {FlatId} updated for tenant {TenantId}", flatId, tenantId);
 
-        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt);
+        return new FlatDto(flat.Id.Value, flat.BuildingId.Value, flat.FlatNumber, flat.FloorNumber, flat.FlatType.ToString(), flat.AreaSqFt, flat.PrimaryPhotoAttachmentId);
     }
 }

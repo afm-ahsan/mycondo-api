@@ -11,8 +11,11 @@ using MyCondo.Application.Features.Property.Flats.Commands.DeactivateFlat;
 using MyCondo.Application.Features.Property.Flats.Commands.UpdateFlat;
 using MyCondo.Application.Features.Property.Flats.Commands.UpdateFlatArea;
 using MyCondo.Application.Features.Property.Flats.DTOs;
+using MyCondo.Application.Features.Property.Buildings.Commands.SetBuildingPrimaryPhoto;
+using MyCondo.Application.Features.Property.Flats.Commands.SetFlatPrimaryPhoto;
 using MyCondo.Application.Features.Property.Flats.Queries.GetFlatById;
 using MyCondo.Application.Features.Property.Flats.Queries.GetFlatsForBuilding;
+using MyCondo.Application.Features.Property.Flats.Queries.GetFlatsForTenant;
 using MyCondo.Application.Features.Property.Gates.Commands.CreateGate;
 using MyCondo.Application.Features.Property.Gates.DTOs;
 using MyCondo.Application.Features.Property.Gates.Queries.GetGatesForBuilding;
@@ -67,6 +70,25 @@ public static class PropertyEndpoints
             .RequireBuildingPermission("property.delete", "id")
             .Produces(StatusCodes.Status204NoContent);
 
+        buildings.MapPut("/{id:guid}/primary-photo", async (Guid id, SetPrimaryPhotoRequest body, ISender sender, CancellationToken ct) =>
+            {
+                BuildingDto result = await sender.Send(new SetBuildingPrimaryPhotoCommand(id, body.AttachmentId), ct);
+                return Results.Ok(result);
+            })
+            .RequireBuildingPermission("property.update", "id")
+            .Produces<BuildingDto>(StatusCodes.Status200OK);
+
+        RouteGroupBuilder flats = app.MapGroup("/api/v1/properties/flats").WithTags("Property");
+
+        flats.MapGet("/", async (string? search, Guid? buildingId, int page, int pageSize, ISender sender, CancellationToken ct) =>
+            {
+                PagedResult<FlatDto> result = await sender.Send(
+                    new GetFlatsForTenantQuery(search, buildingId, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("property.view")
+            .Produces<PagedResult<FlatDto>>(StatusCodes.Status200OK);
+
         buildings.MapPost("/{buildingId:guid}/flats", async (Guid buildingId, CreateFlatRequest body, ISender sender, CancellationToken ct) =>
             {
                 FlatDto result = await sender.Send(
@@ -112,6 +134,14 @@ public static class PropertyEndpoints
         buildings.MapPatch("/{buildingId:guid}/flats/{flatId:guid}/area", async (Guid buildingId, Guid flatId, UpdateFlatAreaRequest body, ISender sender, CancellationToken ct) =>
             {
                 FlatDto result = await sender.Send(new UpdateFlatAreaCommand(flatId, body.AreaSqFt), ct);
+                return Results.Ok(result);
+            })
+            .RequireBuildingPermission("property.update")
+            .Produces<FlatDto>(StatusCodes.Status200OK);
+
+        buildings.MapPut("/{buildingId:guid}/flats/{flatId:guid}/primary-photo", async (Guid buildingId, Guid flatId, SetPrimaryPhotoRequest body, ISender sender, CancellationToken ct) =>
+            {
+                FlatDto result = await sender.Send(new SetFlatPrimaryPhotoCommand(flatId, body.AttachmentId), ct);
                 return Results.Ok(result);
             })
             .RequireBuildingPermission("property.update")
