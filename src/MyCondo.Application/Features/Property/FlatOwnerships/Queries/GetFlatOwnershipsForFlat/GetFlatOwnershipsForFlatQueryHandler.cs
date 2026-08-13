@@ -3,12 +3,14 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
+using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
 
 public sealed class GetFlatOwnershipsForFlatQueryHandler(
     IFlatOwnershipRepository flatOwnerships,
     IFlatRepository flats,
+    IResidentRepository residents,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetFlatOwnershipsForFlatQuery, List<FlatOwnershipDto>>
 {
@@ -37,8 +39,15 @@ public sealed class GetFlatOwnershipsForFlatQueryHandler(
 
         List<FlatOwnership> ownerships = await flatOwnerships.GetForFlatAsync(tenantId, flatId, cancellationToken);
 
-        return ownerships
-            .Select(o => new FlatOwnershipDto(o.Id.Value, o.UserId, o.FlatId.Value, o.Status.ToString(), o.StartDate, o.EndDate))
-            .ToList();
+        List<FlatOwnershipDto> items = [];
+        foreach (FlatOwnership ownership in ownerships)
+        {
+            Resident? owner = await residents.GetByIdAsync(new ResidentId(ownership.ResidentId), cancellationToken);
+            items.Add(new FlatOwnershipDto(
+                ownership.Id.Value, ownership.ResidentId, owner?.FullName ?? "Unknown", ownership.FlatId.Value,
+                ownership.Status.ToString(), ownership.StartDate, ownership.EndDate));
+        }
+
+        return items;
     }
 }

@@ -8,6 +8,8 @@ using MyCondo.Application.Features.Me.Queries.GetMyFlats;
 using MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 using MyCondo.Application.Features.Property.Flats.DTOs;
+using MyCondo.Application.Features.Residents.Commands.CreateResident;
+using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Application.Features.Roles.Queries.GetRolesForTenant;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Tenancy;
@@ -101,11 +103,24 @@ public class FlatOwnershipAccessPart2DbTests : IClassFixture<PostgresApiFactory>
         return result!.FlatId;
     }
 
-    private static async Task<Guid> GrantOwnershipAsync(HttpClient client, string accessToken, Guid userId, Guid flatId)
+    /// <summary>Creates a Resident for the Flat, links it to the given portal User, and grants it
+    /// ownership — FlatOwnership references a Resident, and self-service "My Flats" resolves a
+    /// logged-in User's ownership via Residents bridged to that User (Resident.UserId).</summary>
+    private static async Task<Guid> GrantOwnershipAsync(HttpClient client, string accessToken, Guid userId, Guid flatId, string ownerName)
     {
+        HttpResponseMessage residentResponse = await SendAuthedAsync(
+            client, HttpMethod.Post, "/api/v1/residents", accessToken,
+            new CreateResidentCommand(flatId, ownerName, Phone: null, Email: null, ResidentType: "Owner"));
+        residentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        ResidentDto resident = (await residentResponse.Content.ReadFromJsonAsync<ResidentDto>(JsonOptions))!;
+
+        (await SendAuthedAsync(
+                client, HttpMethod.Post, $"/api/v1/residents/{resident.ResidentId}/link-user", accessToken, new { userId }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
         HttpResponseMessage response = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", accessToken,
-            new CreateFlatOwnershipCommand(userId, flatId, DateOnly.FromDateTime(DateTime.UtcNow)));
+            new CreateFlatOwnershipCommand(resident.ResidentId, flatId, DateOnly.FromDateTime(DateTime.UtcNow)));
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         CreateFlatOwnershipResult? result = await response.Content.ReadFromJsonAsync<CreateFlatOwnershipResult>(JsonOptions);
         return result!.FlatOwnershipId;
@@ -140,7 +155,7 @@ public class FlatOwnershipAccessPart2DbTests : IClassFixture<PostgresApiFactory>
 
         Guid buildingId = await CreateBuildingAsync(client, adminTokens.AccessToken, "FC1");
         Guid flatId = await CreateFlatAsync(client, adminTokens.AccessToken, buildingId, "101");
-        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, flatId);
+        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, flatId, "Owner Member");
         // Deliberately no FlatOwner role assignment.
 
         AuthTokensDto memberLoginTokens = await LoginAsync(client, tenantId, "member@example.com");

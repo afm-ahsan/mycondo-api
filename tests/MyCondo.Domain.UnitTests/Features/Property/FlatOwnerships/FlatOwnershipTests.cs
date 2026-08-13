@@ -12,14 +12,14 @@ public class FlatOwnershipTests
     public void Grant_Creates_An_Active_Ownership()
     {
         Guid tenantId = Guid.NewGuid();
-        Guid userId = Guid.NewGuid();
+        Guid residentId = Guid.NewGuid();
         FlatId flatId = FlatId.New();
         DateOnly startDate = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        FlatOwnership ownership = FlatOwnership.Grant(tenantId, userId, flatId, startDate, Now);
+        FlatOwnership ownership = FlatOwnership.Grant(tenantId, residentId, flatId, startDate, Now);
 
         ownership.TenantId.Should().Be(tenantId);
-        ownership.UserId.Should().Be(userId);
+        ownership.ResidentId.Should().Be(residentId);
         ownership.FlatId.Should().Be(flatId);
         ownership.StartDate.Should().Be(startDate);
         ownership.EndDate.Should().BeNull();
@@ -36,7 +36,7 @@ public class FlatOwnershipTests
     }
 
     [Fact]
-    public void Grant_Throws_When_UserId_Is_Empty()
+    public void Grant_Throws_When_ResidentId_Is_Empty()
     {
         Action act = () => FlatOwnership.Grant(
             Guid.NewGuid(), Guid.Empty, FlatId.New(), DateOnly.FromDateTime(DateTime.UtcNow), Now);

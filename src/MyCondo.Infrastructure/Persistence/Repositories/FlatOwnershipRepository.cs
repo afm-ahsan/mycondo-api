@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MyCondo.Domain.Common;
-using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
+using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Infrastructure.Persistence.Repositories;
 
@@ -30,9 +30,11 @@ public sealed class FlatOwnershipRepository(MyCondoDbContext db) : IFlatOwnershi
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(o => db.Set<User>()
-                .Any(u => u.Id == new UserId(o.UserId)
-                    && (EF.Functions.ILike(u.FullName, $"%{search}%") || EF.Functions.ILike(u.Email, $"%{search}%"))));
+            query = query.Where(o => db.Set<Resident>()
+                .Any(r => r.Id == new ResidentId(o.ResidentId)
+                    && (EF.Functions.ILike(r.FullName, $"%{search}%")
+                        || (r.Email != null && EF.Functions.ILike(r.Email, $"%{search}%"))
+                        || (r.Phone != null && EF.Functions.ILike(r.Phone, $"%{search}%")))));
         }
 
         long total = await query.LongCountAsync(cancellationToken);
@@ -46,18 +48,18 @@ public sealed class FlatOwnershipRepository(MyCondoDbContext db) : IFlatOwnershi
         return new PagedResult<FlatOwnership>(items, page, pageSize, total);
     }
 
-    public Task<List<FlatOwnership>> GetActiveForUserAsync(
-        Guid tenantId, Guid userId, CancellationToken cancellationToken) =>
+    public Task<List<FlatOwnership>> GetActiveForResidentAsync(
+        Guid tenantId, Guid residentId, CancellationToken cancellationToken) =>
         db.Set<FlatOwnership>()
             .AsNoTracking()
-            .Where(o => o.TenantId == tenantId && o.UserId == userId && o.Status == FlatOwnershipStatus.Active)
+            .Where(o => o.TenantId == tenantId && o.ResidentId == residentId && o.Status == FlatOwnershipStatus.Active)
             .ToListAsync(cancellationToken);
 
-    public Task<List<FlatOwnership>> GetAllForUserAsync(
-        Guid tenantId, Guid userId, CancellationToken cancellationToken) =>
+    public Task<List<FlatOwnership>> GetAllForResidentAsync(
+        Guid tenantId, Guid residentId, CancellationToken cancellationToken) =>
         db.Set<FlatOwnership>()
             .AsNoTracking()
-            .Where(o => o.TenantId == tenantId && o.UserId == userId)
+            .Where(o => o.TenantId == tenantId && o.ResidentId == residentId)
             .OrderByDescending(o => o.StartDate)
             .ToListAsync(cancellationToken);
 
@@ -69,10 +71,10 @@ public sealed class FlatOwnershipRepository(MyCondoDbContext db) : IFlatOwnershi
             .OrderByDescending(o => o.StartDate)
             .ToListAsync(cancellationToken);
 
-    public Task<bool> ExistsActiveForUserAndFlatAsync(
-        Guid tenantId, Guid userId, FlatId flatId, CancellationToken cancellationToken) =>
+    public Task<bool> ExistsActiveForResidentAndFlatAsync(
+        Guid tenantId, Guid residentId, FlatId flatId, CancellationToken cancellationToken) =>
         db.Set<FlatOwnership>().AnyAsync(
-            o => o.TenantId == tenantId && o.UserId == userId && o.FlatId == flatId
+            o => o.TenantId == tenantId && o.ResidentId == residentId && o.FlatId == flatId
                 && o.Status == FlatOwnershipStatus.Active,
             cancellationToken);
 

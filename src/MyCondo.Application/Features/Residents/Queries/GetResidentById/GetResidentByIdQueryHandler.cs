@@ -2,6 +2,7 @@ using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Residents.DTOs;
+using MyCondo.Application.Features.Residents.Mappings;
 using MyCondo.Domain.Features.Residents;
 
 namespace MyCondo.Application.Features.Residents.Queries.GetResidentById;
@@ -27,8 +28,6 @@ public sealed class GetResidentByIdQueryHandler(
             throw new NotFoundException(nameof(Resident), query.ResidentId);
         }
 
-        return new ResidentDto(
-            resident.Id.Value, resident.FlatId.Value, resident.FullName, resident.Phone, resident.Email,
-            resident.ResidentType.ToString());
+        return resident.ToDto();
     }
 }

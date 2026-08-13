@@ -9,6 +9,8 @@ using MyCondo.Application.Features.Me.Queries.GetMyFlats;
 using MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 using MyCondo.Application.Features.Property.Flats.DTOs;
+using MyCondo.Application.Features.Residents.Commands.CreateResident;
+using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Application.Features.Roles.Queries.GetRolesForTenant;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Tenancy;
@@ -105,11 +107,25 @@ public class MixedFlatRelationshipDbTests : IClassFixture<PostgresApiFactory>
         return result!.FlatId;
     }
 
-    private static async Task GrantOwnershipAsync(HttpClient client, string accessToken, Guid userId, Guid flatId)
+    /// <summary>Creates a Resident for the Flat and links it to the given portal User in one step —
+    /// FlatOwnership grants ownership to a Resident, and self-service "My Flats" resolves a logged-in
+    /// User's ownership by finding Residents bridged to that User (Resident.UserId), so an owner who
+    /// should see the Flat via self-service needs both steps, not just the ownership grant.</summary>
+    private static async Task GrantOwnershipAsync(HttpClient client, string accessToken, Guid userId, Guid flatId, string ownerName)
     {
+        HttpResponseMessage residentResponse = await SendAuthedAsync(
+            client, HttpMethod.Post, "/api/v1/residents", accessToken,
+            new CreateResidentCommand(flatId, ownerName, Phone: null, Email: null, ResidentType: "Owner"));
+        residentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        ResidentDto resident = (await residentResponse.Content.ReadFromJsonAsync<ResidentDto>(JsonOptions))!;
+
+        (await SendAuthedAsync(
+                client, HttpMethod.Post, $"/api/v1/residents/{resident.ResidentId}/link-user", accessToken, new { userId }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
         (await SendAuthedAsync(
                 client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", accessToken,
-                new CreateFlatOwnershipCommand(userId, flatId, DateOnly.FromDateTime(DateTime.UtcNow))))
+                new CreateFlatOwnershipCommand(resident.ResidentId, flatId, DateOnly.FromDateTime(DateTime.UtcNow))))
             .StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -172,12 +188,12 @@ public class MixedFlatRelationshipDbTests : IClassFixture<PostgresApiFactory>
 
         Guid buildingAId = await CreateBuildingAsync(client, adminTokens.AccessToken, "MA1");
         Guid flatAId = await CreateFlatAsync(client, adminTokens.AccessToken, buildingAId, "101");
-        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, flatAId);
+        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, flatAId, "Owner A");
         await AssignRoleAsync(client, adminTokens.AccessToken, "FlatOwner", memberUserId, buildingAId);
 
         Guid buildingBId = await CreateBuildingAsync(client, adminTokens.AccessToken, "MA2");
         Guid flatBId = await CreateFlatAsync(client, adminTokens.AccessToken, buildingBId, "201");
-        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, flatBId);
+        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, flatBId, "Owner B");
         await AssignRoleAsync(client, adminTokens.AccessToken, "FlatOwner", memberUserId, buildingBId);
 
         AuthTokensDto memberLoginTokens = await LoginAsync(client, tenantId, "member@example.com");
@@ -199,7 +215,7 @@ public class MixedFlatRelationshipDbTests : IClassFixture<PostgresApiFactory>
 
         Guid ownedBuildingId = await CreateBuildingAsync(client, adminTokens.AccessToken, "MB1");
         Guid ownedFlatId = await CreateFlatAsync(client, adminTokens.AccessToken, ownedBuildingId, "101");
-        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, ownedFlatId);
+        await GrantOwnershipAsync(client, adminTokens.AccessToken, memberUserId, ownedFlatId, "Mixed Owner");
         await AssignRoleAsync(client, adminTokens.AccessToken, "FlatOwner", memberUserId, ownedBuildingId);
 
         Guid occupiedBuildingId = await CreateBuildingAsync(client, adminTokens.AccessToken, "MB2");

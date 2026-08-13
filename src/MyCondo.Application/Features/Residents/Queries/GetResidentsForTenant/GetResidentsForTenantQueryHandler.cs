@@ -2,6 +2,7 @@ using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Residents.DTOs;
+using MyCondo.Application.Features.Residents.Mappings;
 using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Residents;
 
@@ -22,10 +23,7 @@ public sealed class GetResidentsForTenantQueryHandler(
         PagedResult<Resident> result = await residents.SearchAsync(
             tenantId, query.Search, query.Page, query.PageSize, cancellationToken);
 
-        List<ResidentDto> items = result.Items
-            .Select(r => new ResidentDto(
-                r.Id.Value, r.FlatId.Value, r.FullName, r.Phone, r.Email, r.ResidentType.ToString()))
-            .ToList();
+        List<ResidentDto> items = result.Items.Select(r => r.ToDto()).ToList();
 
         return new PagedResult<ResidentDto>(items, result.Page, result.PageSize, result.Total);
     }

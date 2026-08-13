@@ -8,6 +8,8 @@ using MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
 using MyCondo.Application.Features.Property.Flats.DTOs;
+using MyCondo.Application.Features.Residents.Commands.CreateResident;
+using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Tenancy;
 
@@ -72,9 +74,6 @@ public class FlatOwnershipAdminManagementDbTests : IClassFixture<PostgresApiFact
         return await client.SendAsync(request);
     }
 
-    private static Guid ParseUserIdFromAccessToken(string accessToken) =>
-        Guid.Parse(JwtTestHelper.Decode(accessToken).GetClaimValue("sub")!);
-
     private static async Task<Guid> CreateBuildingAsync(HttpClient client, string accessToken, string code)
     {
         HttpResponseMessage response = await SendAuthedAsync(
@@ -95,21 +94,30 @@ public class FlatOwnershipAdminManagementDbTests : IClassFixture<PostgresApiFact
         return result!.FlatId;
     }
 
+    private static async Task<Guid> CreateResidentAsync(HttpClient client, string accessToken, Guid flatId, string fullName)
+    {
+        HttpResponseMessage response = await SendAuthedAsync(
+            client, HttpMethod.Post, "/api/v1/residents", accessToken,
+            new CreateResidentCommand(flatId, fullName, Phone: null, Email: null, ResidentType: "Owner"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        ResidentDto? result = await response.Content.ReadFromJsonAsync<ResidentDto>(JsonOptions);
+        return result!.ResidentId;
+    }
+
     [Fact]
     public async Task Admin_Can_Create_And_End_Ownership()
     {
         Guid tenantId = await SeedActiveTenantAsync("ownership-admin-crud");
         using HttpClient client = _factory.CreateClient();
         AuthTokensDto adminTokens = await RegisterAsync(client, tenantId, "admin@example.com");
-        AuthTokensDto memberTokens = await RegisterAsync(client, tenantId, "member@example.com");
-        Guid memberUserId = ParseUserIdFromAccessToken(memberTokens.AccessToken);
 
         Guid buildingId = await CreateBuildingAsync(client, adminTokens.AccessToken, "AM1");
         Guid flatId = await CreateFlatAsync(client, adminTokens.AccessToken, buildingId, "101");
+        Guid residentId = await CreateResidentAsync(client, adminTokens.AccessToken, flatId, "Owner Member");
 
         HttpResponseMessage createResponse = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", adminTokens.AccessToken,
-            new CreateFlatOwnershipCommand(memberUserId, flatId, DateOnly.FromDateTime(DateTime.UtcNow)));
+            new CreateFlatOwnershipCommand(residentId, flatId, DateOnly.FromDateTime(DateTime.UtcNow)));
         createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         CreateFlatOwnershipResult ownership = (await createResponse.Content.ReadFromJsonAsync<CreateFlatOwnershipResult>(JsonOptions))!;
 
@@ -128,7 +136,7 @@ public class FlatOwnershipAdminManagementDbTests : IClassFixture<PostgresApiFact
     }
 
     [Fact]
-    public async Task Cannot_Bind_A_User_From_One_Tenant_To_A_Flat_In_Another_Tenant()
+    public async Task Cannot_Bind_A_Resident_From_One_Tenant_To_A_Flat_In_Another_Tenant()
     {
         Guid tenantAId = await SeedActiveTenantAsync("ownership-cross-tenant-a");
         Guid tenantBId = await SeedActiveTenantAsync("ownership-cross-tenant-b");
@@ -136,38 +144,38 @@ public class FlatOwnershipAdminManagementDbTests : IClassFixture<PostgresApiFact
 
         AuthTokensDto adminATokens = await RegisterAsync(client, tenantAId, "admin-a@example.com");
         AuthTokensDto adminBTokens = await RegisterAsync(client, tenantBId, "admin-b@example.com");
-        AuthTokensDto memberBTokens = await RegisterAsync(client, tenantBId, "member-b@example.com");
-        Guid memberBUserId = ParseUserIdFromAccessToken(memberBTokens.AccessToken);
 
         Guid buildingAId = await CreateBuildingAsync(client, adminATokens.AccessToken, "CX1");
         Guid flatAId = await CreateFlatAsync(client, adminATokens.AccessToken, buildingAId, "101");
+        Guid buildingBId = await CreateBuildingAsync(client, adminBTokens.AccessToken, "CX2");
+        Guid flatBId = await CreateFlatAsync(client, adminBTokens.AccessToken, buildingBId, "101");
+        Guid residentBId = await CreateResidentAsync(client, adminBTokens.AccessToken, flatBId, "Owner B");
 
-        // Tenant A's admin tries to grant ownership of Tenant A's flat to a Tenant B user.
+        // Tenant A's admin tries to grant ownership of Tenant A's flat to a Tenant B resident.
         HttpResponseMessage crossTenantResponse = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", adminATokens.AccessToken,
-            new CreateFlatOwnershipCommand(memberBUserId, flatAId, DateOnly.FromDateTime(DateTime.UtcNow)));
+            new CreateFlatOwnershipCommand(residentBId, flatAId, DateOnly.FromDateTime(DateTime.UtcNow)));
         crossTenantResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // Also verify the reverse: Tenant B's admin cannot grant ownership of Tenant A's flat either.
         HttpResponseMessage crossTenantFlatResponse = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", adminBTokens.AccessToken,
-            new CreateFlatOwnershipCommand(memberBUserId, flatAId, DateOnly.FromDateTime(DateTime.UtcNow)));
+            new CreateFlatOwnershipCommand(residentBId, flatAId, DateOnly.FromDateTime(DateTime.UtcNow)));
         crossTenantFlatResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Duplicate_Active_Ownership_For_The_Same_User_And_Flat_Is_Rejected()
+    public async Task Duplicate_Active_Ownership_For_The_Same_Resident_And_Flat_Is_Rejected()
     {
         Guid tenantId = await SeedActiveTenantAsync("ownership-duplicate");
         using HttpClient client = _factory.CreateClient();
         AuthTokensDto adminTokens = await RegisterAsync(client, tenantId, "admin@example.com");
-        AuthTokensDto memberTokens = await RegisterAsync(client, tenantId, "member@example.com");
-        Guid memberUserId = ParseUserIdFromAccessToken(memberTokens.AccessToken);
 
         Guid buildingId = await CreateBuildingAsync(client, adminTokens.AccessToken, "DP1");
         Guid flatId = await CreateFlatAsync(client, adminTokens.AccessToken, buildingId, "101");
+        Guid residentId = await CreateResidentAsync(client, adminTokens.AccessToken, flatId, "Owner Member");
 
-        CreateFlatOwnershipCommand command = new(memberUserId, flatId, DateOnly.FromDateTime(DateTime.UtcNow));
+        CreateFlatOwnershipCommand command = new(residentId, flatId, DateOnly.FromDateTime(DateTime.UtcNow));
         (await SendAuthedAsync(client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", adminTokens.AccessToken, command))
             .StatusCode.Should().Be(HttpStatusCode.OK);
 

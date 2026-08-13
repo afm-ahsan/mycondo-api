@@ -1,41 +1,41 @@
 using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
-using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
+using MyCondo.Domain.Features.Residents;
 
-namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForUser;
+namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForOwner;
 
-public sealed class GetFlatOwnershipsForUserQueryHandler(
+public sealed class GetFlatOwnershipsForOwnerQueryHandler(
     IFlatOwnershipRepository flatOwnerships,
     IFlatRepository flats,
     IBuildingRepository buildings,
-    IUserRepository users,
+    IResidentRepository residents,
     ICurrentUserProvider currentUser
-) : IRequestHandler<GetFlatOwnershipsForUserQuery, List<UserFlatOwnershipDto>>
+) : IRequestHandler<GetFlatOwnershipsForOwnerQuery, List<OwnerFlatOwnershipDto>>
 {
-    public async ValueTask<List<UserFlatOwnershipDto>> Handle(
-        GetFlatOwnershipsForUserQuery query, CancellationToken cancellationToken)
+    public async ValueTask<List<OwnerFlatOwnershipDto>> Handle(
+        GetFlatOwnershipsForOwnerQuery query, CancellationToken cancellationToken)
     {
         if (currentUser.TenantId is not Guid tenantId)
         {
             throw new ForbiddenException("Authentication required.");
         }
 
-        UserId userId = new(query.UserId);
-        User user = await users.GetByIdAsync(userId, cancellationToken)
-            ?? throw new NotFoundException(nameof(User), query.UserId);
+        ResidentId residentId = new(query.ResidentId);
+        Resident owner = await residents.GetByIdAsync(residentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Resident), query.ResidentId);
 
-        if (user.TenantId != tenantId)
+        if (owner.TenantId != tenantId)
         {
-            throw new NotFoundException(nameof(User), query.UserId);
+            throw new NotFoundException(nameof(Resident), query.ResidentId);
         }
 
-        List<FlatOwnership> ownerships = await flatOwnerships.GetAllForUserAsync(tenantId, query.UserId, cancellationToken);
+        List<FlatOwnership> ownerships = await flatOwnerships.GetAllForResidentAsync(tenantId, query.ResidentId, cancellationToken);
 
-        List<UserFlatOwnershipDto> items = [];
+        List<OwnerFlatOwnershipDto> items = [];
         foreach (FlatOwnership ownership in ownerships)
         {
             Flat? flat = await flats.GetByIdAsync(ownership.FlatId, cancellationToken);
@@ -46,7 +46,7 @@ public sealed class GetFlatOwnershipsForUserQueryHandler(
 
             Building? building = await buildings.GetByIdAsync(flat.BuildingId, cancellationToken);
 
-            items.Add(new UserFlatOwnershipDto(
+            items.Add(new OwnerFlatOwnershipDto(
                 ownership.Id.Value,
                 flat.Id.Value,
                 flat.FlatNumber,

@@ -1,6 +1,6 @@
-namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForUser;
+namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForOwner;
 
-public sealed record UserFlatOwnershipDto(
+public sealed record OwnerFlatOwnershipDto(
     Guid FlatOwnershipId,
     Guid FlatId,
     string FlatNumber,

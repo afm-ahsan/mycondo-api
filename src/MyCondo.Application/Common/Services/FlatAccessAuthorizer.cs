@@ -13,8 +13,24 @@ public sealed class FlatAccessAuthorizer(
     IFlatRepository flats
 ) : IFlatAccessAuthorizer
 {
-    public Task<bool> HasActiveOwnershipAsync(Guid tenantId, Guid userId, Guid flatId, CancellationToken cancellationToken) =>
-        flatOwnerships.ExistsActiveForUserAndFlatAsync(tenantId, userId, new FlatId(flatId), cancellationToken);
+    /// <summary>A <c>User</c> is never referenced by <see cref="FlatOwnership"/> directly — ownership
+    /// is keyed on <see cref="Resident"/> so an owner's profile can exist without a portal account. A
+    /// logged-in User's ownership is resolved by first finding every Resident bridged to that User
+    /// (<see cref="Resident.UserId"/>), then checking each for an active ownership on this Flat.</summary>
+    public async Task<bool> HasActiveOwnershipAsync(Guid tenantId, Guid userId, Guid flatId, CancellationToken cancellationToken)
+    {
+        List<Resident> userResidents = await residents.GetByUserIdAsync(tenantId, userId, cancellationToken);
+        foreach (Resident resident in userResidents)
+        {
+            if (await flatOwnerships.ExistsActiveForResidentAndFlatAsync(
+                tenantId, resident.Id.Value, new FlatId(flatId), cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public async Task<bool> HasActiveOccupancyAsync(Guid tenantId, Guid userId, Guid flatId, CancellationToken cancellationToken)
     {
@@ -34,37 +50,39 @@ public sealed class FlatAccessAuthorizer(
     {
         List<FlatRelationship> relationships = [];
 
-        List<FlatOwnership> ownerships = await flatOwnerships.GetActiveForUserAsync(tenantId, userId, cancellationToken);
-        foreach (FlatOwnership ownership in ownerships)
-        {
-            Flat? flat = await flats.GetByIdAsync(ownership.FlatId, cancellationToken);
-            if (flat is null)
-            {
-                continue;
-            }
-
-            relationships.Add(new FlatRelationship(
-                ownership.FlatId.Value, flat.BuildingId.Value, FlatRelationshipKind.Ownership,
-                ownership.StartDate, ownership.EndDate));
-        }
-
         List<Resident> userResidents = await residents.GetByUserIdAsync(tenantId, userId, cancellationToken);
+
         foreach (Resident resident in userResidents)
         {
+            List<FlatOwnership> ownerships = await flatOwnerships.GetActiveForResidentAsync(
+                tenantId, resident.Id.Value, cancellationToken);
+            foreach (FlatOwnership ownership in ownerships)
+            {
+                Flat? flat = await flats.GetByIdAsync(ownership.FlatId, cancellationToken);
+                if (flat is null)
+                {
+                    continue;
+                }
+
+                relationships.Add(new FlatRelationship(
+                    ownership.FlatId.Value, flat.BuildingId.Value, FlatRelationshipKind.Ownership,
+                    ownership.StartDate, ownership.EndDate));
+            }
+
             OccupancyRegistration? active = await occupancyRegistrations.GetActiveForFlatAsync(tenantId, resident.FlatId, cancellationToken);
             if (active is null || active.PrimaryResidentId != resident.Id)
             {
                 continue;
             }
 
-            Flat? flat = await flats.GetByIdAsync(resident.FlatId, cancellationToken);
-            if (flat is null)
+            Flat? occupiedFlat = await flats.GetByIdAsync(resident.FlatId, cancellationToken);
+            if (occupiedFlat is null)
             {
                 continue;
             }
 
             relationships.Add(new FlatRelationship(
-                resident.FlatId.Value, flat.BuildingId.Value, FlatRelationshipKind.Occupancy,
+                resident.FlatId.Value, occupiedFlat.BuildingId.Value, FlatRelationshipKind.Occupancy,
                 active.MoveInExpectedDate, null));
         }
 

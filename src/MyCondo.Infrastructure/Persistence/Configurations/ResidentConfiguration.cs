@@ -25,6 +25,20 @@ public sealed class ResidentConfiguration : IEntityTypeConfiguration<Resident>
         builder.Property(x => x.Email).HasMaxLength(256);
         builder.Property(x => x.ResidentType).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.UserId);
+        builder.Property(x => x.AlternatePhone).HasMaxLength(20);
+        builder.Property(x => x.NationalIdNumber).HasMaxLength(50);
+        builder.Property(x => x.PassportNumber).HasMaxLength(50);
+        builder.Property(x => x.Gender).HasMaxLength(20);
+        builder.Property(x => x.PresentAddress).HasMaxLength(400);
+        builder.Property(x => x.PermanentAddress).HasMaxLength(400);
+        builder.Property(x => x.FatherName).HasMaxLength(200);
+        builder.Property(x => x.MotherName).HasMaxLength(200);
+        builder.Property(x => x.MaritalStatus).HasMaxLength(20);
+        builder.Property(x => x.Profession).HasMaxLength(200);
+        builder.Property(x => x.Employer).HasMaxLength(200);
+        builder.Property(x => x.OfficeAddress).HasMaxLength(400);
+        builder.Property(x => x.EmergencyContactName).HasMaxLength(200);
+        builder.Property(x => x.EmergencyContactPhone).HasMaxLength(20);
         builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.HasIndex(x => new { x.TenantId, x.FlatId })

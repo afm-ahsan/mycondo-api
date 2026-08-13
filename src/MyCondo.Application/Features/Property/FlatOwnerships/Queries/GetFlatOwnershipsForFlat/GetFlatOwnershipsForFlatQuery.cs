@@ -6,7 +6,8 @@ public sealed record GetFlatOwnershipsForFlatQuery(Guid FlatId) : IRequest<List<
 
 public sealed record FlatOwnershipDto(
     Guid FlatOwnershipId,
-    Guid UserId,
+    Guid ResidentId,
+    string OwnerFullName,
     Guid FlatId,
     string Status,
     DateOnly StartDate,

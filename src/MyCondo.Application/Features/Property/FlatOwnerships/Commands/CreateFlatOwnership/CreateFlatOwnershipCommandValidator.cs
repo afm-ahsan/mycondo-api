@@ -6,7 +6,7 @@ public sealed class CreateFlatOwnershipCommandValidator : AbstractValidator<Crea
 {
     public CreateFlatOwnershipCommandValidator()
     {
-        RuleFor(x => x.UserId).NotEmpty();
+        RuleFor(x => x.ResidentId).NotEmpty();
         RuleFor(x => x.FlatId).NotEmpty();
         RuleFor(x => x.StartDate).NotEmpty();
     }

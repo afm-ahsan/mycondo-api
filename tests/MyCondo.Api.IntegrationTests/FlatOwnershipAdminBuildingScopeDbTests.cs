@@ -8,6 +8,8 @@ using MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
 using MyCondo.Application.Features.Property.Flats.DTOs;
+using MyCondo.Application.Features.Residents.Commands.CreateResident;
+using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Application.Features.Roles.Queries.GetRolesForTenant;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Tenancy;
@@ -103,6 +105,16 @@ public class FlatOwnershipAdminBuildingScopeDbTests : IClassFixture<PostgresApiF
         return result!.FlatId;
     }
 
+    private static async Task<Guid> CreateResidentAsync(HttpClient client, string accessToken, Guid flatId, string fullName)
+    {
+        HttpResponseMessage response = await SendAuthedAsync(
+            client, HttpMethod.Post, "/api/v1/residents", accessToken,
+            new CreateResidentCommand(flatId, fullName, Phone: null, Email: null, ResidentType: "Owner"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        ResidentDto? result = await response.Content.ReadFromJsonAsync<ResidentDto>(JsonOptions);
+        return result!.ResidentId;
+    }
+
     private static async Task AssignCondoAdminRoleAsync(HttpClient client, string accessToken, Guid userId, Guid buildingId)
     {
         HttpResponseMessage rolesResponse = await SendAuthedAsync(client, HttpMethod.Get, "/api/v1/roles", accessToken);
@@ -128,13 +140,19 @@ public class FlatOwnershipAdminBuildingScopeDbTests : IClassFixture<PostgresApiF
         Guid flatAId = await CreateFlatAsync(client, orgAdminTokens.AccessToken, buildingAId, "101");
         Guid flatBId = await CreateFlatAsync(client, orgAdminTokens.AccessToken, buildingBId, "201");
 
+        // FlatOwnership references a Resident party record, not a portal User directly — create one
+        // per Flat (org admin's tenant-wide grants avoid this test depending on Resident permission
+        // scoping, which is not what this test is verifying).
+        Guid residentAId = await CreateResidentAsync(client, orgAdminTokens.AccessToken, flatAId, "Owner A");
+        Guid residentBId = await CreateResidentAsync(client, orgAdminTokens.AccessToken, flatBId, "Owner B");
+
         await AssignCondoAdminRoleAsync(client, orgAdminTokens.AccessToken, condoAdminUserId, buildingAId);
         AuthTokensDto condoAdminFreshTokens = await LoginAsync(client, tenantId, "condo-admin@example.com");
 
         // Own Building (A): create, list, and end an ownership all succeed.
         HttpResponseMessage createInOwnBuilding = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", condoAdminFreshTokens.AccessToken,
-            new CreateFlatOwnershipCommand(condoAdminUserId, flatAId, DateOnly.FromDateTime(DateTime.UtcNow)));
+            new CreateFlatOwnershipCommand(residentAId, flatAId, DateOnly.FromDateTime(DateTime.UtcNow)));
         createInOwnBuilding.StatusCode.Should().Be(HttpStatusCode.OK);
         CreateFlatOwnershipResult ownershipInOwnBuilding =
             (await createInOwnBuilding.Content.ReadFromJsonAsync<CreateFlatOwnershipResult>(JsonOptions))!;
@@ -152,7 +170,7 @@ public class FlatOwnershipAdminBuildingScopeDbTests : IClassFixture<PostgresApiF
         // Another Building (B): create and list are both denied.
         HttpResponseMessage createInOtherBuilding = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", condoAdminFreshTokens.AccessToken,
-            new CreateFlatOwnershipCommand(condoAdminUserId, flatBId, DateOnly.FromDateTime(DateTime.UtcNow)));
+            new CreateFlatOwnershipCommand(residentBId, flatBId, DateOnly.FromDateTime(DateTime.UtcNow)));
         createInOtherBuilding.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         (await SendAuthedAsync(
