@@ -28,8 +28,8 @@ public sealed class CondominiumRoleCatalogueSeeder(
         [
             "property.view", "property.update", "resident.view", "resident.create", "resident.update",
             "ownership.view", "ownership.manage", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
-            "payment.view", "payment.record", "expense.view", "expense.manage", "complaint.view",
-            "complaint.create", "complaint.assign", "complaint.manage", "workorder.view",
+            "payment.view", "payment.record", "expense.view", "expense.manage", "expensetype.view",
+            "complaint.view", "complaint.create", "complaint.assign", "complaint.manage", "workorder.view",
             "workorder.create", "workorder.assign", "workorder.complete", "document.view",
             "document.upload", "notification.view", "visitor.override", "vehicle.override",
         ]),
@@ -42,7 +42,7 @@ public sealed class CondominiumRoleCatalogueSeeder(
         ("Accountant", "condominium.accountant", "Financial administration for a single condominium/building.",
         [
             "billing.rule.view", "billing.generate", "invoice.view", "payment.view", "payment.record",
-            "expense.view", "expense.manage", "report.financial.view",
+            "expense.view", "expense.manage", "expensetype.view", "report.financial.view",
         ]),
         ("SecurityOfficer", "condominium.security", "Security, visitor, vehicle, and parcel oversight for a single condominium/building.",
         [

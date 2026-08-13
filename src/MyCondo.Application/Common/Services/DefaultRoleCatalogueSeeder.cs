@@ -32,16 +32,16 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "property.view", "property.update", "resident.view", "resident.create", "resident.update",
             "ownership.view", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
-            "payment.view", "payment.record", "expense.view", "expense.manage", "complaint.view",
-            "complaint.create", "complaint.assign", "complaint.manage", "workorder.view",
-            "workorder.create", "workorder.assign", "workorder.complete", "document.view",
-            "document.upload", "notification.view",
+            "payment.view", "payment.record", "expense.view", "expense.manage", "expensetype.view",
+            "complaint.view", "complaint.create", "complaint.assign", "complaint.manage",
+            "workorder.view", "workorder.create", "workorder.assign", "workorder.complete",
+            "document.view", "document.upload", "notification.view",
         ]),
         ("Treasurer", "default.treasurer", "Tenant-wide financial oversight and correction authority.",
         [
             "billing.rule.view", "billing.rule.manage", "billing.generate", "invoice.view",
             "invoice.void", "payment.view", "payment.record", "payment.reverse", "expense.view",
-            "expense.manage", "report.financial.view",
+            "expense.manage", "expensetype.view", "expensetype.manage", "report.financial.view",
         ]),
         ("Secretary", "default.secretary", "Administrative/communications support — the point of contact for residents.",
         [
@@ -67,8 +67,9 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "tenant.view", "user.view", "property.view", "resident.view", "ownership.view",
             "lease.view", "billing.rule.view", "invoice.view", "payment.view", "expense.view",
-            "complaint.view", "workorder.view", "document.view", "report.financial.view",
-            "report.operational.view", "role.view", "permission.view", "audit.view",
+            "expensetype.view", "complaint.view", "workorder.view", "document.view",
+            "report.financial.view", "report.operational.view", "role.view", "permission.view",
+            "audit.view",
         ]),
     ];
 
