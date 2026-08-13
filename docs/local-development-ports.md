@@ -23,6 +23,12 @@ MyCondo's local URLs:
 | API (HTTPS, primary) | `https://localhost:7219` |
 | API (HTTP, fallback) | `http://localhost:5219` |
 
+`mycondo-web`'s `VITE_MYCONDO_API_BASE_URL` must point at the HTTP fallback (`http://localhost:5219`),
+not the HTTPS port — the Vite dev server itself is plain HTTP, and browsers treat http/https on the
+same host as cross-site ("schemeful same-site"), which blocks the `SameSite=Strict` `mycondo_rt`
+refresh cookie on reload. Production isn't affected, since `app.mycondo.app`/`api.mycondo.app` share
+the `https` scheme.
+
 ## Env var overrides
 
 Fixed ports are the default, but every one of them can be overridden without editing tracked files,
