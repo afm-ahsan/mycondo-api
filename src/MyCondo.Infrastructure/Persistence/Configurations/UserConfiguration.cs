@@ -23,6 +23,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.EmailConfirmed);
         builder.Property(x => x.LastLoginAtUtc);
+        builder.Property(x => x.AvatarAttachmentId);
         builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.Property(x => x.CreatedAtUtc);

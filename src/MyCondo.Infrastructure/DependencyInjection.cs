@@ -73,6 +73,7 @@ using MyCondo.Infrastructure.Identity;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
 using MyCondo.Infrastructure.Persistence.Repositories;
+using MyCondo.Infrastructure.Storage;
 using MyCondo.Infrastructure.Time;
 using StackExchange.Redis;
 
@@ -99,7 +100,13 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<StorageSettings>()
+            .BindConfiguration(StorageSettings.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
+        services.AddSingleton<IFileStorageService, LocalDiskFileStorageService>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IUserContextResolver, UserContextResolver>();
         services.AddScoped<IPlatformTokenService, PlatformJwtTokenService>();

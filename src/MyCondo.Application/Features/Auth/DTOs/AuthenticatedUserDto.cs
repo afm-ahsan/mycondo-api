@@ -18,7 +18,8 @@ public sealed record AuthenticatedUserDto(
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Permissions,
     IReadOnlyList<Guid> BuildingIds,
-    IReadOnlyList<BuildingPermissionGrant> BuildingPermissions);
+    IReadOnlyList<BuildingPermissionGrant> BuildingPermissions,
+    string? AvatarUrl = null);
 
 public sealed record AuthTokensDto(
     string AccessToken,
@@ -36,4 +37,5 @@ public sealed record UserProfileDto(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? LastLoginAtUtc,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> Permissions);
+    IReadOnlyList<string> Permissions,
+    string? AvatarUrl = null);
