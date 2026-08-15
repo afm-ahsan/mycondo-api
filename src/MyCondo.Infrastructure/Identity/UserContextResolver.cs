@@ -33,7 +33,8 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
             Roles: context.Roles,
             Permissions: context.TenantWidePermissions,
             BuildingIds: context.BuildingIds,
-            BuildingPermissions: context.BuildingPermissions);
+            BuildingPermissions: context.BuildingPermissions,
+            AvatarUrl: ResolveAvatarUrl(user));
     }
 
     public async Task<UserProfileDto> ResolveProfileAsync(User user, CancellationToken cancellationToken)
@@ -52,8 +53,15 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
             // Informational profile view: every permission the user holds anywhere, tenant-wide or
             // building-scoped — unlike AuthenticatedUserDto.Permissions, this is not what goes in the
             // JWT and doesn't need to preserve the tenant-wide/building-scoped distinction.
-            Permissions: context.AllPermissions);
+            Permissions: context.AllPermissions,
+            AvatarUrl: ResolveAvatarUrl(user));
     }
+
+    // AvatarUrl is a relative, authenticated API path rather than a raw storage URL — avatars are
+    // served through GET /api/v1/auth/me/avatar (RequireAuthorization), never a public/static path,
+    // so an uploaded avatar can never be enumerated/guessed by another tenant's user.
+    private static string? ResolveAvatarUrl(User user) =>
+        user.AvatarAttachmentId is not null ? "/api/v1/auth/me/avatar" : null;
 
     private async Task<ResolvedContext> ResolveCoreAsync(User user, CancellationToken ct)
     {

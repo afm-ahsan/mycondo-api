@@ -183,6 +183,11 @@ secrets.json
 *.key
 
 # ============================
+# Local file storage (MVP-1 avatar uploads — see StorageSettings)
+# ============================
+App_Data/
+
+# ============================
 # Logs
 # ============================
 logs/

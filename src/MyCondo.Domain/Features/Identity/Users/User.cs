@@ -14,6 +14,7 @@ public sealed class User : AggregateRoot<UserId>, IAuditable, ISoftDeletable, IT
     public UserStatus Status { get; private set; }
     public bool EmailConfirmed { get; private set; }
     public DateTimeOffset? LastLoginAtUtc { get; private set; }
+    public Guid? AvatarAttachmentId { get; private set; }
     public int Version { get; private set; }
 
     // IAuditable
@@ -152,6 +153,25 @@ public sealed class User : AggregateRoot<UserId>, IAuditable, ISoftDeletable, IT
 
         FullName = trimmedName;
         PhoneNumber = trimmedPhone;
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    public void SetAvatar(Guid attachmentId, DateTimeOffset nowUtc)
+    {
+        AvatarAttachmentId = attachmentId;
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    public void RemoveAvatar(DateTimeOffset nowUtc)
+    {
+        if (AvatarAttachmentId is null)
+        {
+            return;
+        }
+
+        AvatarAttachmentId = null;
         Version++;
         UpdatedAtUtc = nowUtc;
     }

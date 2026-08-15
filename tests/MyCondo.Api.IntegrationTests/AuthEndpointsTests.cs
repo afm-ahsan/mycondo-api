@@ -41,6 +41,50 @@ public class AuthEndpointsTests : IClassFixture<MyCondoWebApplicationFactory>
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task Put_Me_Without_Token_Returns_401()
+    {
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage response = await client.PutAsJsonAsync(
+            "/api/v1/auth/me", new { fullName = "Someone", phoneNumber = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Get_MyAvatar_Without_Token_Returns_401()
+    {
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage response = await client.GetAsync("/api/v1/auth/me/avatar");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Delete_MyAvatar_Without_Token_Returns_401()
+    {
+        using HttpClient client = _factory.CreateClient();
+
+        HttpResponseMessage response = await client.DeleteAsync("/api/v1/auth/me/avatar");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Post_MyAvatar_Without_Token_Returns_401()
+    {
+        using HttpClient client = _factory.CreateClient();
+        using MultipartFormDataContent form = new();
+        using ByteArrayContent fileContent = new([0x89, 0x50, 0x4E, 0x47]);
+        form.Add(fileContent, "file", "photo.png");
+
+        HttpResponseMessage response = await client.PostAsync("/api/v1/auth/me/avatar", form);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     [Theory]
     [InlineData("", "someone@example.com", "password")]
     [InlineData("00000000-0000-0000-0000-000000000000", "not-an-email", "password")]

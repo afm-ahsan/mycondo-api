@@ -11,4 +11,5 @@ public enum AttachmentOwnerType
     OccupancyRegistration = 1,
     Building = 2,
     Flat = 3,
+    User = 4,
 }

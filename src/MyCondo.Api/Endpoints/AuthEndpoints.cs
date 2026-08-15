@@ -5,7 +5,11 @@ using MyCondo.Application.Features.Auth.Commands.Login;
 using MyCondo.Application.Features.Auth.Commands.Logout;
 using MyCondo.Application.Features.Auth.Commands.RefreshToken;
 using MyCondo.Application.Features.Auth.Commands.Register;
+using MyCondo.Application.Features.Auth.Commands.RemoveMyAvatar;
+using MyCondo.Application.Features.Auth.Commands.UpdateMyProfile;
+using MyCondo.Application.Features.Auth.Commands.UploadMyAvatar;
 using MyCondo.Application.Features.Auth.DTOs;
+using MyCondo.Application.Features.Auth.Queries.GetMyAvatar;
 using MyCondo.Application.Features.Auth.Queries.GetMyProfile;
 
 namespace MyCondo.Api.Endpoints;
@@ -80,6 +84,41 @@ public static class AuthEndpoints
             })
             .RequireAuthorization()
             .Produces<UserProfileDto>(StatusCodes.Status200OK);
+
+        group.MapPut("/me", async (UpdateMyProfileCommand command, ISender sender, CancellationToken ct) =>
+            {
+                UserProfileDto profile = await sender.Send(command, ct);
+                return Results.Ok(profile);
+            })
+            .RequireAuthorization()
+            .Produces<UserProfileDto>(StatusCodes.Status200OK);
+
+        group.MapPost("/me/avatar", async (IFormFile file, ISender sender, CancellationToken ct) =>
+            {
+                await using Stream stream = file.OpenReadStream();
+                UserProfileDto profile = await sender.Send(
+                    new UploadMyAvatarCommand(stream, file.FileName, file.ContentType, file.Length), ct);
+                return Results.Ok(profile);
+            })
+            .RequireAuthorization()
+            .DisableAntiforgery()
+            .Accepts<IFormFile>("multipart/form-data")
+            .Produces<UserProfileDto>(StatusCodes.Status200OK);
+
+        group.MapDelete("/me/avatar", async (ISender sender, CancellationToken ct) =>
+            {
+                UserProfileDto profile = await sender.Send(new RemoveMyAvatarCommand(), ct);
+                return Results.Ok(profile);
+            })
+            .RequireAuthorization()
+            .Produces<UserProfileDto>(StatusCodes.Status200OK);
+
+        group.MapGet("/me/avatar", async (ISender sender, CancellationToken ct) =>
+            {
+                AvatarContentDto? avatar = await sender.Send(new GetMyAvatarQuery(), ct);
+                return avatar is null ? Results.NotFound() : Results.File(avatar.Content, avatar.ContentType);
+            })
+            .RequireAuthorization();
 
         return app;
     }
