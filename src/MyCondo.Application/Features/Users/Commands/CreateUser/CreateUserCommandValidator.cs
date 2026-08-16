@@ -1,4 +1,5 @@
 using FluentValidation;
+using MyCondo.Application.Common.Validation;
 
 namespace MyCondo.Application.Features.Users.Commands.CreateUser;
 
@@ -8,7 +9,7 @@ public sealed class CreateUserCommandValidator : AbstractValidator<CreateUserCom
     {
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(320);
-        RuleFor(x => x.PhoneNumber).MaximumLength(40);
+        RuleFor(x => x.PhoneNumber).MustBeValidBangladeshMobileNumber();
 
         When(x => x.InitialPassword is not null, () =>
         {

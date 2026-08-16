@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 
 namespace MyCondo.Domain.Features.Operations.GasCylinderSuppliers;
 
@@ -48,8 +49,8 @@ public sealed class GasCylinderSupplier : AggregateRoot<GasCylinderSupplierId>, 
         }
 
         return new GasCylinderSupplier(
-            GasCylinderSupplierId.New(), tenantId, name.Trim(), contactPhone?.Trim(), contactEmail?.Trim(),
-            address?.Trim(), nowUtc);
+            GasCylinderSupplierId.New(), tenantId, name.Trim(), BangladeshMobileNumber.Normalize(contactPhone),
+            contactEmail?.Trim(), address?.Trim(), nowUtc);
     }
 
     public void UpdateDetails(string name, string? contactPhone, string? contactEmail, string? address)
@@ -57,7 +58,7 @@ public sealed class GasCylinderSupplier : AggregateRoot<GasCylinderSupplierId>, 
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         Name = name.Trim();
-        ContactPhone = contactPhone?.Trim();
+        ContactPhone = BangladeshMobileNumber.Normalize(contactPhone);
         ContactEmail = contactEmail?.Trim();
         Address = address?.Trim();
         Version++;

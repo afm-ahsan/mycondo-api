@@ -259,7 +259,7 @@ public class AuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         UserProfileDto? updated = await updateResponse.Content.ReadFromJsonAsync<UserProfileDto>(JsonOptions);
         updated!.FullName.Should().Be("Updated Name");
-        updated.PhoneNumber.Should().Be("01700000000");
+        updated.PhoneNumber.Should().Be("+8801700000000");
 
         using HttpRequestMessage meRequest = AuthenticatedRequest(HttpMethod.Get, "/api/v1/auth/me", tokens.AccessToken);
         HttpResponseMessage meResponse = await client.SendAsync(meRequest);

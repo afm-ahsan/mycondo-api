@@ -11,7 +11,7 @@ public class StaffMemberTests
     [Fact]
     public void Register_Trims_FullName_And_Starts_Active()
     {
-        StaffMember staffMember = StaffMember.Register(TenantId, "  John Guard  ", StaffRole.Guard, "017", Now);
+        StaffMember staffMember = StaffMember.Register(TenantId, "  John Guard  ", StaffRole.Guard, "01712345678", Now);
 
         staffMember.FullName.Should().Be("John Guard");
         staffMember.IsActive.Should().BeTrue();

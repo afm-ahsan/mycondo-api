@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Domain.Features.Residents;
@@ -97,13 +98,13 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         }
 
         return new Resident(
-            ResidentId.New(), tenantId, flatId, fullName.Trim(), phone?.Trim(), email?.Trim(),
+            ResidentId.New(), tenantId, flatId, fullName.Trim(), BangladeshMobileNumber.Normalize(phone), email?.Trim(),
             residentType, nowUtc);
     }
 
     public void UpdateContactDetails(string? phone, string? email)
     {
-        Phone = phone?.Trim();
+        Phone = BangladeshMobileNumber.Normalize(phone);
         Email = email?.Trim();
         Version++;
     }
@@ -115,7 +116,7 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         ArgumentException.ThrowIfNullOrWhiteSpace(newFullName);
 
         FullName = newFullName.Trim();
-        Phone = phone?.Trim();
+        Phone = BangladeshMobileNumber.Normalize(phone);
         Email = email?.Trim();
         Version++;
         UpdatedAtUtc = nowUtc;
@@ -137,7 +138,7 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         string? maritalStatus, string? profession, string? employer, string? officeAddress,
         string? emergencyContactName, string? emergencyContactPhone, DateTimeOffset nowUtc)
     {
-        AlternatePhone = alternatePhone?.Trim();
+        AlternatePhone = BangladeshMobileNumber.Normalize(alternatePhone);
         if (!string.IsNullOrWhiteSpace(nationalIdNumber))
         {
             NationalIdNumber = nationalIdNumber.Trim();
@@ -159,7 +160,7 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         Employer = employer?.Trim();
         OfficeAddress = officeAddress?.Trim();
         EmergencyContactName = emergencyContactName?.Trim();
-        EmergencyContactPhone = emergencyContactPhone?.Trim();
+        EmergencyContactPhone = BangladeshMobileNumber.Normalize(emergencyContactPhone);
         Version++;
         UpdatedAtUtc = nowUtc;
     }

@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 using MyCondo.Domain.Features.Security.Common;
 
 namespace MyCondo.Domain.Features.Security.DomesticWorkers;
@@ -52,12 +53,12 @@ public sealed class DomesticWorkerProfile : AggregateRoot<DomesticWorkerProfileI
     {
         TenantId = tenantId;
         FullName = fullName;
-        Phone = phone;
+        Phone = BangladeshMobileNumber.Normalize(phone)!;
         WorkerType = workerType;
         IdentityDocumentType = identityDocumentType;
         IdentityDocumentNumber = identityDocumentNumber;
         EmergencyContactName = emergencyContactName;
-        EmergencyContactPhone = emergencyContactPhone;
+        EmergencyContactPhone = BangladeshMobileNumber.Normalize(emergencyContactPhone);
         VerificationStatus = VerificationStatus.Unverified;
         Status = RecurringAccessProfileStatus.Active;
         Version = 1;

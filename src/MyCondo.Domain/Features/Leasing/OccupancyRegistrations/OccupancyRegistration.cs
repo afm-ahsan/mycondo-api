@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations.Exceptions;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Residents;
@@ -97,9 +98,10 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
 
         return new OccupancyRegistration(
             OccupancyRegistrationId.New(), tenantId, flatId, primaryResidentId, occupancyType,
-            primaryFullName.Trim(), primaryPhone?.Trim(), primaryEmail?.Trim(), primaryNationalIdNumber?.Trim(),
-            primaryDateOfBirth, primaryPermanentAddress?.Trim(), emergencyContactName?.Trim(),
-            emergencyContactPhone?.Trim(), moveInExpectedDate, nowUtc);
+            primaryFullName.Trim(), BangladeshMobileNumber.Normalize(primaryPhone), primaryEmail?.Trim(),
+            primaryNationalIdNumber?.Trim(), primaryDateOfBirth, primaryPermanentAddress?.Trim(),
+            emergencyContactName?.Trim(), BangladeshMobileNumber.Normalize(emergencyContactPhone),
+            moveInExpectedDate, nowUtc);
     }
 
     private void EnsureEditable(string attemptedAction)
@@ -119,7 +121,7 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         ArgumentException.ThrowIfNullOrWhiteSpace(primaryFullName);
 
         PrimaryFullName = primaryFullName.Trim();
-        PrimaryPhone = primaryPhone?.Trim();
+        PrimaryPhone = BangladeshMobileNumber.Normalize(primaryPhone);
         PrimaryEmail = primaryEmail?.Trim();
         // The National ID is masked on every read, so the client can never round-trip the existing
         // value back through this form — an empty submission means "not retyped", not "clear it".
@@ -131,7 +133,7 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         PrimaryDateOfBirth = primaryDateOfBirth;
         PrimaryPermanentAddress = primaryPermanentAddress?.Trim();
         EmergencyContactName = emergencyContactName?.Trim();
-        EmergencyContactPhone = emergencyContactPhone?.Trim();
+        EmergencyContactPhone = BangladeshMobileNumber.Normalize(emergencyContactPhone);
         MoveInExpectedDate = moveInExpectedDate;
         Version++;
     }

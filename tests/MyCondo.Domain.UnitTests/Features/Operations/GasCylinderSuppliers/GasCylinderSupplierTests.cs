@@ -11,7 +11,7 @@ public class GasCylinderSupplierTests
     [Fact]
     public void Create_Starts_Active()
     {
-        GasCylinderSupplier supplier = GasCylinderSupplier.Create(TenantId, "Padma Oil", "017...", null, "Dhaka", Now);
+        GasCylinderSupplier supplier = GasCylinderSupplier.Create(TenantId, "Padma Oil", "01712345678", null, "Dhaka", Now);
 
         supplier.IsActive.Should().BeTrue();
         supplier.Version.Should().Be(1);

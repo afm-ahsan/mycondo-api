@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 
 namespace MyCondo.Domain.Features.Security.Guests;
 
@@ -41,7 +42,7 @@ public sealed class GuestProfile : AggregateRoot<GuestProfileId>, IAuditable, IT
     {
         TenantId = tenantId;
         FullName = fullName;
-        Phone = phone;
+        Phone = BangladeshMobileNumber.Normalize(phone)!;
         IdentityDocumentType = identityDocumentType;
         IdentityDocumentNumber = identityDocumentNumber;
         Version = 1;

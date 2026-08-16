@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
 
 namespace MyCondo.Domain.Features.Leasing.HouseholdMembers;
@@ -61,7 +62,8 @@ public sealed class HouseholdMember : Entity<HouseholdMemberId>, IAuditable, ITe
 
         return new HouseholdMember(
             HouseholdMemberId.New(), tenantId, occupancyRegistrationId, fullName.Trim(),
-            relationshipToPrimary.Trim(), dateOfBirth, phone?.Trim(), nationalIdNumber?.Trim(), nowUtc);
+            relationshipToPrimary.Trim(), dateOfBirth, BangladeshMobileNumber.Normalize(phone),
+            nationalIdNumber?.Trim(), nowUtc);
     }
 
     /// <summary>Removes this member from the active household without moving out the whole

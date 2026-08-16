@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 using MyCondo.Domain.Features.Security.Common;
 
 namespace MyCondo.Domain.Features.Security.ServiceProviders;
@@ -50,7 +51,7 @@ public sealed class ServiceProviderProfile : AggregateRoot<ServiceProviderProfil
     {
         TenantId = tenantId;
         FullName = fullName;
-        Phone = phone;
+        Phone = BangladeshMobileNumber.Normalize(phone)!;
         ProviderType = providerType;
         ServiceDescription = serviceDescription;
         IdentityDocumentType = identityDocumentType;

@@ -1,4 +1,5 @@
 using FluentValidation;
+using MyCondo.Application.Common.Validation;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Commands.UpdateFlatOwnerProfile;
 
@@ -8,9 +9,9 @@ public sealed class UpdateFlatOwnerProfileCommandValidator : AbstractValidator<U
     {
         RuleFor(x => x.ResidentId).NotEmpty();
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Phone).MaximumLength(20);
+        RuleFor(x => x.Phone).MustBeValidBangladeshMobileNumber();
         RuleFor(x => x.Email).MaximumLength(256).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
-        RuleFor(x => x.AlternatePhone).MaximumLength(20);
+        RuleFor(x => x.AlternatePhone).MustBeValidBangladeshMobileNumber();
         RuleFor(x => x.NationalIdNumber).MaximumLength(50);
         RuleFor(x => x.PassportNumber).MaximumLength(50);
         RuleFor(x => x.Gender).MaximumLength(20);
@@ -23,6 +24,6 @@ public sealed class UpdateFlatOwnerProfileCommandValidator : AbstractValidator<U
         RuleFor(x => x.Employer).MaximumLength(200);
         RuleFor(x => x.OfficeAddress).MaximumLength(400);
         RuleFor(x => x.EmergencyContactName).MaximumLength(200);
-        RuleFor(x => x.EmergencyContactPhone).MaximumLength(20);
+        RuleFor(x => x.EmergencyContactPhone).MustBeValidBangladeshMobileNumber();
     }
 }

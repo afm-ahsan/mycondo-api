@@ -12,7 +12,7 @@ public class CheckInSebaVisitorCommandValidatorTests
     public void Valid_Command_Passes()
     {
         CheckInSebaVisitorCommand command = new(
-            "Jane Public", "017", "ABC Corp", "Complaints Dept", "T-001", "Complaint", Guid.NewGuid(), Guid.NewGuid());
+            "Jane Public", "01712345678", "ABC Corp", "Complaints Dept", "T-001", "Complaint", Guid.NewGuid(), Guid.NewGuid());
 
         ValidationResult result = _validator.Validate(command);
 

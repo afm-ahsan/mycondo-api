@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 using MyCondo.Domain.Features.Identity.Users.Events;
 using MyCondo.Domain.Features.Identity.Users.Exceptions;
 
@@ -48,7 +49,7 @@ public sealed class User : AggregateRoot<UserId>, IAuditable, ISoftDeletable, IT
         Email = email;
         PasswordHash = passwordHash;
         FullName = fullName;
-        PhoneNumber = phoneNumber;
+        PhoneNumber = BangladeshMobileNumber.Normalize(phoneNumber);
         Status = UserStatus.Active;
         EmailConfirmed = false;
         Version = 1;
@@ -143,16 +144,16 @@ public sealed class User : AggregateRoot<UserId>, IAuditable, ISoftDeletable, IT
         ArgumentException.ThrowIfNullOrWhiteSpace(newFullName);
 
         string trimmedName = newFullName.Trim();
-        string? trimmedPhone = newPhoneNumber?.Trim();
+        string? normalizedPhone = BangladeshMobileNumber.Normalize(newPhoneNumber);
 
         if (string.Equals(FullName, trimmedName, StringComparison.Ordinal)
-            && string.Equals(PhoneNumber, trimmedPhone, StringComparison.Ordinal))
+            && string.Equals(PhoneNumber, normalizedPhone, StringComparison.Ordinal))
         {
             return;
         }
 
         FullName = trimmedName;
-        PhoneNumber = trimmedPhone;
+        PhoneNumber = normalizedPhone;
         Version++;
         UpdatedAtUtc = nowUtc;
     }

@@ -26,14 +26,14 @@ public class GetUserByIdQueryHandlerTests
     [Fact]
     public async Task Returns_The_Users_Detail_When_In_Callers_Tenant()
     {
-        User user = User.Register(TenantId, "member@example.com", "hash", "Member", "+8801000000000", NowUtc);
+        User user = User.Register(TenantId, "member@example.com", "hash", "Member", "+8801700000000", NowUtc);
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
 
         UserDetailDto result = await CreateHandler().Handle(new GetUserByIdQuery(user.Id.Value), CancellationToken.None);
 
         result.UserId.Should().Be(user.Id.Value);
         result.Email.Should().Be("member@example.com");
-        result.PhoneNumber.Should().Be("+8801000000000");
+        result.PhoneNumber.Should().Be("+8801700000000");
         result.IsActive.Should().BeTrue();
     }
 

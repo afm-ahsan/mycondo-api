@@ -11,7 +11,7 @@ public class UpdateUserCommandValidatorTests
     [Fact]
     public void Valid_Command_Passes()
     {
-        UpdateUserCommand command = new(Guid.NewGuid(), "Full Name", "+8801000000000");
+        UpdateUserCommand command = new(Guid.NewGuid(), "Full Name", "+8801700000000");
 
         ValidationResult result = _validator.Validate(command);
 

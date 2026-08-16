@@ -14,7 +14,7 @@ public class SebaVisitDetailTests
     public void Record_Trims_VisitorFullName()
     {
         SebaVisitDetail detail = SebaVisitDetail.Record(
-            TenantId, AccessSessionId, "  Jane Public  ", "017", "ABC Corp", "Complaints Dept", "T-001",
+            TenantId, AccessSessionId, "  Jane Public  ", "01712345678", "ABC Corp", "Complaints Dept", "T-001",
             "Complaint", Guid.NewGuid(), Now);
 
         detail.VisitorFullName.Should().Be("Jane Public");
