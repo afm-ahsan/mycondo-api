@@ -32,6 +32,7 @@ public sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Hous
         builder.Property(x => x.Nationality).HasMaxLength(50);
         builder.Property(x => x.Occupation).HasMaxLength(200);
         builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.PrimaryPhotoAttachmentId);
 
         builder.HasIndex(x => new { x.TenantId, x.OccupancyRegistrationId })
             .HasDatabaseName("ix_household_members_tenant_id_occupancy_registration_id");

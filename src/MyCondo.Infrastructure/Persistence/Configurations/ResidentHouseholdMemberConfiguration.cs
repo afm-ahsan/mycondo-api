@@ -28,6 +28,7 @@ public sealed class ResidentHouseholdMemberConfiguration : IEntityTypeConfigurat
         builder.Property(x => x.Nationality).HasMaxLength(50);
         builder.Property(x => x.Occupation).HasMaxLength(200);
         builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.PrimaryPhotoAttachmentId);
 
         builder.HasIndex(x => new { x.TenantId, x.ResidentId })
             .HasDatabaseName("ix_resident_household_members_tenant_id_resident_id");

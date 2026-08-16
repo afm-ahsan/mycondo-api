@@ -15,6 +15,7 @@ using MyCondo.Application.Features.Leasing.Commands.RejectOccupancyRegistrationB
 using MyCondo.Application.Features.Leasing.Commands.RejectOccupancyRegistrationByOwner;
 using MyCondo.Application.Features.Leasing.Commands.RequestOccupancyRegistrationCorrectionsByManagement;
 using MyCondo.Application.Features.Leasing.Commands.RequestOccupancyRegistrationCorrectionsByOwner;
+using MyCondo.Application.Features.Leasing.Commands.SetHouseholdMemberPrimaryPhoto;
 using MyCondo.Application.Features.Leasing.Commands.SetOccupancyRegistrationPrimaryPhoto;
 using MyCondo.Application.Features.Leasing.Commands.SubmitOccupancyRegistration;
 using MyCondo.Application.Features.Leasing.Commands.UpdateOccupancyRegistrationDraft;
@@ -209,6 +210,16 @@ public static class OccupancyRegistrationEndpoints
         app.MapPost("/api/v1/household-members/{id:guid}/deactivate", async (Guid id, ISender sender, CancellationToken ct) =>
             {
                 HouseholdMemberDto result = await sender.Send(new DeactivateHouseholdMemberCommand(id), ct);
+                return Results.Ok(result);
+            })
+            .WithTags("Tenant Registrations")
+            .RequirePermission("occupancy-registration.create")
+            .Produces<HouseholdMemberDto>(StatusCodes.Status200OK);
+
+        app.MapPut("/api/v1/household-members/{id:guid}/primary-photo", async (Guid id, SetPrimaryPhotoRequest body, ISender sender, CancellationToken ct) =>
+            {
+                HouseholdMemberDto result = await sender.Send(
+                    new SetHouseholdMemberPrimaryPhotoCommand(id, body.AttachmentId), ct);
                 return Results.Ok(result);
             })
             .WithTags("Tenant Registrations")

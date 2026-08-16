@@ -31,7 +31,7 @@ internal static class LeasingMappings
         member.Id.Value, member.OccupancyRegistrationId.Value, member.FullName, member.RelationshipToPrimary,
         member.DateOfBirth, member.Phone, IdentityMasking.Mask(member.NationalIdNumber), member.Gender,
         IdentityMasking.Mask(member.BirthCertificateNumber), member.BloodGroup, member.Religion, member.Nationality,
-        member.Occupation, member.IsActive);
+        member.Occupation, member.IsActive, member.PrimaryPhotoAttachmentId);
 
     public static OccupancyRegistrationStatusHistoryDto ToDto(this OccupancyRegistrationStatusHistory entry) => new(
         entry.Id.Value, entry.OccupancyRegistrationId.Value, entry.FromStatus?.ToString(), entry.ToStatus.ToString(),

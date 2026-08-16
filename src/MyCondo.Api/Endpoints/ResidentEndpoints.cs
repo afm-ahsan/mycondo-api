@@ -7,6 +7,7 @@ using MyCondo.Application.Features.Residents.Commands.UpdateResident;
 using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Application.Features.Residents.HouseholdMembers.Commands.AddOwnerHouseholdMember;
 using MyCondo.Application.Features.Residents.HouseholdMembers.Commands.DeactivateOwnerHouseholdMember;
+using MyCondo.Application.Features.Residents.HouseholdMembers.Commands.SetOwnerHouseholdMemberPrimaryPhoto;
 using MyCondo.Application.Features.Residents.HouseholdMembers.Commands.UpdateOwnerHouseholdMember;
 using MyCondo.Application.Features.Residents.HouseholdMembers.DTOs;
 using MyCondo.Application.Features.Residents.HouseholdMembers.Queries.GetOwnerHouseholdMembers;
@@ -109,6 +110,16 @@ public static class ResidentEndpoints
         app.MapPost("/api/v1/residents/household-members/{id:guid}/deactivate", async (Guid id, ISender sender, CancellationToken ct) =>
             {
                 ResidentHouseholdMemberDto result = await sender.Send(new DeactivateOwnerHouseholdMemberCommand(id), ct);
+                return Results.Ok(result);
+            })
+            .WithTags("Residents")
+            .RequireAuthorization()
+            .Produces<ResidentHouseholdMemberDto>(StatusCodes.Status200OK);
+
+        app.MapPut("/api/v1/residents/household-members/{id:guid}/primary-photo", async (Guid id, SetPrimaryPhotoRequest body, ISender sender, CancellationToken ct) =>
+            {
+                ResidentHouseholdMemberDto result = await sender.Send(
+                    new SetOwnerHouseholdMemberPrimaryPhotoCommand(id, body.AttachmentId), ct);
                 return Results.Ok(result);
             })
             .WithTags("Residents")
