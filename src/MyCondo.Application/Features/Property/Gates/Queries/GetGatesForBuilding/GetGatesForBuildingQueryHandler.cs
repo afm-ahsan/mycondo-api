@@ -21,10 +21,13 @@ public sealed class GetGatesForBuildingQueryHandler(
 
         BuildingId buildingId = new(query.BuildingId);
 
-        List<Gate> buildingGates = await gates.GetAllForBuildingAsync(tenantId, buildingId, cancellationToken);
+        List<Gate> buildingGates = await gates.GetAllForBuildingAsync(
+            tenantId, buildingId, query.ActiveOnly, cancellationToken);
 
         return buildingGates
-            .Select(g => new GateDto(g.Id.Value, g.BuildingId.Value, g.Name))
+            .Select(g => new GateDto(
+                g.Id.Value, g.BuildingId.Value, g.Name, g.Code, g.Description, g.IsActive, g.IsEntryAllowed,
+                g.IsExitAllowed, g.DisplayOrder))
             .ToList();
     }
 }

@@ -16,7 +16,10 @@ using MyCondo.Application.Features.Property.Flats.Commands.SetFlatPrimaryPhoto;
 using MyCondo.Application.Features.Property.Flats.Queries.GetFlatById;
 using MyCondo.Application.Features.Property.Flats.Queries.GetFlatsForBuilding;
 using MyCondo.Application.Features.Property.Flats.Queries.GetFlatsForTenant;
+using MyCondo.Application.Features.Property.Gates.Commands.ActivateGate;
 using MyCondo.Application.Features.Property.Gates.Commands.CreateGate;
+using MyCondo.Application.Features.Property.Gates.Commands.DeactivateGate;
+using MyCondo.Application.Features.Property.Gates.Commands.UpdateGate;
 using MyCondo.Application.Features.Property.Gates.DTOs;
 using MyCondo.Application.Features.Property.Gates.Queries.GetGatesForBuilding;
 using MyCondo.Domain.Common;
@@ -149,19 +152,51 @@ public static class PropertyEndpoints
 
         buildings.MapPost("/{buildingId:guid}/gates", async (Guid buildingId, CreateGateRequest body, ISender sender, CancellationToken ct) =>
             {
-                GateDto result = await sender.Send(new CreateGateCommand(buildingId, body.Name), ct);
+                GateDto result = await sender.Send(
+                    new CreateGateCommand(
+                        buildingId, body.Name, body.Code, body.Description, body.IsEntryAllowed, body.IsExitAllowed,
+                        body.DisplayOrder),
+                    ct);
                 return Results.Ok(result);
             })
-            .RequireBuildingPermission("property.create")
+            .RequireBuildingPermission("gate.manage")
             .Produces<GateDto>(StatusCodes.Status200OK);
 
-        buildings.MapGet("/{buildingId:guid}/gates", async (Guid buildingId, ISender sender, CancellationToken ct) =>
+        buildings.MapGet("/{buildingId:guid}/gates", async (Guid buildingId, bool activeOnly, ISender sender, CancellationToken ct) =>
             {
-                List<GateDto> result = await sender.Send(new GetGatesForBuildingQuery(buildingId), ct);
+                List<GateDto> result = await sender.Send(new GetGatesForBuildingQuery(buildingId, activeOnly), ct);
                 return Results.Ok(result);
             })
-            .RequireBuildingPermission("property.view")
+            .RequireBuildingPermission("gate.view")
             .Produces<List<GateDto>>(StatusCodes.Status200OK);
+
+        buildings.MapPut("/{buildingId:guid}/gates/{gateId:guid}", async (Guid buildingId, Guid gateId, UpdateGateRequest body, ISender sender, CancellationToken ct) =>
+            {
+                GateDto result = await sender.Send(
+                    new UpdateGateCommand(
+                        gateId, body.Name, body.Code, body.Description, body.IsEntryAllowed, body.IsExitAllowed,
+                        body.DisplayOrder),
+                    ct);
+                return Results.Ok(result);
+            })
+            .RequireBuildingPermission("gate.manage")
+            .Produces<GateDto>(StatusCodes.Status200OK);
+
+        buildings.MapPost("/{buildingId:guid}/gates/{gateId:guid}/activate", async (Guid buildingId, Guid gateId, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new ActivateGateCommand(gateId), ct);
+                return Results.NoContent();
+            })
+            .RequireBuildingPermission("gate.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        buildings.MapPost("/{buildingId:guid}/gates/{gateId:guid}/deactivate", async (Guid buildingId, Guid gateId, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new DeactivateGateCommand(gateId), ct);
+                return Results.NoContent();
+            })
+            .RequireBuildingPermission("gate.manage")
+            .Produces(StatusCodes.Status204NoContent);
 
         return app;
     }
@@ -175,4 +210,8 @@ public sealed record UpdateFlatRequest(string FlatNumber, int? FloorNumber, stri
 
 public sealed record UpdateFlatAreaRequest(decimal? AreaSqFt);
 
-public sealed record CreateGateRequest(string Name);
+public sealed record CreateGateRequest(
+    string Name, string Code, string? Description, bool IsEntryAllowed, bool IsExitAllowed, int DisplayOrder);
+
+public sealed record UpdateGateRequest(
+    string Name, string Code, string? Description, bool IsEntryAllowed, bool IsExitAllowed, int DisplayOrder);

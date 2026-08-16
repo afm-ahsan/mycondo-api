@@ -35,13 +35,21 @@ public sealed class CreateGateCommandHandler(
         }
 
         string name = command.Name.Trim();
-        Gate? existing = await gates.GetByNameAsync(tenantId, buildingId, name, cancellationToken);
-        if (existing is not null)
+        string code = command.Code.Trim().ToUpperInvariant();
+
+        if (await gates.ExistsByCodeAsync(tenantId, buildingId, code, null, cancellationToken))
+        {
+            throw new ConflictException($"A gate with code '{code}' already exists for this building.");
+        }
+
+        if (await gates.ExistsByNameAsync(tenantId, buildingId, name, null, cancellationToken))
         {
             throw new ConflictException($"A gate named '{name}' already exists for this building.");
         }
 
-        Gate gate = Gate.Create(tenantId, buildingId, name, clock.UtcNow);
+        Gate gate = Gate.Create(
+            tenantId, buildingId, name, code, command.Description, command.IsEntryAllowed, command.IsExitAllowed,
+            command.DisplayOrder, clock.UtcNow);
 
         gates.Add(gate);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -50,6 +58,8 @@ public sealed class CreateGateCommandHandler(
             "Gate {GateId} '{Name}' created for building {BuildingId}, tenant {TenantId}",
             gate.Id, gate.Name, buildingId, tenantId);
 
-        return new GateDto(gate.Id.Value, gate.BuildingId.Value, gate.Name);
+        return new GateDto(
+            gate.Id.Value, gate.BuildingId.Value, gate.Name, gate.Code, gate.Description, gate.IsActive,
+            gate.IsEntryAllowed, gate.IsExitAllowed, gate.DisplayOrder);
     }
 }

@@ -43,6 +43,16 @@ public sealed class CheckOutDomesticWorkerCommandHandler(
             throw new NotFoundException(nameof(Gate), command.ExitGateId);
         }
 
+        if (!exitGate.IsActive)
+        {
+            throw new ConflictException($"Gate '{exitGate.Name}' is not active.");
+        }
+
+        if (!exitGate.IsExitAllowed)
+        {
+            throw new ConflictException($"Gate '{exitGate.Name}' does not allow exit.");
+        }
+
         session.CheckOut(exitGateId, currentUser.UserId, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
