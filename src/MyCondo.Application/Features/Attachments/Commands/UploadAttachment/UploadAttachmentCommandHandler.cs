@@ -6,9 +6,11 @@ using MyCondo.Application.Features.Attachments.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Attachments;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
+using MyCondo.Domain.Features.Leasing.HouseholdMembers;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Residents;
+using MyCondo.Domain.Features.Residents.HouseholdMembers;
 
 namespace MyCondo.Application.Features.Attachments.Commands.UploadAttachment;
 
@@ -23,6 +25,8 @@ public sealed class UploadAttachmentCommandHandler(
     IOccupancyRegistrationRepository occupancyRegistrations,
     IBuildingRepository buildings,
     IFlatRepository flats,
+    IResidentHouseholdMemberRepository residentHouseholdMembers,
+    IHouseholdMemberRepository leasingHouseholdMembers,
     IFileStorageService fileStorage,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
@@ -99,6 +103,26 @@ public sealed class UploadAttachmentCommandHandler(
                 if (flat.TenantId != tenantId)
                 {
                     throw new NotFoundException(nameof(Flat), ownerId);
+                }
+
+                break;
+            case AttachmentOwnerType.ResidentHouseholdMember:
+                ResidentHouseholdMember residentHouseholdMember = await residentHouseholdMembers.GetByIdAsync(
+                        new ResidentHouseholdMemberId(ownerId), cancellationToken)
+                    ?? throw new NotFoundException(nameof(ResidentHouseholdMember), ownerId);
+                if (residentHouseholdMember.TenantId != tenantId)
+                {
+                    throw new NotFoundException(nameof(ResidentHouseholdMember), ownerId);
+                }
+
+                break;
+            case AttachmentOwnerType.LeasingHouseholdMember:
+                HouseholdMember leasingHouseholdMember = await leasingHouseholdMembers.GetByIdAsync(
+                        new HouseholdMemberId(ownerId), cancellationToken)
+                    ?? throw new NotFoundException(nameof(HouseholdMember), ownerId);
+                if (leasingHouseholdMember.TenantId != tenantId)
+                {
+                    throw new NotFoundException(nameof(HouseholdMember), ownerId);
                 }
 
                 break;

@@ -41,7 +41,8 @@ public sealed class AddHouseholdMemberCommandHandler(
 
         HouseholdMember member = HouseholdMember.Add(
             tenantId, registrationId, command.FullName, command.RelationshipToPrimary, command.DateOfBirth,
-            command.Phone, command.NationalIdNumber, clock.UtcNow);
+            command.Phone, command.NationalIdNumber, command.Gender, command.BirthCertificateNumber,
+            command.BloodGroup, command.Religion, command.Nationality, command.Occupation, clock.UtcNow);
 
         members.Add(member);
         await unitOfWork.SaveChangesAsync(cancellationToken);

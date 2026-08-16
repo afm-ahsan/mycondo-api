@@ -8,4 +8,10 @@ public sealed record HouseholdMemberDto(
     DateOnly? DateOfBirth,
     string? Phone,
     string? NationalIdNumberMasked,
+    string? Gender,
+    string? BirthCertificateNumberMasked,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality,
+    string? Occupation,
     bool IsActive);

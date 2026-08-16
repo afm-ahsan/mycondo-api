@@ -48,7 +48,8 @@ public class ApproveOccupancyRegistrationByOwnerCommandHandlerTests
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
             TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", "01700000000", "jane@example.com",
-            "1234567890", new DateOnly(1990, 1, 1), "123 Example Road, Dhaka", "John Doe", "01711111111", null, Now);
+            "1234567890", new DateOnly(1990, 1, 1), "Female", null, null, null, null, "123 Example Road, Dhaka",
+            "John Doe", "01711111111", null, Now);
         registration.Submit(Guid.NewGuid(), Now);
         return registration;
     }
@@ -75,7 +76,8 @@ public class ApproveOccupancyRegistrationByOwnerCommandHandlerTests
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
             TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", "01700000000", "jane@example.com",
-            "1234567890", new DateOnly(1990, 1, 1), "123 Example Road, Dhaka", "John Doe", "01711111111", null, Now);
+            "1234567890", new DateOnly(1990, 1, 1), "Female", null, null, null, null, "123 Example Road, Dhaka",
+            "John Doe", "01711111111", null, Now);
         _registrations.GetByIdAsync(registration.Id, Arg.Any<CancellationToken>()).Returns(registration);
 
         Func<Task> act = () => CreateHandler().Handle(

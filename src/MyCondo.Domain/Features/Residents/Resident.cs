@@ -38,6 +38,9 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
     public string? OfficeAddress { get; private set; }
     public string? EmergencyContactName { get; private set; }
     public string? EmergencyContactPhone { get; private set; }
+    public string? BloodGroup { get; private set; }
+    public string? Religion { get; private set; }
+    public string? Nationality { get; private set; }
 
     /// <summary>
     /// Bridges this party record to a portal <see cref="Identity.Users.User"/> account (Phase 3,
@@ -136,7 +139,8 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         string? alternatePhone, string? nationalIdNumber, string? passportNumber, DateOnly? dateOfBirth,
         string? gender, string? presentAddress, string? permanentAddress, string? fatherName, string? motherName,
         string? maritalStatus, string? profession, string? employer, string? officeAddress,
-        string? emergencyContactName, string? emergencyContactPhone, DateTimeOffset nowUtc)
+        string? emergencyContactName, string? emergencyContactPhone, string? bloodGroup, string? religion,
+        string? nationality, DateTimeOffset nowUtc)
     {
         AlternatePhone = BangladeshMobileNumber.Normalize(alternatePhone);
         if (!string.IsNullOrWhiteSpace(nationalIdNumber))
@@ -161,6 +165,9 @@ public sealed class Resident : AggregateRoot<ResidentId>, IAuditable, ISoftDelet
         OfficeAddress = officeAddress?.Trim();
         EmergencyContactName = emergencyContactName?.Trim();
         EmergencyContactPhone = BangladeshMobileNumber.Normalize(emergencyContactPhone);
+        BloodGroup = bloodGroup?.Trim();
+        Religion = religion?.Trim();
+        Nationality = nationality?.Trim();
         Version++;
         UpdatedAtUtc = nowUtc;
     }

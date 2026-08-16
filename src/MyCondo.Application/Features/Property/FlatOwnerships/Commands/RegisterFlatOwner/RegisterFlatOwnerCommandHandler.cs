@@ -59,7 +59,8 @@ public sealed class RegisterFlatOwnerCommandHandler(
             command.AlternatePhone, command.NationalIdNumber, command.PassportNumber, command.DateOfBirth,
             command.Gender, command.PresentAddress, command.PermanentAddress, command.FatherName, command.MotherName,
             command.MaritalStatus, command.Profession, command.Employer, command.OfficeAddress,
-            command.EmergencyContactName, command.EmergencyContactPhone, clock.UtcNow);
+            command.EmergencyContactName, command.EmergencyContactPhone, command.BloodGroup, command.Religion,
+            command.Nationality, clock.UtcNow);
 
         bool alreadyActive = await flatOwnerships.ExistsActiveForResidentAndFlatAsync(
             tenantId, resident.Id.Value, flatId, cancellationToken);

@@ -25,6 +25,12 @@ public sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Hous
         builder.Property(x => x.DateOfBirth);
         builder.Property(x => x.Phone).HasMaxLength(30);
         builder.Property(x => x.NationalIdNumber).HasMaxLength(50);
+        builder.Property(x => x.Gender).HasMaxLength(20);
+        builder.Property(x => x.BirthCertificateNumber).HasMaxLength(50);
+        builder.Property(x => x.BloodGroup).HasMaxLength(10);
+        builder.Property(x => x.Religion).HasMaxLength(50);
+        builder.Property(x => x.Nationality).HasMaxLength(50);
+        builder.Property(x => x.Occupation).HasMaxLength(200);
         builder.Property(x => x.IsActive).IsRequired();
 
         builder.HasIndex(x => new { x.TenantId, x.OccupancyRegistrationId })

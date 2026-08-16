@@ -115,7 +115,7 @@ public class ResidentTests
         resident.UpdateOwnerDetails(
             "01799999999", "1234567890123", "P1234567", dob, "Female", "123 Present St", "456 Permanent Rd",
             "John Doe Sr.", "Mary Doe", "Married", "Engineer", "Acme Corp", "789 Office Ave", "Emergency Contact",
-            "01788888888", Now.AddDays(1));
+            "01788888888", "O+", "Islam", "Bangladeshi", Now.AddDays(1));
 
         resident.AlternatePhone.Should().Be("+8801799999999");
         resident.NationalIdNumber.Should().Be("1234567890123");
@@ -132,6 +132,9 @@ public class ResidentTests
         resident.OfficeAddress.Should().Be("789 Office Ave");
         resident.EmergencyContactName.Should().Be("Emergency Contact");
         resident.EmergencyContactPhone.Should().Be("+8801788888888");
+        resident.BloodGroup.Should().Be("O+");
+        resident.Religion.Should().Be("Islam");
+        resident.Nationality.Should().Be("Bangladeshi");
         resident.Version.Should().Be(2);
     }
 
@@ -141,10 +144,11 @@ public class ResidentTests
         Resident resident = Resident.Register(TenantId, FlatId, "Jane Doe", null, null, ResidentType.Owner, Now);
         resident.UpdateOwnerDetails(
             null, "1234567890123", "P1234567", null, null, null, null, null, null, null, null, null, null, null,
-            null, Now);
+            null, null, null, null, Now);
 
         resident.UpdateOwnerDetails(
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, Now.AddDays(1));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+            null, Now.AddDays(1));
 
         resident.NationalIdNumber.Should().Be(
             "1234567890123", "an empty submission means 'not retyped', not 'clear it' — matching OccupancyRegistration's masking convention");

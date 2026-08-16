@@ -55,8 +55,8 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
     private static OccupancyRegistration ActiveRegistration()
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
-            TenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null, null, null, null,
-            null, null, Now);
+            TenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, "1234567890",
+            new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, null, Now);
         registration.Submit(Guid.NewGuid(), Now);
         registration.ApproveByOwner(Guid.NewGuid(), Now);
         registration.VerifyByManagement(Guid.NewGuid(), Now);
@@ -71,9 +71,11 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
         _registrations.GetByIdAsync(registration.Id, Arg.Any<CancellationToken>()).Returns(registration);
 
         HouseholdMember activeMember = HouseholdMember.Add(
-            TenantId, registration.Id, "John Doe", "Spouse", null, null, null, Now);
+            TenantId, registration.Id, "John Doe", "Spouse", null, null, null, "Male", null, null, null, null, null,
+            Now);
         HouseholdMember alreadyInactiveMember = HouseholdMember.Add(
-            TenantId, registration.Id, "Old Member", "Sibling", null, null, null, Now);
+            TenantId, registration.Id, "Old Member", "Father", null, null, null, "Male", null, null, null, null,
+            null, Now);
         alreadyInactiveMember.Deactivate();
         _members.GetForRegistrationAsync(registration.Id, Arg.Any<CancellationToken>())
             .Returns(new List<HouseholdMember> { activeMember, alreadyInactiveMember });
@@ -116,8 +118,8 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
     public async Task Throws_When_Registration_Is_Not_Active()
     {
         OccupancyRegistration draft = OccupancyRegistration.Register(
-            TenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null, null, null, null,
-            null, null, Now);
+            TenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null, null,
+            null, null, null, null, null, null, null, null, null, Now);
         _registrations.GetByIdAsync(draft.Id, Arg.Any<CancellationToken>()).Returns(draft);
 
         Func<Task> act = () => CreateHandler()
@@ -130,8 +132,8 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
     public async Task Throws_NotFound_When_Registration_Belongs_To_Another_Tenant()
     {
         OccupancyRegistration otherTenantRegistration = OccupancyRegistration.Register(
-            Guid.NewGuid(), FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null, null, null,
-            null, null, null, Now);
+            Guid.NewGuid(), FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null,
+            null, null, null, null, null, null, null, null, null, null, Now);
         _registrations.GetByIdAsync(otherTenantRegistration.Id, Arg.Any<CancellationToken>()).Returns(otherTenantRegistration);
 
         Func<Task> act = () => CreateHandler()

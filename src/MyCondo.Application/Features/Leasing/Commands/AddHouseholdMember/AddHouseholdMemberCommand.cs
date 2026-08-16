@@ -9,5 +9,11 @@ public sealed record AddHouseholdMemberCommand(
     string RelationshipToPrimary,
     DateOnly? DateOfBirth,
     string? Phone,
-    string? NationalIdNumber
+    string? NationalIdNumber,
+    string? Gender,
+    string? BirthCertificateNumber,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality,
+    string? Occupation
 ) : IRequest<HouseholdMemberDto>;

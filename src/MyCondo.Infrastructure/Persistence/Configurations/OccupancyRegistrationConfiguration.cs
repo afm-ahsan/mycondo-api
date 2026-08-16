@@ -30,6 +30,11 @@ public sealed class OccupancyRegistrationConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.PrimaryEmail).HasMaxLength(200);
         builder.Property(x => x.PrimaryNationalIdNumber).HasMaxLength(50);
         builder.Property(x => x.PrimaryDateOfBirth);
+        builder.Property(x => x.PrimaryGender).HasMaxLength(20);
+        builder.Property(x => x.PrimaryBloodGroup).HasMaxLength(10);
+        builder.Property(x => x.PrimaryReligion).HasMaxLength(50);
+        builder.Property(x => x.PrimaryNationality).HasMaxLength(50);
+        builder.Property(x => x.PrimaryProfession).HasMaxLength(200);
         builder.Property(x => x.PrimaryPermanentAddress).HasMaxLength(500);
         builder.Property(x => x.EmergencyContactName).HasMaxLength(200);
         builder.Property(x => x.EmergencyContactPhone).HasMaxLength(30);

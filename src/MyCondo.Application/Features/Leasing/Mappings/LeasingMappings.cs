@@ -19,6 +19,8 @@ internal static class LeasingMappings
         registration.Id.Value, registration.FlatId.Value, registration.PrimaryResidentId.Value,
         registration.OccupancyType.ToString(), registration.PrimaryFullName, registration.PrimaryPhone,
         registration.PrimaryEmail, IdentityMasking.Mask(registration.PrimaryNationalIdNumber), registration.PrimaryDateOfBirth,
+        registration.PrimaryGender, registration.PrimaryBloodGroup, registration.PrimaryReligion,
+        registration.PrimaryNationality, registration.PrimaryProfession,
         registration.PrimaryPermanentAddress, registration.EmergencyContactName, registration.EmergencyContactPhone,
         registration.PrimaryPhotoAttachmentId, registration.MoveInExpectedDate,
         registration.Status.ToString(), registration.SubmittedAtUtc, registration.OwnerReviewedAtUtc,
@@ -27,7 +29,9 @@ internal static class LeasingMappings
 
     public static HouseholdMemberDto ToDto(this HouseholdMember member) => new(
         member.Id.Value, member.OccupancyRegistrationId.Value, member.FullName, member.RelationshipToPrimary,
-        member.DateOfBirth, member.Phone, IdentityMasking.Mask(member.NationalIdNumber), member.IsActive);
+        member.DateOfBirth, member.Phone, IdentityMasking.Mask(member.NationalIdNumber), member.Gender,
+        IdentityMasking.Mask(member.BirthCertificateNumber), member.BloodGroup, member.Religion, member.Nationality,
+        member.Occupation, member.IsActive);
 
     public static OccupancyRegistrationStatusHistoryDto ToDto(this OccupancyRegistrationStatusHistory entry) => new(
         entry.Id.Value, entry.OccupancyRegistrationId.Value, entry.FromStatus?.ToString(), entry.ToStatus.ToString(),
