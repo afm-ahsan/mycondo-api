@@ -31,7 +31,7 @@ public sealed class FlatOwnershipRepository(MyCondoDbContext db) : IFlatOwnershi
         if (!string.IsNullOrWhiteSpace(search))
         {
             query = query.Where(o => db.Set<Resident>()
-                .Any(r => r.Id == new ResidentId(o.ResidentId)
+                .Any(r => EF.Property<Guid>(r, nameof(Resident.Id)) == o.ResidentId
                     && (EF.Functions.ILike(r.FullName, $"%{search}%")
                         || (r.Email != null && EF.Functions.ILike(r.Email, $"%{search}%"))
                         || (r.Phone != null && EF.Functions.ILike(r.Phone, $"%{search}%")))));
