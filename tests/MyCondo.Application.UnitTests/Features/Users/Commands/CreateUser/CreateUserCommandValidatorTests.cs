@@ -30,10 +30,11 @@ public class CreateUserCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("short")]
-    [InlineData("alllowercase12")]
-    [InlineData("ALLUPPERCASE12")]
-    [InlineData("NoDigitsHere")]
+    [InlineData("Sh0!")]
+    [InlineData("alllowercase12!")]
+    [InlineData("ALLUPPERCASE12!")]
+    [InlineData("NoDigitsHere!")]
+    [InlineData("NoSpecialChar12")]
     public void Weak_Supplied_Password_Fails(string weakPassword)
     {
         CreateUserCommand command = new("Full Name", "user@example.com", null, weakPassword);

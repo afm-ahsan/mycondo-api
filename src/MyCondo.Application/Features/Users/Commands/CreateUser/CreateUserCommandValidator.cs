@@ -13,12 +13,7 @@ public sealed class CreateUserCommandValidator : AbstractValidator<CreateUserCom
 
         When(x => x.InitialPassword is not null, () =>
         {
-            RuleFor(x => x.InitialPassword!)
-                .MinimumLength(12).WithMessage("Password must be at least 12 characters.")
-                .MaximumLength(128)
-                .Matches(@"[A-Z]").WithMessage("Password must contain an uppercase letter.")
-                .Matches(@"[a-z]").WithMessage("Password must contain a lowercase letter.")
-                .Matches(@"\d").WithMessage("Password must contain a digit.");
+            RuleFor(x => x.InitialPassword!).MustBeAStrongPassword();
         });
     }
 }
