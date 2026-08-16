@@ -58,6 +58,16 @@ public sealed class CheckInServiceProviderCommandHandler(
             throw new NotFoundException(nameof(Gate), command.EntryGateId);
         }
 
+        if (!entryGate.IsActive)
+        {
+            throw new ConflictException($"Gate '{entryGate.Name}' is not active.");
+        }
+
+        if (!entryGate.IsEntryAllowed)
+        {
+            throw new ConflictException($"Gate '{entryGate.Name}' does not allow entry.");
+        }
+
         if (entryGate.BuildingId != hostFlat.BuildingId)
         {
             throw new ConflictException("Entry gate does not belong to the host flat's building.");

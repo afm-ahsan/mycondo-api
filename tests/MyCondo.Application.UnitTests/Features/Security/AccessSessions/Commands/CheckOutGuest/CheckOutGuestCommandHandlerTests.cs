@@ -53,7 +53,7 @@ public class CheckOutGuestCommandHandlerTests
     {
         AccessSession session = OpenGuestSession(Guid.NewGuid()); // a different tenant than the caller
         _accessSessions.GetByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        Gate gate = Gate.Create(TenantId, BuildingId, "Main Gate", Now);
+        Gate gate = Gate.Create(TenantId, BuildingId, "Main Gate", "MAIN", null, true, true, 0, Now);
         _gates.GetByIdAsync(gate.Id, Arg.Any<CancellationToken>()).Returns(gate);
 
         Func<Task> act = () => CreateHandler().Handle(
@@ -70,7 +70,7 @@ public class CheckOutGuestCommandHandlerTests
             TenantId, MyCondo.Domain.Features.Security.Vehicles.VehicleId.New(), FlatId, GateId.New(),
             Guid.NewGuid(), null, null, Now);
         _accessSessions.GetByIdAsync(vehicleSession.Id, Arg.Any<CancellationToken>()).Returns(vehicleSession);
-        Gate gate = Gate.Create(TenantId, BuildingId, "Main Gate", Now);
+        Gate gate = Gate.Create(TenantId, BuildingId, "Main Gate", "MAIN", null, true, true, 0, Now);
         _gates.GetByIdAsync(gate.Id, Arg.Any<CancellationToken>()).Returns(gate);
 
         Func<Task> act = () => CreateHandler().Handle(
@@ -84,7 +84,7 @@ public class CheckOutGuestCommandHandlerTests
     {
         AccessSession session = OpenGuestSession(TenantId);
         _accessSessions.GetByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        Gate gate = Gate.Create(TenantId, BuildingId, "Main Gate", Now);
+        Gate gate = Gate.Create(TenantId, BuildingId, "Main Gate", "MAIN", null, true, true, 0, Now);
         _gates.GetByIdAsync(gate.Id, Arg.Any<CancellationToken>()).Returns(gate);
 
         AccessSessionDto result = await CreateHandler().Handle(
@@ -92,5 +92,36 @@ public class CheckOutGuestCommandHandlerTests
 
         result.Status.Should().Be(AccessSessionStatus.CheckedOut.ToString());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_Conflict_When_The_Exit_Gate_Is_Inactive()
+    {
+        AccessSession session = OpenGuestSession(TenantId);
+        _accessSessions.GetByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        Gate gate = Gate.Create(TenantId, BuildingId, "Main Gate", "MAIN", null, true, true, 0, Now);
+        gate.Deactivate(Now);
+        _gates.GetByIdAsync(gate.Id, Arg.Any<CancellationToken>()).Returns(gate);
+
+        Func<Task> act = () => CreateHandler().Handle(
+            new CheckOutGuestCommand(session.Id.Value, gate.Id.Value), CancellationToken.None).AsTask();
+
+        await act.Should().ThrowAsync<ConflictException>();
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_Conflict_When_The_Gate_Does_Not_Allow_Exit()
+    {
+        AccessSession session = OpenGuestSession(TenantId);
+        _accessSessions.GetByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        Gate gate = Gate.Create(TenantId, BuildingId, "Entry Only", "ENTRY_ONLY", null, true, false, 0, Now);
+        _gates.GetByIdAsync(gate.Id, Arg.Any<CancellationToken>()).Returns(gate);
+
+        Func<Task> act = () => CreateHandler().Handle(
+            new CheckOutGuestCommand(session.Id.Value, gate.Id.Value), CancellationToken.None).AsTask();
+
+        await act.Should().ThrowAsync<ConflictException>();
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

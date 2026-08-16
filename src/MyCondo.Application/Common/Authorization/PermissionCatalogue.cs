@@ -29,6 +29,8 @@ public static class PermissionCatalogue
         ("property.create", "Create properties/buildings/units", "property", true),
         ("property.update", "Update property hierarchy", "property", true),
         ("property.delete", "Delete property hierarchy entries", "property", true),
+        ("gate.view", "View entry gates", "gate", true),
+        ("gate.manage", "Create, update, and deactivate entry gates", "gate", true),
         ("resident.view", "View residents", "resident", true),
         ("resident.create", "Create resident records", "resident", true),
         ("resident.update", "Update resident records", "resident", true),

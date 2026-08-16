@@ -21,10 +21,21 @@ public sealed class GateConfiguration : IEntityTypeConfiguration<Gate>
             .HasConversion(id => id.Value, value => new BuildingId(value))
             .IsRequired();
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.Code).IsRequired().HasMaxLength(20);
+        builder.Property(x => x.Description).HasMaxLength(500);
+        builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.IsEntryAllowed).IsRequired();
+        builder.Property(x => x.IsExitAllowed).IsRequired();
+        builder.Property(x => x.DisplayOrder).IsRequired();
+        builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.HasIndex(x => new { x.TenantId, x.BuildingId, x.Name })
             .IsUnique()
             .HasDatabaseName("ux_gates_tenant_id_building_id_name");
+
+        builder.HasIndex(x => new { x.TenantId, x.BuildingId, x.Code })
+            .IsUnique()
+            .HasDatabaseName("ux_gates_tenant_id_building_id_code");
 
         builder.Ignore(x => x.DomainEvents);
     }

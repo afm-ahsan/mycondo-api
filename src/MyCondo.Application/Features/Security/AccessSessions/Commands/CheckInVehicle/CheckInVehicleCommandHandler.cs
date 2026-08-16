@@ -46,6 +46,16 @@ public sealed class CheckInVehicleCommandHandler(
             throw new NotFoundException(nameof(Gate), command.EntryGateId);
         }
 
+        if (!entryGate.IsActive)
+        {
+            throw new ConflictException($"Gate '{entryGate.Name}' is not active.");
+        }
+
+        if (!entryGate.IsEntryAllowed)
+        {
+            throw new ConflictException($"Gate '{entryGate.Name}' does not allow entry.");
+        }
+
         FlatId? hostFlatId = null;
         if (command.HostFlatId is Guid rawHostFlatId)
         {

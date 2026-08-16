@@ -1,10 +1,10 @@
 using Mediator;
 using MyCondo.Application.Features.Property.Gates.DTOs;
 
-namespace MyCondo.Application.Features.Property.Gates.Commands.CreateGate;
+namespace MyCondo.Application.Features.Property.Gates.Commands.UpdateGate;
 
-public sealed record CreateGateCommand(
-    Guid BuildingId,
+public sealed record UpdateGateCommand(
+    Guid GateId,
     string Name,
     string Code,
     string? Description,

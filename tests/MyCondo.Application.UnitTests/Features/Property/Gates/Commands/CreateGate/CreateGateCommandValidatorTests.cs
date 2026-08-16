@@ -11,7 +11,7 @@ public class CreateGateCommandValidatorTests
     [Fact]
     public void Valid_Command_Passes()
     {
-        CreateGateCommand command = new(Guid.NewGuid(), "Main Gate");
+        CreateGateCommand command = new(Guid.NewGuid(), "Main Gate", "MAIN", null, true, true, 0);
 
         ValidationResult result = _validator.Validate(command);
 
@@ -21,11 +21,22 @@ public class CreateGateCommandValidatorTests
     [Fact]
     public void Empty_Name_Fails()
     {
-        CreateGateCommand command = new(Guid.NewGuid(), "");
+        CreateGateCommand command = new(Guid.NewGuid(), "", "MAIN", null, true, true, 0);
 
         ValidationResult result = _validator.Validate(command);
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateGateCommand.Name));
+    }
+
+    [Fact]
+    public void Empty_Code_Fails()
+    {
+        CreateGateCommand command = new(Guid.NewGuid(), "Main Gate", "", null, true, true, 0);
+
+        ValidationResult result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateGateCommand.Code));
     }
 }
