@@ -4,10 +4,10 @@ namespace MyCondo.Domain.Features.Attachments;
 
 /// <summary>
 /// Generic file-metadata pointer shared by every register's "photo"/"identity document" field, so
-/// registers don't each reinvent file handling. Records metadata only — this slice does not wire an
-/// actual object-storage backend (S3/MinIO isn't added to <c>Directory.Packages.props</c> yet, per its
-/// own "added when Documents module needs it" note); <see cref="StorageKey"/> is supplied by the
-/// caller today. Wiring real upload/pre-signed-URL retrieval is a follow-up, not built here.
+/// registers don't each reinvent file handling. <see cref="StorageKey"/> is always server-generated
+/// by <c>IFileStorageService</c> at upload time — it is never accepted from the caller, since that
+/// would let a caller point an attachment at a file it doesn't own. MVP-1 storage is local disk; see
+/// <c>IFileStorageService</c> for the swap-in path to a real object-storage backend (S3/MinIO).
 /// </summary>
 public sealed class Attachment : AggregateRoot<AttachmentId>, IAuditable, ISoftDeletable, ITenantScoped
 {
