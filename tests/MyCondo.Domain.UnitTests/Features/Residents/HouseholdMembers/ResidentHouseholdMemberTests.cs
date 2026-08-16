@@ -151,4 +151,44 @@ public class ResidentHouseholdMemberTests
 
         act.Should().NotThrow("the existing National ID is preserved, so the Child-identity guard is still satisfied");
     }
+
+    [Fact]
+    public void SetPrimaryPhoto_Sets_AttachmentId()
+    {
+        ResidentHouseholdMember member = ResidentHouseholdMember.Add(
+            TenantId, ResidentId, "Fatema Ahmed", RelationshipType.Spouse, "Female", new DateOnly(1992, 5, 1), null,
+            null, null, null, null, null, Now);
+        Guid attachmentId = Guid.NewGuid();
+
+        member.SetPrimaryPhoto(attachmentId);
+
+        member.PrimaryPhotoAttachmentId.Should().Be(attachmentId);
+    }
+
+    [Fact]
+    public void SetPrimaryPhoto_Replaces_Existing_AttachmentId()
+    {
+        ResidentHouseholdMember member = ResidentHouseholdMember.Add(
+            TenantId, ResidentId, "Fatema Ahmed", RelationshipType.Spouse, "Female", new DateOnly(1992, 5, 1), null,
+            null, null, null, null, null, Now);
+        member.SetPrimaryPhoto(Guid.NewGuid());
+        Guid replacementAttachmentId = Guid.NewGuid();
+
+        member.SetPrimaryPhoto(replacementAttachmentId);
+
+        member.PrimaryPhotoAttachmentId.Should().Be(replacementAttachmentId);
+    }
+
+    [Fact]
+    public void SetPrimaryPhoto_Null_Clears_AttachmentId()
+    {
+        ResidentHouseholdMember member = ResidentHouseholdMember.Add(
+            TenantId, ResidentId, "Fatema Ahmed", RelationshipType.Spouse, "Female", new DateOnly(1992, 5, 1), null,
+            null, null, null, null, null, Now);
+        member.SetPrimaryPhoto(Guid.NewGuid());
+
+        member.SetPrimaryPhoto(null);
+
+        member.PrimaryPhotoAttachmentId.Should().BeNull();
+    }
 }

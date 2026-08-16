@@ -10,5 +10,5 @@ public static class ResidentHouseholdMemberMappings
         member.Id.Value, member.ResidentId, member.FullName, member.RelationshipType.ToString(), member.Gender,
         member.DateOfBirth, IdentityMasking.Mask(member.NationalIdNumber),
         IdentityMasking.Mask(member.BirthCertificateNumber), member.BloodGroup, member.Religion, member.Nationality,
-        member.Occupation, member.IsActive);
+        member.Occupation, member.IsActive, member.PrimaryPhotoAttachmentId);
 }

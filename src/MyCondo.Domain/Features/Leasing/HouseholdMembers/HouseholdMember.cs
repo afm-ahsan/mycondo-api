@@ -26,6 +26,7 @@ public sealed class HouseholdMember : Entity<HouseholdMemberId>, IAuditable, ITe
     public string? Nationality { get; private set; }
     public string? Occupation { get; private set; }
     public bool IsActive { get; private set; }
+    public Guid? PrimaryPhotoAttachmentId { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
     public Guid? CreatedBy { get; set; }
@@ -132,5 +133,10 @@ public sealed class HouseholdMember : Entity<HouseholdMemberId>, IAuditable, ITe
     public void Deactivate()
     {
         IsActive = false;
+    }
+
+    public void SetPrimaryPhoto(Guid? photoAttachmentId)
+    {
+        PrimaryPhotoAttachmentId = photoAttachmentId;
     }
 }

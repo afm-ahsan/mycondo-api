@@ -13,4 +13,5 @@ public sealed record ResidentHouseholdMemberDto(
     string? Religion,
     string? Nationality,
     string? Occupation,
-    bool IsActive);
+    bool IsActive,
+    Guid? PrimaryPhotoAttachmentId);

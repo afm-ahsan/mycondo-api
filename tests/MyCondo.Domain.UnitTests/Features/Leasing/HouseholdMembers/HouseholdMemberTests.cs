@@ -104,4 +104,44 @@ public class HouseholdMemberTests
         member.NationalIdNumber.Should().Be(
             "1234567890", "an empty submission means 'not retyped', not 'clear it' — the field is masked on every read");
     }
+
+    [Fact]
+    public void SetPrimaryPhoto_Sets_AttachmentId()
+    {
+        HouseholdMember member = HouseholdMember.Add(
+            TenantId, RegistrationId, "John Doe", "Spouse", null, null, null, "Male", null, null, null, null, null,
+            Now);
+        Guid attachmentId = Guid.NewGuid();
+
+        member.SetPrimaryPhoto(attachmentId);
+
+        member.PrimaryPhotoAttachmentId.Should().Be(attachmentId);
+    }
+
+    [Fact]
+    public void SetPrimaryPhoto_Replaces_Existing_AttachmentId()
+    {
+        HouseholdMember member = HouseholdMember.Add(
+            TenantId, RegistrationId, "John Doe", "Spouse", null, null, null, "Male", null, null, null, null, null,
+            Now);
+        member.SetPrimaryPhoto(Guid.NewGuid());
+        Guid replacementAttachmentId = Guid.NewGuid();
+
+        member.SetPrimaryPhoto(replacementAttachmentId);
+
+        member.PrimaryPhotoAttachmentId.Should().Be(replacementAttachmentId);
+    }
+
+    [Fact]
+    public void SetPrimaryPhoto_Null_Clears_AttachmentId()
+    {
+        HouseholdMember member = HouseholdMember.Add(
+            TenantId, RegistrationId, "John Doe", "Spouse", null, null, null, "Male", null, null, null, null, null,
+            Now);
+        member.SetPrimaryPhoto(Guid.NewGuid());
+
+        member.SetPrimaryPhoto(null);
+
+        member.PrimaryPhotoAttachmentId.Should().BeNull();
+    }
 }
