@@ -11,7 +11,7 @@ public class CreateUserCommandValidatorTests
     [Fact]
     public void Valid_Command_Without_A_Password_Passes()
     {
-        CreateUserCommand command = new("Full Name", "user@example.com", "+8801000000000", null);
+        CreateUserCommand command = new("Full Name", "user@example.com", "+8801700000000", null);
 
         ValidationResult result = _validator.Validate(command);
 

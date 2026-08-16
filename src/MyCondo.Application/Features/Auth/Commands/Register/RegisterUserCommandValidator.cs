@@ -1,4 +1,5 @@
 using FluentValidation;
+using MyCondo.Application.Common.Validation;
 
 namespace MyCondo.Application.Features.Auth.Commands.Register;
 
@@ -16,6 +17,6 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
             .Matches(@"[a-z]").WithMessage("Password must contain a lowercase letter.")
             .Matches(@"\d").WithMessage("Password must contain a digit.");
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.PhoneNumber).MaximumLength(40);
+        RuleFor(x => x.PhoneNumber).MustBeValidBangladeshMobileNumber();
     }
 }

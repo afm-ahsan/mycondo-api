@@ -15,7 +15,7 @@ public class GuestProfileTests
             TenantId, "  Jane Doe  ", " 01700000000 ", " NID ", " 1234567890 ", Now);
 
         guest.FullName.Should().Be("Jane Doe");
-        guest.Phone.Should().Be("01700000000");
+        guest.Phone.Should().Be("+8801700000000");
         guest.IdentityDocumentType.Should().Be("NID");
         guest.IdentityDocumentNumber.Should().Be("1234567890");
         guest.IsBlocked.Should().BeFalse();
@@ -45,7 +45,7 @@ public class GuestProfileTests
     [Fact]
     public void Block_Sets_IsBlocked_And_Reason()
     {
-        GuestProfile guest = GuestProfile.Register(TenantId, "Jane Doe", "017", null, null, Now);
+        GuestProfile guest = GuestProfile.Register(TenantId, "Jane Doe", "01712345678", null, null, Now);
 
         guest.Block("Reported theft");
 
@@ -57,7 +57,7 @@ public class GuestProfileTests
     [Fact]
     public void Unblock_Clears_IsBlocked_And_Reason()
     {
-        GuestProfile guest = GuestProfile.Register(TenantId, "Jane Doe", "017", null, null, Now);
+        GuestProfile guest = GuestProfile.Register(TenantId, "Jane Doe", "01712345678", null, null, Now);
         guest.Block("Reported theft");
 
         guest.Unblock();

@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 
 namespace MyCondo.Domain.Features.Payroll.StaffMembers;
 
@@ -53,7 +54,8 @@ public sealed class StaffMember : AggregateRoot<StaffMemberId>, IAuditable, ISof
             throw new ArgumentException("TenantId is required.", nameof(tenantId));
         }
 
-        return new StaffMember(StaffMemberId.New(), tenantId, fullName.Trim(), role, phone?.Trim(), nowUtc);
+        return new StaffMember(
+            StaffMemberId.New(), tenantId, fullName.Trim(), role, BangladeshMobileNumber.Normalize(phone), nowUtc);
     }
 
     public void Deactivate(DateTimeOffset nowUtc, Guid? deactivatedBy)

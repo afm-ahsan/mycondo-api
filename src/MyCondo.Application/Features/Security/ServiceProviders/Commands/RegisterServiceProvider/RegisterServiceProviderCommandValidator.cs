@@ -1,4 +1,5 @@
 using FluentValidation;
+using MyCondo.Application.Common.Validation;
 using MyCondo.Domain.Features.Security.ServiceProviders;
 
 namespace MyCondo.Application.Features.Security.ServiceProviders.Commands.RegisterServiceProvider;
@@ -8,7 +9,7 @@ public sealed class RegisterServiceProviderCommandValidator : AbstractValidator<
     public RegisterServiceProviderCommandValidator()
     {
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Phone).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Phone).NotEmpty().MustBeValidBangladeshMobileNumber();
         RuleFor(x => x.ServiceDescription).MaximumLength(200);
         RuleFor(x => x.IdentityDocumentType).MaximumLength(40);
         RuleFor(x => x.IdentityDocumentNumber).MaximumLength(60);

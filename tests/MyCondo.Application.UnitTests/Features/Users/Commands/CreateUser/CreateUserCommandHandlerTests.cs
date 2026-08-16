@@ -36,7 +36,7 @@ public class CreateUserCommandHandlerTests
     {
         _users.EmailExistsAsync(TenantId, "new.user@example.com", Arg.Any<CancellationToken>()).Returns(false);
 
-        CreateUserCommand command = new("New User", "New.User@example.com", "+8801000000000", "Str0ngPassw0rd!");
+        CreateUserCommand command = new("New User", "New.User@example.com", "+8801700000000", "Str0ngPassw0rd!");
 
         CreateUserResult result = await CreateHandler().Handle(command, CancellationToken.None);
 

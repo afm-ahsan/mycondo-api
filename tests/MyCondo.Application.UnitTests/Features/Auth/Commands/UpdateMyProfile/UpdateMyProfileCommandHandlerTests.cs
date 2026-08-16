@@ -71,7 +71,7 @@ public class UpdateMyProfileCommandHandlerTests
         UserProfileDto result = await CreateHandler().Handle(command, CancellationToken.None);
 
         user.FullName.Should().Be("Jane Doe");
-        user.PhoneNumber.Should().Be("01700000000");
+        user.PhoneNumber.Should().Be("+8801700000000");
         result.Should().Be(expectedDto);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }

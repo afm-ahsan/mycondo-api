@@ -17,7 +17,7 @@ public class ResidentTests
             TenantId, FlatId, "  Jane Doe  ", " 01700000000 ", " jane@example.com ", ResidentType.Owner, Now);
 
         resident.FullName.Should().Be("Jane Doe");
-        resident.Phone.Should().Be("01700000000");
+        resident.Phone.Should().Be("+8801700000000");
         resident.Email.Should().Be("jane@example.com");
         resident.ResidentType.Should().Be(ResidentType.Owner);
         resident.Version.Should().Be(1);
@@ -49,7 +49,7 @@ public class ResidentTests
 
         resident.UpdateContactDetails("01711111111", "jane2@example.com");
 
-        resident.Phone.Should().Be("01711111111");
+        resident.Phone.Should().Be("+8801711111111");
         resident.Email.Should().Be("jane2@example.com");
         resident.Version.Should().Be(2);
     }
@@ -117,7 +117,7 @@ public class ResidentTests
             "John Doe Sr.", "Mary Doe", "Married", "Engineer", "Acme Corp", "789 Office Ave", "Emergency Contact",
             "01788888888", Now.AddDays(1));
 
-        resident.AlternatePhone.Should().Be("01799999999");
+        resident.AlternatePhone.Should().Be("+8801799999999");
         resident.NationalIdNumber.Should().Be("1234567890123");
         resident.PassportNumber.Should().Be("P1234567");
         resident.DateOfBirth.Should().Be(dob);
@@ -131,7 +131,7 @@ public class ResidentTests
         resident.Employer.Should().Be("Acme Corp");
         resident.OfficeAddress.Should().Be("789 Office Ave");
         resident.EmergencyContactName.Should().Be("Emergency Contact");
-        resident.EmergencyContactPhone.Should().Be("01788888888");
+        resident.EmergencyContactPhone.Should().Be("+8801788888888");
         resident.Version.Should().Be(2);
     }
 

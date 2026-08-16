@@ -11,7 +11,7 @@ public class UpdateResidentCommandValidatorTests
     [Fact]
     public void Valid_Command_Passes()
     {
-        UpdateResidentCommand command = new(Guid.NewGuid(), "Full Name", "+8801000000000", "resident@example.com");
+        UpdateResidentCommand command = new(Guid.NewGuid(), "Full Name", "+8801700000000", "resident@example.com");
 
         ValidationResult result = _validator.Validate(command);
 

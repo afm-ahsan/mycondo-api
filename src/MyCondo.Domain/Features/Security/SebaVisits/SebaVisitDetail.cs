@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Common.PhoneNumbers;
 using MyCondo.Domain.Features.Security.AccessSessions;
 
 namespace MyCondo.Domain.Features.Security.SebaVisits;
@@ -53,7 +54,7 @@ public sealed class SebaVisitDetail : AggregateRoot<SebaVisitDetailId>, IAuditab
         TenantId = tenantId;
         AccessSessionId = accessSessionId;
         VisitorFullName = visitorFullName;
-        VisitorPhone = visitorPhone;
+        VisitorPhone = BangladeshMobileNumber.Normalize(visitorPhone);
         Organization = organization;
         DepartmentOrEmployeeToMeet = departmentOrEmployeeToMeet;
         TokenNumber = tokenNumber;
