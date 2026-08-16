@@ -21,4 +21,7 @@ public sealed record ResidentDto(
     string? Employer,
     string? OfficeAddress,
     string? EmergencyContactName,
-    string? EmergencyContactPhone);
+    string? EmergencyContactPhone,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality);

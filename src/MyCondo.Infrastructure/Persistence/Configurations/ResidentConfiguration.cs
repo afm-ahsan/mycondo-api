@@ -39,6 +39,9 @@ public sealed class ResidentConfiguration : IEntityTypeConfiguration<Resident>
         builder.Property(x => x.OfficeAddress).HasMaxLength(400);
         builder.Property(x => x.EmergencyContactName).HasMaxLength(200);
         builder.Property(x => x.EmergencyContactPhone).HasMaxLength(20);
+        builder.Property(x => x.BloodGroup).HasMaxLength(10);
+        builder.Property(x => x.Religion).HasMaxLength(50);
+        builder.Property(x => x.Nationality).HasMaxLength(50);
         builder.Property(x => x.Version).IsConcurrencyToken();
 
         builder.HasIndex(x => new { x.TenantId, x.FlatId })

@@ -12,5 +12,6 @@ public static class ResidentMappings
         IdentityMasking.Mask(resident.PassportNumber), resident.DateOfBirth, resident.Gender,
         resident.PresentAddress, resident.PermanentAddress, resident.FatherName, resident.MotherName,
         resident.MaritalStatus, resident.Profession, resident.Employer, resident.OfficeAddress,
-        resident.EmergencyContactName, resident.EmergencyContactPhone);
+        resident.EmergencyContactName, resident.EmergencyContactPhone, resident.BloodGroup, resident.Religion,
+        resident.Nationality);
 }

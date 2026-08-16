@@ -28,5 +28,8 @@ public sealed record UpdateFlatOwnerProfileCommand(
     string? Employer,
     string? OfficeAddress,
     string? EmergencyContactName,
-    string? EmergencyContactPhone
+    string? EmergencyContactPhone,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality
 ) : IRequest<ResidentDto>;

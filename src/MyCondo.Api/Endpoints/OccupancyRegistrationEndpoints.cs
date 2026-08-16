@@ -7,6 +7,7 @@ using MyCondo.Application.Features.Leasing.Commands.AssignVehicleToOccupancyRegi
 using MyCondo.Application.Features.Leasing.Commands.AssignWorkerToOccupancyRegistration;
 using MyCondo.Application.Features.Leasing.Commands.CreateOccupancyRegistration;
 using MyCondo.Application.Features.Leasing.Commands.DeactivateHouseholdMember;
+using MyCondo.Application.Features.Leasing.Commands.UpdateHouseholdMember;
 using MyCondo.Application.Features.Leasing.Commands.EndVehicleAssignment;
 using MyCondo.Application.Features.Leasing.Commands.EndWorkerAssignment;
 using MyCondo.Application.Features.Leasing.Commands.MoveOutOccupancyRegistration;
@@ -72,8 +73,9 @@ public static class OccupancyRegistrationEndpoints
                 OccupancyRegistrationDto result = await sender.Send(
                     new UpdateOccupancyRegistrationDraftCommand(
                         id, body.PrimaryFullName, body.PrimaryPhone, body.PrimaryEmail, body.PrimaryNationalIdNumber,
-                        body.PrimaryDateOfBirth, body.PrimaryPermanentAddress, body.EmergencyContactName,
-                        body.EmergencyContactPhone, body.MoveInExpectedDate), ct);
+                        body.PrimaryDateOfBirth, body.PrimaryGender, body.PrimaryBloodGroup, body.PrimaryReligion,
+                        body.PrimaryNationality, body.PrimaryProfession, body.PrimaryPermanentAddress,
+                        body.EmergencyContactName, body.EmergencyContactPhone, body.MoveInExpectedDate), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("occupancy-registration.create")
@@ -182,9 +184,25 @@ public static class OccupancyRegistrationEndpoints
         registrations.MapPost("/{id:guid}/household-members", async (Guid id, AddHouseholdMemberRequest body, ISender sender, CancellationToken ct) =>
             {
                 HouseholdMemberDto result = await sender.Send(
-                    new AddHouseholdMemberCommand(id, body.FullName, body.RelationshipToPrimary, body.DateOfBirth, body.Phone, body.NationalIdNumber), ct);
+                    new AddHouseholdMemberCommand(
+                        id, body.FullName, body.RelationshipToPrimary, body.DateOfBirth, body.Phone,
+                        body.NationalIdNumber, body.Gender, body.BirthCertificateNumber, body.BloodGroup,
+                        body.Religion, body.Nationality, body.Occupation), ct);
                 return Results.Ok(result);
             })
+            .RequirePermission("occupancy-registration.create")
+            .Produces<HouseholdMemberDto>(StatusCodes.Status200OK);
+
+        app.MapPut("/api/v1/household-members/{id:guid}", async (Guid id, UpdateHouseholdMemberRequest body, ISender sender, CancellationToken ct) =>
+            {
+                HouseholdMemberDto result = await sender.Send(
+                    new UpdateHouseholdMemberCommand(
+                        id, body.FullName, body.RelationshipToPrimary, body.DateOfBirth, body.Phone,
+                        body.NationalIdNumber, body.Gender, body.BirthCertificateNumber, body.BloodGroup,
+                        body.Religion, body.Nationality, body.Occupation), ct);
+                return Results.Ok(result);
+            })
+            .WithTags("Tenant Registrations")
             .RequirePermission("occupancy-registration.create")
             .Produces<HouseholdMemberDto>(StatusCodes.Status200OK);
 
@@ -281,6 +299,11 @@ public sealed record UpdateOccupancyRegistrationDraftRequest(
     string? PrimaryEmail,
     string? PrimaryNationalIdNumber,
     DateOnly? PrimaryDateOfBirth,
+    string? PrimaryGender,
+    string? PrimaryBloodGroup,
+    string? PrimaryReligion,
+    string? PrimaryNationality,
+    string? PrimaryProfession,
     string? PrimaryPermanentAddress,
     string? EmergencyContactName,
     string? EmergencyContactPhone,
@@ -297,7 +320,26 @@ public sealed record AddHouseholdMemberRequest(
     string RelationshipToPrimary,
     DateOnly? DateOfBirth,
     string? Phone,
-    string? NationalIdNumber);
+    string? NationalIdNumber,
+    string? Gender,
+    string? BirthCertificateNumber,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality,
+    string? Occupation);
+
+public sealed record UpdateHouseholdMemberRequest(
+    string FullName,
+    string RelationshipToPrimary,
+    DateOnly? DateOfBirth,
+    string? Phone,
+    string? NationalIdNumber,
+    string? Gender,
+    string? BirthCertificateNumber,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality,
+    string? Occupation);
 
 public sealed record AssignWorkerRequest(Guid DomesticWorkerProfileId);
 

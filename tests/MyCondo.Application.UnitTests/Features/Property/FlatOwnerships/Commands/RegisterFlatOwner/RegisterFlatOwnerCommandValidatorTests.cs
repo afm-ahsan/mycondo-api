@@ -9,8 +9,9 @@ public class RegisterFlatOwnerCommandValidatorTests
     private readonly RegisterFlatOwnerCommandValidator _validator = new();
 
     private static RegisterFlatOwnerCommand ValidCommand() => new(
-        Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow), "Jane Owner", null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null, null);
+        Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow), "Jane Owner", null, null, null, "1234567890123",
+        null, DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-30), "Female",
+        null, null, null, null, null, null, null, null, null, null, null, null, null);
 
     [Fact]
     public void Valid_Command_Passes()

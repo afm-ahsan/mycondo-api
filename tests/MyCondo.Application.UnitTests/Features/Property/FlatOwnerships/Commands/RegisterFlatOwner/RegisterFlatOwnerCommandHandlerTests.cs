@@ -43,7 +43,7 @@ public class RegisterFlatOwnerCommandHandlerTests
         flatId, DateOnly.FromDateTime(NowUtc.UtcDateTime), "Jane Owner", "01700000000", "jane@example.com",
         "01711111111", "1234567890123", "P1234567", new DateOnly(1990, 1, 1), "Female", "Present Addr",
         "Permanent Addr", "Father Name", "Mother Name", "Married", "Engineer", "Acme Corp", "Office Addr",
-        "Emergency Contact", "01788888888");
+        "Emergency Contact", "01788888888", "O+", "Islam", "Bangladeshi");
 
     [Fact]
     public async Task Registers_A_New_Resident_And_Grants_The_First_Ownership()

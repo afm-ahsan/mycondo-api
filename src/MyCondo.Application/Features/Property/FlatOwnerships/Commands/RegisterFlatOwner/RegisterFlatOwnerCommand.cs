@@ -32,7 +32,10 @@ public sealed record RegisterFlatOwnerCommand(
     string? Employer,
     string? OfficeAddress,
     string? EmergencyContactName,
-    string? EmergencyContactPhone
+    string? EmergencyContactPhone,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality
 ) : IRequest<RegisterFlatOwnerResult>;
 
 public sealed record RegisterFlatOwnerResult(Guid ResidentId, Guid FlatOwnershipId, ResidentDto Resident);

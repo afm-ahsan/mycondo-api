@@ -3,6 +3,7 @@ using MyCondo.Api.Authorization;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.EndFlatOwnership;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.RegisterFlatOwner;
+using MyCondo.Application.Features.Property.FlatOwnerships.Commands.SaveOwnerResidentProfile;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.UpdateFlatOwnerProfile;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForOwner;
@@ -76,6 +77,14 @@ public static class FlatOwnershipEndpoints
             .RequireAuthorization()
             .Produces<RegisterFlatOwnerResult>(StatusCodes.Status200OK);
 
+        flatOwnerships.MapPost("/owner-resident-profile", async (SaveOwnerResidentProfileCommand command, ISender sender, CancellationToken ct) =>
+            {
+                ResidentDto result = await sender.Send(command, ct);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization()
+            .Produces<ResidentDto>(StatusCodes.Status200OK);
+
         flatOwnerships.MapPut("/owners/{residentId:guid}/profile", async (Guid residentId, UpdateFlatOwnerProfileRequest body, ISender sender, CancellationToken ct) =>
             {
                 ResidentDto result = await sender.Send(
@@ -83,7 +92,8 @@ public static class FlatOwnershipEndpoints
                         residentId, body.FullName, body.Phone, body.Email, body.AlternatePhone, body.NationalIdNumber,
                         body.PassportNumber, body.DateOfBirth, body.Gender, body.PresentAddress, body.PermanentAddress,
                         body.FatherName, body.MotherName, body.MaritalStatus, body.Profession, body.Employer,
-                        body.OfficeAddress, body.EmergencyContactName, body.EmergencyContactPhone),
+                        body.OfficeAddress, body.EmergencyContactName, body.EmergencyContactPhone, body.BloodGroup,
+                        body.Religion, body.Nationality),
                     ct);
                 return Results.Ok(result);
             })
@@ -129,4 +139,7 @@ public sealed record UpdateFlatOwnerProfileRequest(
     string? Employer,
     string? OfficeAddress,
     string? EmergencyContactName,
-    string? EmergencyContactPhone);
+    string? EmergencyContactPhone,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality);

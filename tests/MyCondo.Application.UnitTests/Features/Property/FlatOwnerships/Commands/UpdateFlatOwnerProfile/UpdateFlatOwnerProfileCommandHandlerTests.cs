@@ -38,7 +38,8 @@ public class UpdateFlatOwnerProfileCommandHandlerTests
     private static UpdateFlatOwnerProfileCommand BuildCommand(Guid residentId) => new(
         residentId, "Updated Name", "01700000000", "updated@example.com", "01711111111", "9876543210", "P7654321",
         new DateOnly(1985, 5, 5), "Male", "New Present Addr", "New Permanent Addr", "New Father", "New Mother",
-        "Single", "Doctor", "New Employer", "New Office Addr", "New Emergency Contact", "01799999999");
+        "Single", "Doctor", "New Employer", "New Office Addr", "New Emergency Contact", "01799999999", "A+",
+        "Christianity", "Bangladeshi");
 
     [Fact]
     public async Task Updates_Base_And_Extended_Profile_Fields()

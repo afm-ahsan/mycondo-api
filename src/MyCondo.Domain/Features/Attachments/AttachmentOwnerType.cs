@@ -12,4 +12,6 @@ public enum AttachmentOwnerType
     Building = 2,
     Flat = 3,
     User = 4,
+    ResidentHouseholdMember = 5,
+    LeasingHouseholdMember = 6,
 }

@@ -54,6 +54,7 @@ using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Property.Gates;
 using MyCondo.Domain.Features.Residents;
+using MyCondo.Domain.Features.Residents.HouseholdMembers;
 using MyCondo.Domain.Features.Security.AccessSessions;
 using MyCondo.Domain.Features.Security.DomesticWorkerAssignments;
 using MyCondo.Domain.Features.Security.DomesticWorkers;
@@ -174,6 +175,7 @@ public static class DependencyInjection
         services.AddScoped<IFlatOwnershipRepository, FlatOwnershipRepository>();
         services.AddScoped<IGateRepository, GateRepository>();
         services.AddScoped<IResidentRepository, ResidentRepository>();
+        services.AddScoped<IResidentHouseholdMemberRepository, ResidentHouseholdMemberRepository>();
         services.AddScoped<IExpenseTypeRepository, ExpenseTypeRepository>();
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();

@@ -5,6 +5,11 @@ using MyCondo.Application.Features.Residents.Commands.DisableResident;
 using MyCondo.Application.Features.Residents.Commands.LinkResidentToUser;
 using MyCondo.Application.Features.Residents.Commands.UpdateResident;
 using MyCondo.Application.Features.Residents.DTOs;
+using MyCondo.Application.Features.Residents.HouseholdMembers.Commands.AddOwnerHouseholdMember;
+using MyCondo.Application.Features.Residents.HouseholdMembers.Commands.DeactivateOwnerHouseholdMember;
+using MyCondo.Application.Features.Residents.HouseholdMembers.Commands.UpdateOwnerHouseholdMember;
+using MyCondo.Application.Features.Residents.HouseholdMembers.DTOs;
+using MyCondo.Application.Features.Residents.HouseholdMembers.Queries.GetOwnerHouseholdMembers;
 using MyCondo.Application.Features.Residents.Queries.GetResidentById;
 using MyCondo.Application.Features.Residents.Queries.GetResidentsForTenant;
 using MyCondo.Domain.Common;
@@ -67,6 +72,49 @@ public static class ResidentEndpoints
             .RequirePermission("resident.disable")
             .Produces(StatusCodes.Status204NoContent);
 
+        residents.MapGet("/{id:guid}/household-members", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                IReadOnlyList<ResidentHouseholdMemberDto> result =
+                    await sender.Send(new GetOwnerHouseholdMembersQuery(id), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("ownership.manage")
+            .Produces<IReadOnlyList<ResidentHouseholdMemberDto>>(StatusCodes.Status200OK);
+
+        residents.MapPost("/{id:guid}/household-members", async (Guid id, AddOwnerHouseholdMemberRequest body, ISender sender, CancellationToken ct) =>
+            {
+                ResidentHouseholdMemberDto result = await sender.Send(
+                    new AddOwnerHouseholdMemberCommand(
+                        id, body.FullName, body.RelationshipType, body.Gender, body.DateOfBirth,
+                        body.NationalIdNumber, body.BirthCertificateNumber, body.BloodGroup, body.Religion,
+                        body.Nationality, body.Occupation), ct);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization()
+            .Produces<ResidentHouseholdMemberDto>(StatusCodes.Status200OK);
+
+        app.MapPut("/api/v1/residents/household-members/{id:guid}", async (Guid id, UpdateOwnerHouseholdMemberRequest body, ISender sender, CancellationToken ct) =>
+            {
+                ResidentHouseholdMemberDto result = await sender.Send(
+                    new UpdateOwnerHouseholdMemberCommand(
+                        id, body.FullName, body.RelationshipType, body.Gender, body.DateOfBirth,
+                        body.NationalIdNumber, body.BirthCertificateNumber, body.BloodGroup, body.Religion,
+                        body.Nationality, body.Occupation), ct);
+                return Results.Ok(result);
+            })
+            .WithTags("Residents")
+            .RequireAuthorization()
+            .Produces<ResidentHouseholdMemberDto>(StatusCodes.Status200OK);
+
+        app.MapPost("/api/v1/residents/household-members/{id:guid}/deactivate", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                ResidentHouseholdMemberDto result = await sender.Send(new DeactivateOwnerHouseholdMemberCommand(id), ct);
+                return Results.Ok(result);
+            })
+            .WithTags("Residents")
+            .RequireAuthorization()
+            .Produces<ResidentHouseholdMemberDto>(StatusCodes.Status200OK);
+
         return app;
     }
 }
@@ -74,3 +122,27 @@ public static class ResidentEndpoints
 public sealed record LinkResidentToUserRequest(Guid UserId);
 
 public sealed record UpdateResidentRequest(string FullName, string? Phone, string? Email);
+
+public sealed record AddOwnerHouseholdMemberRequest(
+    string FullName,
+    string RelationshipType,
+    string Gender,
+    DateOnly DateOfBirth,
+    string? NationalIdNumber,
+    string? BirthCertificateNumber,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality,
+    string? Occupation);
+
+public sealed record UpdateOwnerHouseholdMemberRequest(
+    string FullName,
+    string RelationshipType,
+    string Gender,
+    DateOnly DateOfBirth,
+    string? NationalIdNumber,
+    string? BirthCertificateNumber,
+    string? BloodGroup,
+    string? Religion,
+    string? Nationality,
+    string? Occupation);

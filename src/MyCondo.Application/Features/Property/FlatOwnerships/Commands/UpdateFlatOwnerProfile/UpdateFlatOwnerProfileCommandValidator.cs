@@ -15,6 +15,9 @@ public sealed class UpdateFlatOwnerProfileCommandValidator : AbstractValidator<U
         RuleFor(x => x.NationalIdNumber).MaximumLength(50);
         RuleFor(x => x.PassportNumber).MaximumLength(50);
         RuleFor(x => x.Gender).MaximumLength(20);
+        RuleFor(x => x.DateOfBirth)
+            .Must(dob => dob is null || dob.Value <= DateOnly.FromDateTime(DateTime.UtcNow))
+            .WithMessage("Date of birth cannot be in the future.");
         RuleFor(x => x.PresentAddress).MaximumLength(400);
         RuleFor(x => x.PermanentAddress).MaximumLength(400);
         RuleFor(x => x.FatherName).MaximumLength(200);
@@ -25,5 +28,8 @@ public sealed class UpdateFlatOwnerProfileCommandValidator : AbstractValidator<U
         RuleFor(x => x.OfficeAddress).MaximumLength(400);
         RuleFor(x => x.EmergencyContactName).MaximumLength(200);
         RuleFor(x => x.EmergencyContactPhone).MustBeValidBangladeshMobileNumber();
+        RuleFor(x => x.BloodGroup).MaximumLength(10);
+        RuleFor(x => x.Religion).MaximumLength(50);
+        RuleFor(x => x.Nationality).MaximumLength(50);
     }
 }

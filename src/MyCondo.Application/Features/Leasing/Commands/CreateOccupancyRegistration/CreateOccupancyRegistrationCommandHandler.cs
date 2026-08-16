@@ -58,9 +58,10 @@ public sealed class CreateOccupancyRegistrationCommandHandler(
 
         OccupancyRegistration registration = OccupancyRegistration.Register(
             tenantId, flatId, resident.Id, occupancyType, command.PrimaryFullName, command.PrimaryPhone,
-            command.PrimaryEmail, command.PrimaryNationalIdNumber, command.PrimaryDateOfBirth,
-            command.PrimaryPermanentAddress, command.EmergencyContactName, command.EmergencyContactPhone,
-            command.MoveInExpectedDate, clock.UtcNow);
+            command.PrimaryEmail, command.PrimaryNationalIdNumber, command.PrimaryDateOfBirth, command.PrimaryGender,
+            command.PrimaryBloodGroup, command.PrimaryReligion, command.PrimaryNationality,
+            command.PrimaryProfession, command.PrimaryPermanentAddress, command.EmergencyContactName,
+            command.EmergencyContactPhone, command.MoveInExpectedDate, clock.UtcNow);
 
         registrations.Add(registration);
         history.Add(OccupancyRegistrationStatusHistory.Record(
