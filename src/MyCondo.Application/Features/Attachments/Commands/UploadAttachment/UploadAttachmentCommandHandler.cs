@@ -10,21 +10,27 @@ using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Residents;
 
-namespace MyCondo.Application.Features.Attachments.Commands.RecordAttachment;
+namespace MyCondo.Application.Features.Attachments.Commands.UploadAttachment;
 
-public sealed class RecordAttachmentCommandHandler(
+/// <summary>
+/// Persists uploaded file bytes via <see cref="IFileStorageService"/> before recording metadata —
+/// StorageKey is always server-generated (see <see cref="IFileStorageService.SaveAsync"/>), never
+/// caller-supplied, so an attachment record can never point at a file the caller doesn't actually own.
+/// </summary>
+public sealed class UploadAttachmentCommandHandler(
     IAttachmentRepository attachments,
     IResidentRepository residents,
     IOccupancyRegistrationRepository occupancyRegistrations,
     IBuildingRepository buildings,
     IFlatRepository flats,
+    IFileStorageService fileStorage,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
-    ILogger<RecordAttachmentCommandHandler> logger
-) : IRequestHandler<RecordAttachmentCommand, AttachmentDto>
+    ILogger<UploadAttachmentCommandHandler> logger
+) : IRequestHandler<UploadAttachmentCommand, AttachmentDto>
 {
-    public async ValueTask<AttachmentDto> Handle(RecordAttachmentCommand command, CancellationToken cancellationToken)
+    public async ValueTask<AttachmentDto> Handle(UploadAttachmentCommand command, CancellationToken cancellationToken)
     {
         if (currentUser.TenantId is not Guid tenantId)
         {
@@ -35,15 +41,18 @@ public sealed class RecordAttachmentCommandHandler(
 
         await EnsureOwnerExistsForTenantAsync(ownerType, command.OwnerId, tenantId, cancellationToken);
 
+        string storageKey = await fileStorage.SaveAsync(
+            command.Content, command.FileName, command.ContentType, cancellationToken);
+
         Attachment attachment = Attachment.Record(
-            tenantId, ownerType, command.OwnerId, command.StorageKey, command.FileName, command.ContentType,
+            tenantId, ownerType, command.OwnerId, storageKey, command.FileName, command.ContentType,
             command.SizeBytes, clock.UtcNow);
 
         attachments.Add(attachment);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Attachment {AttachmentId} recorded for {OwnerType} {OwnerId}, tenant {TenantId}",
+            "Attachment {AttachmentId} uploaded for {OwnerType} {OwnerId}, tenant {TenantId}",
             attachment.Id, ownerType, command.OwnerId, tenantId);
 
         return new AttachmentDto(
