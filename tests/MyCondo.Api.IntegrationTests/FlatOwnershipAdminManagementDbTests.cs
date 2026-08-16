@@ -6,11 +6,13 @@ using Microsoft.Extensions.DependencyInjection;
 using MyCondo.Application.Features.Auth.DTOs;
 using MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
 using MyCondo.Application.Features.Property.FlatOwnerships.Commands.CreateFlatOwnership;
+using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnersForTenant;
 using MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
 using MyCondo.Application.Features.Property.Flats.DTOs;
 using MyCondo.Application.Features.Residents.Commands.CreateResident;
 using MyCondo.Application.Features.Residents.DTOs;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Tenancy;
 
 namespace MyCondo.Api.IntegrationTests;
@@ -94,11 +96,12 @@ public class FlatOwnershipAdminManagementDbTests : IClassFixture<PostgresApiFact
         return result!.FlatId;
     }
 
-    private static async Task<Guid> CreateResidentAsync(HttpClient client, string accessToken, Guid flatId, string fullName)
+    private static async Task<Guid> CreateResidentAsync(
+        HttpClient client, string accessToken, Guid flatId, string fullName, string? phone = null, string? email = null)
     {
         HttpResponseMessage response = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/residents", accessToken,
-            new CreateResidentCommand(flatId, fullName, Phone: null, Email: null, ResidentType: "Owner"));
+            new CreateResidentCommand(flatId, fullName, phone, email, ResidentType: "Owner"));
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         ResidentDto? result = await response.Content.ReadFromJsonAsync<ResidentDto>(JsonOptions);
         return result!.ResidentId;
@@ -182,5 +185,70 @@ public class FlatOwnershipAdminManagementDbTests : IClassFixture<PostgresApiFact
         HttpResponseMessage duplicateResponse = await SendAuthedAsync(
             client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", adminTokens.AccessToken, command);
         duplicateResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Ownership_Register_Search_By_Email_Returns_The_Matching_Owner()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("ownership-search-email");
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto adminTokens = await RegisterAsync(client, tenantId, "admin@example.com");
+
+        Guid buildingId = await CreateBuildingAsync(client, adminTokens.AccessToken, "SR1");
+        Guid flatId = await CreateFlatAsync(client, adminTokens.AccessToken, buildingId, "101");
+        Guid residentId = await CreateResidentAsync(
+            client, adminTokens.AccessToken, flatId, "Search Target Owner", email: "afm.ahsan@gmail.com");
+        (await SendAuthedAsync(
+                client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", adminTokens.AccessToken,
+                new CreateFlatOwnershipCommand(residentId, flatId, DateOnly.FromDateTime(DateTime.UtcNow))))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HttpResponseMessage searchResponse = await SendAuthedAsync(
+            client, HttpMethod.Get, "/api/v1/properties/flat-ownerships?search=afm.ahsan%40gmail.com", adminTokens.AccessToken);
+        searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        PagedResult<FlatOwnerRegisterDto>? page =
+            await searchResponse.Content.ReadFromJsonAsync<PagedResult<FlatOwnerRegisterDto>>(JsonOptions);
+        page.Should().NotBeNull();
+        page!.Items.Should().ContainSingle(o => o.ResidentId == residentId);
+    }
+
+    [Fact]
+    public async Task Ownership_Register_Search_By_Name_Substring_Returns_The_Matching_Owner()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("ownership-search-name");
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto adminTokens = await RegisterAsync(client, tenantId, "admin@example.com");
+
+        Guid buildingId = await CreateBuildingAsync(client, adminTokens.AccessToken, "SR2");
+        Guid flatId = await CreateFlatAsync(client, adminTokens.AccessToken, buildingId, "101");
+        Guid residentId = await CreateResidentAsync(client, adminTokens.AccessToken, flatId, "Aisha Rahman");
+        (await SendAuthedAsync(
+                client, HttpMethod.Post, "/api/v1/properties/flat-ownerships", adminTokens.AccessToken,
+                new CreateFlatOwnershipCommand(residentId, flatId, DateOnly.FromDateTime(DateTime.UtcNow))))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HttpResponseMessage searchResponse = await SendAuthedAsync(
+            client, HttpMethod.Get, "/api/v1/properties/flat-ownerships?search=aisha", adminTokens.AccessToken);
+        searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        PagedResult<FlatOwnerRegisterDto>? page =
+            await searchResponse.Content.ReadFromJsonAsync<PagedResult<FlatOwnerRegisterDto>>(JsonOptions);
+        page.Should().NotBeNull();
+        page!.Items.Should().ContainSingle(o => o.ResidentId == residentId);
+    }
+
+    [Fact]
+    public async Task Ownership_Register_Search_With_No_Match_Returns_An_Empty_Page_Not_An_Error()
+    {
+        Guid tenantId = await SeedActiveTenantAsync("ownership-search-nomatch");
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto adminTokens = await RegisterAsync(client, tenantId, "admin@example.com");
+
+        HttpResponseMessage searchResponse = await SendAuthedAsync(
+            client, HttpMethod.Get, "/api/v1/properties/flat-ownerships?search=nobody-matches-this", adminTokens.AccessToken);
+        searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        PagedResult<FlatOwnerRegisterDto>? page =
+            await searchResponse.Content.ReadFromJsonAsync<PagedResult<FlatOwnerRegisterDto>>(JsonOptions);
+        page.Should().NotBeNull();
+        page!.Items.Should().BeEmpty();
     }
 }
