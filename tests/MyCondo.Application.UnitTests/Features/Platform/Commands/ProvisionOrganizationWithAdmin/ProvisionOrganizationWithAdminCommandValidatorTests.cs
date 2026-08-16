@@ -39,10 +39,12 @@ public class ProvisionOrganizationWithAdminCommandValidatorTests
         result.Errors.Should().Contain(e => e.PropertyName == nameof(ProvisionOrganizationWithAdminCommand.Code));
     }
 
-    [Fact]
-    public void Rejects_Weak_Password()
+    [Theory]
+    [InlineData("Sh0!")]
+    [InlineData("NoSpecialChar12")]
+    public void Rejects_Weak_Password(string weakPassword)
     {
-        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { AdministratorPassword = "short" };
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { AdministratorPassword = weakPassword };
 
         ValidationResult result = _validator.Validate(command);
 
