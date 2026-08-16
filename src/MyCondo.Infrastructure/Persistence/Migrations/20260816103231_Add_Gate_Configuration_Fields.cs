@@ -84,7 +84,8 @@ public partial class Add_Gate_Configuration_Fields : Migration
                         'GATE'
                     ) AS base_code,
                     tenant_id,
-                    building_id
+                    building_id,
+                    created_at_utc
                 FROM property.gates
             ),
             numbered AS (
