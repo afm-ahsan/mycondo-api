@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Security.Parcels.DTOs;
 using MyCondo.Application.Features.Security.Parcels.Mappings;
 using MyCondo.Domain.Abstractions;
@@ -15,6 +16,7 @@ namespace MyCondo.Application.Features.Security.Parcels.Commands.CloseParcel;
 public sealed class CloseParcelCommandHandler(
     IParcelRepository parcels,
     IParcelCustodyEventRepository custodyEvents,
+    IFlatDisplayNameResolver flatDisplayNames,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -51,6 +53,7 @@ public sealed class CloseParcelCommandHandler(
 
         logger.LogInformation("Parcel {ParcelId} closed as {Outcome}, tenant {TenantId}", id, outcome, tenantId);
 
-        return parcel.ToDto();
+        string recipientFlatDisplayName = await flatDisplayNames.ResolveAsync(parcel.RecipientFlatId, cancellationToken);
+        return parcel.ToDto(recipientFlatDisplayName);
     }
 }

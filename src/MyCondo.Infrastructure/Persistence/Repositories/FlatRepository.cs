@@ -10,6 +10,11 @@ public sealed class FlatRepository(MyCondoDbContext db) : IFlatRepository
     public Task<Flat?> GetByIdAsync(FlatId id, CancellationToken cancellationToken) =>
         db.Set<Flat>().FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
 
+    public Task<List<Flat>> GetByIdsAsync(IReadOnlyCollection<FlatId> ids, CancellationToken cancellationToken) =>
+        ids.Count == 0
+            ? Task.FromResult(new List<Flat>())
+            : db.Set<Flat>().AsNoTracking().Where(f => ids.Contains(f.Id)).ToListAsync(cancellationToken);
+
     public Task<Flat?> GetByFlatNumberAsync(
         Guid tenantId, BuildingId buildingId, string flatNumber, CancellationToken cancellationToken) =>
         db.Set<Flat>().FirstOrDefaultAsync(

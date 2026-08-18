@@ -5,9 +5,9 @@ namespace MyCondo.Application.Features.Security.Parcels.Mappings;
 
 internal static class ParcelMappings
 {
-    public static ParcelDto ToDto(this Parcel parcel) => new(
+    public static ParcelDto ToDto(this Parcel parcel, string recipientFlatDisplayName) => new(
         parcel.Id.Value, parcel.ParcelReference, parcel.CourierProvider, parcel.TrackingNumber,
-        parcel.SenderName, parcel.RecipientFlatId.Value, parcel.RecipientResidentId?.Value,
+        parcel.SenderName, parcel.RecipientFlatId.Value, recipientFlatDisplayName, parcel.RecipientResidentId?.Value,
         parcel.ParcelType.ToString(), parcel.PackageCount, parcel.ReceivedAtUtc, parcel.ReceivedBy,
         parcel.StorageLocation, parcel.NotificationStatus.ToString(), parcel.Status.ToString(),
         parcel.CollectedAtUtc, parcel.CollectedBy, parcel.CollectorName, parcel.CollectionAcknowledgement,
