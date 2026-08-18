@@ -25,6 +25,14 @@ public sealed class UserRepository(MyCondoDbContext db) : IUserRepository
     public Task<List<User>> GetAllForTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
         db.Set<User>().Where(u => u.TenantId == tenantId).OrderBy(u => u.Email).ToListAsync(cancellationToken);
 
+    public Task<List<User>> GetByIdsAsync(Guid tenantId, IReadOnlyCollection<UserId> ids, CancellationToken cancellationToken) =>
+        ids.Count == 0
+            ? Task.FromResult(new List<User>())
+            : db.Set<User>()
+                .AsNoTracking()
+                .Where(u => u.TenantId == tenantId && ids.Contains(u.Id))
+                .ToListAsync(cancellationToken);
+
     public async Task<PagedResult<User>> SearchAsync(
         Guid tenantId,
         string? searchText,

@@ -7,6 +7,10 @@ public interface IFlatRepository
 {
     Task<Flat?> GetByIdAsync(FlatId id, CancellationToken cancellationToken);
 
+    /// <summary>Batched lookup for resolving display names for a set of flats (e.g. list rows) without
+    /// one query per row. Missing ids are simply absent from the result.</summary>
+    Task<List<Flat>> GetByIdsAsync(IReadOnlyCollection<FlatId> ids, CancellationToken cancellationToken);
+
     Task<Flat?> GetByFlatNumberAsync(
         Guid tenantId, BuildingId buildingId, string flatNumber, CancellationToken cancellationToken);
 

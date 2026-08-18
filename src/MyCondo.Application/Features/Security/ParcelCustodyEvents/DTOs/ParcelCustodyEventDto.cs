@@ -6,4 +6,5 @@ public sealed record ParcelCustodyEventDto(
     string ToStatus,
     DateTimeOffset OccurredAtUtc,
     Guid? PerformedBy,
+    string PerformedByDisplayName,
     string? Notes);

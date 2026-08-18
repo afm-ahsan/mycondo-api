@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Security.Parcels.DTOs;
 using MyCondo.Application.Features.Security.Parcels.Mappings;
 using MyCondo.Domain.Abstractions;
@@ -16,6 +17,7 @@ public sealed class ReceiveParcelCommandHandler(
     IParcelRepository parcels,
     IParcelCustodyEventRepository custodyEvents,
     IFlatRepository flats,
+    IFlatDisplayNameResolver flatDisplayNames,
     IResidentRepository residents,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
@@ -66,6 +68,7 @@ public sealed class ReceiveParcelCommandHandler(
 
         logger.LogInformation("Parcel {ParcelId} received for flat {FlatId}, tenant {TenantId}", parcel.Id, flatId, tenantId);
 
-        return parcel.ToDto();
+        string recipientFlatDisplayName = await flatDisplayNames.ResolveAsync(flatId, cancellationToken);
+        return parcel.ToDto(recipientFlatDisplayName);
     }
 }

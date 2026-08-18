@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Security.Parcels.DTOs;
 using MyCondo.Application.Features.Security.Parcels.Mappings;
 using MyCondo.Domain.Features.Security.Parcels;
@@ -9,6 +10,7 @@ namespace MyCondo.Application.Features.Security.Parcels.Queries.GetParcelById;
 
 public sealed class GetParcelByIdQueryHandler(
     IParcelRepository parcels,
+    IFlatDisplayNameResolver flatDisplayNames,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetParcelByIdQuery, ParcelDto>
 {
@@ -28,6 +30,7 @@ public sealed class GetParcelByIdQueryHandler(
             throw new NotFoundException(nameof(Parcel), query.ParcelId);
         }
 
-        return parcel.ToDto();
+        string recipientFlatDisplayName = await flatDisplayNames.ResolveAsync(parcel.RecipientFlatId, cancellationToken);
+        return parcel.ToDto(recipientFlatDisplayName);
     }
 }

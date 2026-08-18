@@ -14,6 +14,10 @@ public interface IUserRepository
 
     Task<List<User>> GetAllForTenantAsync(Guid tenantId, CancellationToken cancellationToken);
 
+    /// <summary>Batched lookup for resolving display names (e.g. audit/custody "performed by" actors)
+    /// without one query per row. Missing/foreign-tenant ids are simply absent from the result.</summary>
+    Task<List<User>> GetByIdsAsync(Guid tenantId, IReadOnlyCollection<UserId> ids, CancellationToken cancellationToken);
+
     /// <summary>Search/filter/paginate the tenant's users for the User Administration list. Filters
     /// only by users who hold at least one assignment of <paramref name="roleId"/> when provided.</summary>
     Task<PagedResult<User>> SearchAsync(

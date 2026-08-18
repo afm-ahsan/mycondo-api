@@ -9,6 +9,11 @@ public sealed class BuildingRepository(MyCondoDbContext db) : IBuildingRepositor
     public Task<Building?> GetByIdAsync(BuildingId id, CancellationToken cancellationToken) =>
         db.Set<Building>().FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
+    public Task<List<Building>> GetByIdsAsync(IReadOnlyCollection<BuildingId> ids, CancellationToken cancellationToken) =>
+        ids.Count == 0
+            ? Task.FromResult(new List<Building>())
+            : db.Set<Building>().AsNoTracking().Where(b => ids.Contains(b.Id)).ToListAsync(cancellationToken);
+
     public Task<Building?> GetByNameAsync(Guid tenantId, string name, CancellationToken cancellationToken) =>
         db.Set<Building>().FirstOrDefaultAsync(b => b.TenantId == tenantId && b.Name == name, cancellationToken);
 

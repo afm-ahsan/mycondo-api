@@ -7,6 +7,7 @@ public sealed record ParcelDto(
     string? TrackingNumber,
     string? SenderName,
     Guid RecipientFlatId,
+    string RecipientFlatDisplayName,
     Guid? RecipientResidentId,
     string ParcelType,
     int PackageCount,
