@@ -32,11 +32,13 @@ internal static class AmenitiesMappings
         booking.CancelledAtUtc, booking.CheckedInBy, booking.CheckedInAtUtc, booking.CompletedAtUtc,
         booking.InspectedBy, booking.InspectedAtUtc, booking.InspectionNotes, booking.DamageDeductionReason);
 
-    public static PoolSessionDto ToDto(this PoolSession poolSession) => new(
-        poolSession.Id.Value, poolSession.FacilityId.Value, poolSession.FlatId.Value, poolSession.PersonType.ToString(),
-        poolSession.AgeCategory.ToString(), poolSession.AccompaniedBySessionId?.Value, poolSession.EntryAtUtc,
-        poolSession.ExitAtUtc, poolSession.GuestFeeAmount, poolSession.SafetyAcknowledgedAtUtc,
-        poolSession.CheckedInBy, poolSession.CheckedOutBy, poolSession.OverrideReason, poolSession.Status.ToString());
+    public static PoolSessionDto ToDto(
+        this PoolSession poolSession, string flatDisplayName, string checkedInByDisplayName, string? checkedOutByDisplayName) => new(
+        poolSession.Id.Value, poolSession.FacilityId.Value, poolSession.FlatId.Value, flatDisplayName,
+        poolSession.PersonType.ToString(), poolSession.AgeCategory.ToString(), poolSession.AccompaniedBySessionId?.Value,
+        poolSession.EntryAtUtc, poolSession.ExitAtUtc, poolSession.GuestFeeAmount, poolSession.SafetyAcknowledgedAtUtc,
+        poolSession.CheckedInBy, checkedInByDisplayName, poolSession.CheckedOutBy, checkedOutByDisplayName,
+        poolSession.OverrideReason, poolSession.Status.ToString());
 
     public static PoolIncidentDto ToDto(this PoolIncident poolIncident) => new(
         poolIncident.Id.Value, poolIncident.FacilityId.Value, poolIncident.PoolSessionId?.Value,

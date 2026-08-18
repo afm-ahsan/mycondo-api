@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Application.Features.Amenities.Mappings;
 using MyCondo.Domain.Abstractions;
@@ -10,6 +11,7 @@ using MyCondo.Domain.Features.Amenities.BlackoutDates;
 using MyCondo.Domain.Features.Amenities.Facilities;
 using MyCondo.Domain.Features.Amenities.PoolSessions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Application.Features.Amenities.Commands.CheckInPoolSession;
@@ -33,6 +35,8 @@ public sealed class CheckInPoolSessionCommandHandler(
     IBlackoutDateRepository blackoutDates,
     IPoolSessionRepository poolSessions,
     IFlatRepository flats,
+    IFlatDisplayNameResolver flatDisplayNames,
+    IUserRepository users,
     IInvoiceRepository invoices,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
@@ -177,6 +181,14 @@ public sealed class CheckInPoolSessionCommandHandler(
             "Pool session {PoolSessionId} checked in at facility {FacilityId}, flat {FlatId}, tenant {TenantId}",
             session.Id, facilityId, flatId, tenantId);
 
-        return session.ToDto();
+        string flatDisplayName = await flatDisplayNames.ResolveAsync(flatId, cancellationToken);
+        string checkedInByDisplayName = "System";
+        if (currentUser.UserId is Guid checkedInById)
+        {
+            User? checkedInByUser = await users.GetByIdAsync(new UserId(checkedInById), cancellationToken);
+            checkedInByDisplayName = checkedInByUser?.FullName ?? "Unknown user";
+        }
+
+        return session.ToDto(flatDisplayName, checkedInByDisplayName, checkedOutByDisplayName: null);
     }
 }
