@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Amenities.Commands.CheckInPoolSession;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Domain.Abstractions;
@@ -9,6 +10,7 @@ using MyCondo.Domain.Features.Amenities.BlackoutDates;
 using MyCondo.Domain.Features.Amenities.Facilities;
 using MyCondo.Domain.Features.Amenities.PoolSessions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using NSubstitute;
@@ -32,6 +34,8 @@ public class CheckInPoolSessionCommandHandlerTests
     private readonly IBlackoutDateRepository _blackoutDates = Substitute.For<IBlackoutDateRepository>();
     private readonly IPoolSessionRepository _poolSessions = Substitute.For<IPoolSessionRepository>();
     private readonly IFlatRepository _flats = Substitute.For<IFlatRepository>();
+    private readonly IFlatDisplayNameResolver _flatDisplayNames = Substitute.For<IFlatDisplayNameResolver>();
+    private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
@@ -46,11 +50,12 @@ public class CheckInPoolSessionCommandHandlerTests
             .Returns((IReadOnlyList<BlackoutDate>)[]);
         _flats.GetByIdAsync(FlatId, Arg.Any<CancellationToken>())
             .Returns(Flat.Create(TenantId, BuildingId.New(), "3B", 3, FlatType.Residential, Now));
+        _flatDisplayNames.ResolveAsync(FlatId, Arg.Any<CancellationToken>()).Returns("AISHA 3B");
     }
 
     private CheckInPoolSessionCommandHandler CreateHandler() => new(
-        _facilities, _blackoutDates, _poolSessions, _flats, _invoices, _unitOfWork, _currentUser, _clock,
-        Substitute.For<ILogger<CheckInPoolSessionCommandHandler>>());
+        _facilities, _blackoutDates, _poolSessions, _flats, _flatDisplayNames, _users, _invoices, _unitOfWork,
+        _currentUser, _clock, Substitute.For<ILogger<CheckInPoolSessionCommandHandler>>());
 
     private static Facility PoolFacility(int capacity) => Facility.Create(
         TenantId, BuildingId.New(), "Main Pool", FacilityType.SwimmingPool, capacity, null, null, false, null, null,
@@ -68,7 +73,24 @@ public class CheckInPoolSessionCommandHandlerTests
         PoolSessionDto result = await CreateHandler().Handle(ValidCommand(), CancellationToken.None);
 
         result.Status.Should().Be("CheckedIn");
+        result.FlatDisplayName.Should().Be("AISHA 3B");
         await _facilities.Received(1).LockForCapacityCheckAsync(FacilityId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CheckIn_Resolves_The_Checking_In_Staff_Member_To_A_Display_Name_Not_A_Raw_Id()
+    {
+        _facilities.GetByIdAsync(FacilityId, Arg.Any<CancellationToken>()).Returns(PoolFacility(capacity: 10));
+        _poolSessions.CountOpenAsync(TenantId, FacilityId, Arg.Any<CancellationToken>()).Returns(0);
+        Guid staffId = Guid.NewGuid();
+        _currentUser.UserId.Returns(staffId);
+        _users.GetByIdAsync(new UserId(staffId), Arg.Any<CancellationToken>())
+            .Returns(User.Register(TenantId, "guard@mycondo.test", "hash", "Ahsan Uddin", null, Now));
+
+        PoolSessionDto result = await CreateHandler().Handle(ValidCommand(), CancellationToken.None);
+
+        result.CheckedInByDisplayName.Should().Be("Ahsan Uddin");
+        result.CheckedOutByDisplayName.Should().BeNull();
     }
 
     [Fact]

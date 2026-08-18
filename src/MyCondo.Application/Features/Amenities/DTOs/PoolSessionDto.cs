@@ -4,6 +4,7 @@ public sealed record PoolSessionDto(
     Guid PoolSessionId,
     Guid FacilityId,
     Guid FlatId,
+    string FlatDisplayName,
     string PersonType,
     string AgeCategory,
     Guid? AccompaniedBySessionId,
@@ -12,6 +13,8 @@ public sealed record PoolSessionDto(
     decimal? GuestFeeAmount,
     DateTimeOffset? SafetyAcknowledgedAtUtc,
     Guid? CheckedInBy,
+    string CheckedInByDisplayName,
     Guid? CheckedOutBy,
+    string? CheckedOutByDisplayName,
     string? OverrideReason,
     string Status);
