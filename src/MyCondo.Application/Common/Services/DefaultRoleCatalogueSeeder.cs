@@ -42,6 +42,9 @@ public sealed class DefaultRoleCatalogueSeeder(
             "billing.rule.view", "billing.rule.manage", "billing.generate", "invoice.view",
             "invoice.void", "payment.view", "payment.record", "payment.reverse", "expense.view",
             "expense.manage", "expensetype.view", "expensetype.manage", "report.financial.view",
+            // Billing↔Finance integration template: Fine assess/waive/reverse are correction-authority
+            // actions, same category as invoice.void/payment.reverse above — Treasurer gets the full set.
+            "billing.fine.view", "billing.fine.assess", "billing.fine.waive", "billing.fine.reverse",
         ]),
         ("Secretary", "default.secretary", "Administrative/communications support — the point of contact for residents.",
         [

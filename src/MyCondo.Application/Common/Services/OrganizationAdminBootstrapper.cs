@@ -49,11 +49,7 @@ public sealed class OrganizationAdminBootstrapper(
 
         roles.Add(organizationAdmin);
 
-        List<Permission> catalogue = await permissions.GetAllAsync(cancellationToken);
-        List<Permission> tenantPermissions = catalogue
-            .Where(p => !string.Equals(p.Module, PlatformPermissionModule, StringComparison.Ordinal)
-                && !string.Equals(p.Module, TenantLifecyclePermissionModule, StringComparison.Ordinal))
-            .ToList();
+        List<Permission> tenantPermissions = await GetTenantScopedPermissionsAsync(cancellationToken);
 
         foreach (Permission permission in tenantPermissions)
         {
@@ -65,5 +61,46 @@ public sealed class OrganizationAdminBootstrapper(
         logger.LogInformation(
             "OrganizationAdmin role {RoleId} bootstrapped for tenant {TenantId} with {PermissionCount} permissions",
             organizationAdmin.Id, tenantId, tenantPermissions.Count);
+    }
+
+    public async Task<int> ReconcilePermissionsAsync(
+        Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken)
+    {
+        List<Role> existingRoles = await roles.GetAllForTenantAsync(tenantId, cancellationToken);
+        Role? organizationAdmin = existingRoles.FirstOrDefault(
+            r => string.Equals(r.Code, OrganizationAdminRoleCode, StringComparison.Ordinal));
+
+        // No OrganizationAdmin role for this tenant — either not bootstrapped yet (nothing to
+        // reconcile) or still on the legacy tenant SuperAdmin role, which this class's own doc
+        // comment says must be left untouched. Either way, a no-op, not an error.
+        if (organizationAdmin is null)
+        {
+            return 0;
+        }
+
+        List<Permission> tenantPermissions = await GetTenantScopedPermissionsAsync(cancellationToken);
+        List<RolePermission> existingGrants = await rolePermissions.GetForRoleAsync(organizationAdmin.Id, cancellationToken);
+        HashSet<PermissionId> grantedIds = existingGrants.Select(g => g.PermissionId).ToHashSet();
+
+        int grantsCreated = 0;
+        foreach (Permission permission in tenantPermissions)
+        {
+            if (grantedIds.Add(permission.Id))
+            {
+                rolePermissions.Add(new RolePermission(tenantId, organizationAdmin.Id, permission.Id, nowUtc, grantedBy: null));
+                grantsCreated++;
+            }
+        }
+
+        return grantsCreated;
+    }
+
+    private async Task<List<Permission>> GetTenantScopedPermissionsAsync(CancellationToken cancellationToken)
+    {
+        List<Permission> catalogue = await permissions.GetAllAsync(cancellationToken);
+        return catalogue
+            .Where(p => !string.Equals(p.Module, PlatformPermissionModule, StringComparison.Ordinal)
+                && !string.Equals(p.Module, TenantLifecyclePermissionModule, StringComparison.Ordinal))
+            .ToList();
     }
 }

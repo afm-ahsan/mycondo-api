@@ -43,6 +43,10 @@ public sealed class CondominiumRoleCatalogueSeeder(
         [
             "billing.rule.view", "billing.generate", "invoice.view", "payment.view", "payment.record",
             "expense.view", "expense.manage", "expensetype.view", "report.financial.view",
+            // Billing↔Finance integration template: Accountant gets Treasurer's operational subset
+            // (view + assess) — not waive/reverse, mirroring its existing exclusion of invoice.void/
+            // payment.reverse (correction authority stays with the tenant-wide Treasurer role).
+            "billing.fine.view", "billing.fine.assess",
         ]),
         ("SecurityOfficer", "condominium.security", "Security, visitor, vehicle, and parcel oversight for a single condominium/building.",
         [

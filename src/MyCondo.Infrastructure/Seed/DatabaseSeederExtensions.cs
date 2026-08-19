@@ -84,11 +84,18 @@ public static class DatabaseSeederExtensions
                     environment.EnvironmentName);
             }
 
-            // 04 Finance chart-of-accounts backfill — every environment, not Development-only: a real
+            // 04 Tenant role/permission catalogue backfill — every environment, not Development-only:
+            // a permission added to the catalogue (or a role's static permission list updated) after a
+            // tenant's first-user bootstrap never reaches that tenant's roles otherwise — reconciles
+            // OrganizationAdmin's blanket grant and the three role-catalogue seeders for every tenant.
+            // See TenantRoleCatalogueBackfillSeeder's doc comment.
+            await sp.GetRequiredService<TenantRoleCatalogueBackfillSeeder>().SeedAsync(cancellationToken);
+
+            // 05 Finance chart-of-accounts backfill — every environment, not Development-only: a real
             // Staging/Production tenant bootstrapped before the Finance foundation (or before a later
             // Finance role was added) has the exact same missing-mapping gap a dev tenant would. Runs
-            // last so a tenant created by step 03 above (e.g. ARP) is already visible to it in the
-            // same startup, not just from the next restart onward. See
+            // after step 03 so a tenant created there (e.g. ARP) is already visible to it in the same
+            // startup, not just from the next restart onward. See
             // FinanceChartOfAccountBackfillSeeder's doc comment.
             await sp.GetRequiredService<FinanceChartOfAccountBackfillSeeder>().SeedAsync(cancellationToken);
         }

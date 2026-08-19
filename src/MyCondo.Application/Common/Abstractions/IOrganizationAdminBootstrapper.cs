@@ -20,4 +20,20 @@ namespace MyCondo.Application.Common.Abstractions;
 public interface IOrganizationAdminBootstrapper
 {
     Task BootstrapAsync(Guid tenantId, User user, DateTimeOffset nowUtc, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reconciles an *already-bootstrapped* tenant's existing OrganizationAdmin role (found by
+    /// <c>Role.Code == "organization.admin"</c>) against the current permission catalogue — grants any
+    /// non-Platform/non-tenant-lifecycle permission the role doesn't already have, same blanket-grant
+    /// rule as <see cref="BootstrapAsync"/>, but additive-only (never revokes) so it's safe to call
+    /// repeatedly. Needed because <see cref="BootstrapAsync"/> only ever runs once, at a tenant's
+    /// first-user registration — a permission added to the catalogue afterward (e.g. a later feature's
+    /// new permission) would otherwise never reach that tenant's OrganizationAdmin. A tenant with no
+    /// OrganizationAdmin role (not yet bootstrapped, or still on the legacy tenant <c>SuperAdmin</c>
+    /// role predating Phase 2 — see this interface's own doc comment) is a no-op, not an error: legacy
+    /// SuperAdmin tenants are left untouched, same as <see cref="BootstrapAsync"/>'s policy. Returns the
+    /// number of grants created, for caller logging. Adds to the caller's current unit of work; the
+    /// caller owns calling <c>IUnitOfWork.SaveChangesAsync</c> afterward.
+    /// </summary>
+    Task<int> ReconcilePermissionsAsync(Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken);
 }
