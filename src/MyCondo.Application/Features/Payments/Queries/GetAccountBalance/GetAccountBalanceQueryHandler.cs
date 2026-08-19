@@ -29,7 +29,8 @@ public sealed class GetAccountBalanceQueryHandler(
         }
 
         decimal balance = await ledgerEntries.GetReceivableBalanceForFlatAsync(tenantId, flatId, cancellationToken);
+        decimal advanceBalance = await ledgerEntries.GetAdvanceBalanceForFlatAsync(tenantId, flatId, cancellationToken);
 
-        return new AccountBalanceDto(query.FlatId, balance);
+        return new AccountBalanceDto(query.FlatId, balance, advanceBalance);
     }
 }

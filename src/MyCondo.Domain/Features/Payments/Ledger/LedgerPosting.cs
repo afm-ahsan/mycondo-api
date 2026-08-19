@@ -42,10 +42,22 @@ public sealed class LedgerPosting : AggregateRoot<LedgerPostingId>, ITenantScope
         PostedAtUtc = nowUtc;
     }
 
+    /// <summary>Account types whose balance is tracked per-flat rather than tenant-wide — the only
+    /// types a <see cref="LedgerLine"/> may carry a <see cref="LedgerEntry.FlatId"/> for. Extended by
+    /// ADR-027's Billing↔Finance integration to include <see cref="LedgerAccountType.ResidentAdvance"/>
+    /// alongside the original <see cref="LedgerAccountType.ResidentReceivable"/> — ADR-027 explicitly
+    /// deferred broadening this invariant to "when one of those templates actually needs it"; Resident
+    /// Advance/overpayment credit is that need.</summary>
+    private static readonly HashSet<LedgerAccountType> FlatScopedAccountTypes =
+    [
+        LedgerAccountType.ResidentReceivable,
+        LedgerAccountType.ResidentAdvance,
+    ];
+
     /// <summary>Validates that <paramref name="lines"/> balance (debits == credits) and that only
-    /// <see cref="LedgerAccountType.ResidentReceivable"/> lines carry a FlatId, then materializes the
-    /// posting plus its entries. Throws <see cref="LedgerPostingUnbalancedException"/> if the lines
-    /// don't balance — callers cannot construct an unbalanced posting.</summary>
+    /// <see cref="FlatScopedAccountTypes"/> lines carry a FlatId, then materializes the posting plus
+    /// its entries. Throws <see cref="LedgerPostingUnbalancedException"/> if the lines don't balance —
+    /// callers cannot construct an unbalanced posting.</summary>
     public static (LedgerPosting Posting, IReadOnlyList<LedgerEntry> Entries) Create(
         Guid tenantId,
         DateOnly businessDate,
@@ -74,7 +86,7 @@ public sealed class LedgerPosting : AggregateRoot<LedgerPostingId>, ITenantScope
             }
 
             bool hasFlatId = line.FlatId is not null;
-            bool requiresFlatId = line.AccountType == LedgerAccountType.ResidentReceivable;
+            bool requiresFlatId = FlatScopedAccountTypes.Contains(line.AccountType);
             if (hasFlatId != requiresFlatId)
             {
                 throw new ArgumentException(

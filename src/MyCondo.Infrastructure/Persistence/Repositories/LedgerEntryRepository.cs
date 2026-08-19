@@ -30,6 +30,27 @@ public sealed class LedgerEntryRepository(MyCondoDbContext db) : ILedgerEntryRep
         return debits - credits;
     }
 
+    public async Task<decimal> GetAdvanceBalanceForFlatAsync(
+        Guid tenantId, FlatId flatId, CancellationToken cancellationToken)
+    {
+        IQueryable<LedgerEntry> query = db.Set<LedgerEntry>()
+            .AsNoTracking()
+            .Where(e =>
+                e.TenantId == tenantId &&
+                e.FlatId == flatId &&
+                e.AccountType == LedgerAccountType.ResidentAdvance);
+
+        decimal debits = await query
+            .Where(e => e.Direction == LedgerDirection.Debit)
+            .SumAsync(e => e.Amount, cancellationToken);
+
+        decimal credits = await query
+            .Where(e => e.Direction == LedgerDirection.Credit)
+            .SumAsync(e => e.Amount, cancellationToken);
+
+        return credits - debits;
+    }
+
     public async Task<PagedResult<LedgerEntryWithReference>> SearchForFlatAsync(
         Guid tenantId, FlatId flatId, DateOnly? fromDate, DateOnly? toDate, string? referenceType,
         int page, int pageSize, CancellationToken cancellationToken)

@@ -72,7 +72,7 @@ public class ReversePaymentCommandHandlerTests
         InvoiceLineInput line = new(null, "Service Charge", "Maintenance", "FixedAmount", totalAmount, null, 1, totalAmount, "Test line");
         (Invoice invoice, _) = Invoice.Issue(
             TenantId, BuildingId, FlatId, invoiceNumber, InvoiceSource.ServiceCharge,
-            Today, Today, Today, Today, [line], LedgerPostingId.New(), Now);
+            Today, Today, Today, Today, [line], LedgerPostingId.New(), LedgerAccountType.AssociationRevenue, null, Now);
         return invoice;
     }
 
@@ -163,6 +163,35 @@ public class ReversePaymentCommandHandlerTests
         await act.Should().ThrowAsync<PaymentAlreadyReversedException>();
         await _paymentAllocations.DidNotReceive().GetForPaymentAsync(Arg.Any<PaymentId>(), Arg.Any<CancellationToken>());
         invoice.Status.Should().Be(InvoiceStatus.Paid); // untouched — the guard fires before any invoice lookup
+    }
+
+    [Fact]
+    public async Task Reversal_Of_A_Payment_With_An_Unallocated_Remainder_Debits_Both_Receivable_And_Advance()
+    {
+        // Simulates a payment that was originally split between ResidentReceivable (300, settling
+        // invoiceA) and ResidentAdvance (200, the unallocated remainder) — see
+        // RecordPaymentCommandHandlerFifoAllocationTests' equivalent posting test. Reversal must
+        // re-derive that same split from the PaymentAllocation rows (sum = 300) against
+        // payment.Amount (500), not assume the whole amount was ResidentReceivable.
+        Invoice invoiceA = IssuedInvoice("INV-0006", 300m);
+        invoiceA.ApplyPayment(300m);
+
+        Payment payment = PostedPayment(500m);
+        PaymentAllocation allocationA = PaymentAllocation.Allocate(TenantId, payment.Id, invoiceA.Id, FlatId, 300m, Now);
+
+        _payments.GetByIdAsync(payment.Id, Arg.Any<CancellationToken>()).Returns(payment);
+        _paymentAllocations.GetForPaymentAsync(payment.Id, Arg.Any<CancellationToken>()).Returns([allocationA]);
+        _invoices.GetByIdAsync(invoiceA.Id, Arg.Any<CancellationToken>()).Returns(invoiceA);
+
+        await CreateHandler().Handle(new ReversePaymentCommand(payment.Id.Value, "Bounced cheque"), CancellationToken.None);
+
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.Lines.Any(l =>
+                l.Role == LedgerAccountType.ResidentReceivable && l.Direction == LedgerDirection.Debit && l.Amount == 300m)
+                && r.Lines.Any(l =>
+                l.Role == LedgerAccountType.ResidentAdvance && l.Direction == LedgerDirection.Debit && l.Amount == 200m)
+                && r.Lines.Any(l => l.Role == LedgerAccountType.CashOrBank && l.Amount == 500m)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

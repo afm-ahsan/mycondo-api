@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Billing.DTOs;
+using MyCondo.Application.Features.Billing.Services;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Utilities.Commands.BillReading;
 using MyCondo.Domain.Abstractions;
@@ -41,6 +42,7 @@ public class BillReadingCommandHandlerTests
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IInvoiceSequenceRepository _sequences = Substitute.For<IInvoiceSequenceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IResponsiblePartyResolver _responsibleParties = Substitute.For<IResponsiblePartyResolver>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -73,8 +75,8 @@ public class BillReadingCommandHandlerTests
             });
 
     private BillReadingCommandHandler CreateHandler() => new(
-        _readings, _ratePlans, _buildings, _invoices, _sequences, _financialPosting, _unitOfWork,
-        _currentUser, _clock, Substitute.For<ILogger<BillReadingCommandHandler>>());
+        _readings, _ratePlans, _buildings, _invoices, _sequences, _financialPosting, _responsibleParties,
+        _unitOfWork, _currentUser, _clock, Substitute.For<ILogger<BillReadingCommandHandler>>());
 
     private static Reading FinalizedReading(decimal previous = 0m, decimal present = 50m)
     {

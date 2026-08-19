@@ -28,6 +28,7 @@ public sealed class GenerateInvoiceBatchCommandHandler(
     IInvoiceRepository invoices,
     IInvoiceSequenceRepository sequences,
     IFinancialPostingService financialPosting,
+    IResponsiblePartyResolver responsibleParties,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -139,16 +140,20 @@ public sealed class GenerateInvoiceBatchCommandHandler(
                 FinancialPostingLine[] postingLines =
                 [
                     new FinancialPostingLine(LedgerAccountType.ResidentReceivable, flat.Id, LedgerDirection.Debit, subtotal),
-                    new FinancialPostingLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, subtotal),
+                    new FinancialPostingLine(LedgerAccountType.ServiceChargeIncome, null, LedgerDirection.Credit, subtotal),
                 ];
 
                 FinancialPostingResult posted = await financialPosting.PostAsync(
                     new FinancialPostingRequest(tenantId, invoiceDate, description, "Invoice", null, postingLines),
                     cancellationToken);
 
+                ResponsiblePartySnapshot? responsibleParty = await responsibleParties.ResolveAsync(
+                    tenantId, flat.Id, invoiceDate, cancellationToken);
+
                 (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
                     tenantId, buildingId, flat.Id, invoiceNumber, InvoiceSource.ServiceCharge, command.PeriodStart,
-                    command.PeriodEnd, invoiceDate, dueDate, lineInputs, posted.Posting.Id, nowUtc);
+                    command.PeriodEnd, invoiceDate, dueDate, lineInputs, posted.Posting.Id,
+                    LedgerAccountType.ServiceChargeIncome, responsibleParty, nowUtc);
 
                 invoices.Add(invoice);
                 invoices.AddLines(lines);

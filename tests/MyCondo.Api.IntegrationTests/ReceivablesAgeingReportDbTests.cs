@@ -111,7 +111,8 @@ public class ReceivablesAgeingReportDbTests : IClassFixture<PostgresApiFactory>
         InvoiceLineInput line = new(null, "Service Charge", "Maintenance", "FixedAmount", totalAmount, null, 1, totalAmount, "Test line");
         (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
             tenantId, buildingId, flatId, invoiceNumber, InvoiceSource.ServiceCharge,
-            dueDate, dueDate, dueDate, dueDate, [line], LedgerPostingId.New(), clock.UtcNow);
+            dueDate, dueDate, dueDate, dueDate, [line], LedgerPostingId.New(),
+            LedgerAccountType.AssociationRevenue, null, clock.UtcNow);
 
         if (amountPaid > 0)
         {

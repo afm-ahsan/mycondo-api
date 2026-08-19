@@ -71,12 +71,25 @@ public sealed class ReversePaymentCommandHandler(
             allocationsWithInvoiceNumbers.Add((allocation, invoice.InvoiceNumber));
         }
 
+        // The original payment may have been split between ResidentReceivable (settled invoices) and
+        // ResidentAdvance (unallocated remainder) — see RecordPaymentCommandHandler. Re-derive that
+        // split from the same PaymentAllocation rows just walked above rather than persisting it
+        // separately: sum(allocations) is exactly what was credited to ResidentReceivable, and
+        // whatever's left of payment.Amount is exactly what was credited to ResidentAdvance.
+        decimal allocatedAmount = allocations.Sum(a => a.AllocatedAmount);
+        decimal advanceAmount = payment.Amount - allocatedAmount;
+
         string description = $"Reversal of payment {payment.Id}: {command.Reason}";
-        FinancialPostingLine[] lines =
-        [
-            new FinancialPostingLine(LedgerAccountType.ResidentReceivable, payment.FlatId, LedgerDirection.Debit, payment.Amount),
-            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, payment.Amount),
-        ];
+        List<FinancialPostingLine> lines = [new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, payment.Amount)];
+        if (allocatedAmount > 0)
+        {
+            lines.Add(new FinancialPostingLine(LedgerAccountType.ResidentReceivable, payment.FlatId, LedgerDirection.Debit, allocatedAmount));
+        }
+
+        if (advanceAmount > 0)
+        {
+            lines.Add(new FinancialPostingLine(LedgerAccountType.ResidentAdvance, payment.FlatId, LedgerDirection.Debit, advanceAmount));
+        }
 
         FinancialPostingResult reversal = await financialPosting.PostAsync(
             new FinancialPostingRequest(

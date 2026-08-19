@@ -16,4 +16,10 @@ public enum InvoiceSource
     ServiceCharge = 0,
     Utility = 1,
     FacilityBooking = 2,
+    /// <summary>Added by the Billing↔Finance integration template — a fine/penalty assessed against a
+    /// flat. Reuses the entire Invoice/InvoiceLine/payment-allocation/void machinery rather than a
+    /// parallel entity, same rationale as <see cref="Utility"/>. Like <see cref="FacilityBooking"/>, a
+    /// one-off charge exempted from <c>ux_invoices_tenant_id_flat_id_period_source</c>'s
+    /// period-uniqueness rule — two fines for the same flat can share a period.</summary>
+    Fine = 3,
 }

@@ -18,6 +18,11 @@ public interface ILedgerEntryRepository
     /// derived from ledger entries" rule.</summary>
     Task<decimal> GetReceivableBalanceForFlatAsync(Guid tenantId, FlatId flatId, CancellationToken cancellationToken);
 
+    /// <summary>Sum(credits) - sum(debits) for the flat's ResidentAdvance account — the resident's
+    /// unallocated credit/overpayment balance (Billing↔Finance integration template §12), same
+    /// ledger-derived-not-stored rule as <see cref="GetReceivableBalanceForFlatAsync"/>.</summary>
+    Task<decimal> GetAdvanceBalanceForFlatAsync(Guid tenantId, FlatId flatId, CancellationToken cancellationToken);
+
     /// <summary>referenceType filters against the same finite vocabulary LedgerPosting.Create's
     /// callers actually use ("Invoice", "Payment", "PaymentReversal", "OpeningBalance", "InvoiceVoid",
     /// "UtilityBill") — this is the real "transaction type" signal for a flat-scoped ledger. AccountType

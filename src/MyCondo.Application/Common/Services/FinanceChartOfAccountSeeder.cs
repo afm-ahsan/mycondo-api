@@ -25,8 +25,16 @@ public sealed class FinanceChartOfAccountSeeder(
         (LedgerAccountType.CashOrBank, "1000", "Cash / Bank", AccountCategory.Asset, LedgerDirection.Debit),
         (LedgerAccountType.ResidentReceivable, "1100", "Resident Receivable", AccountCategory.Asset, LedgerDirection.Debit),
         (LedgerAccountType.RefundableDepositsHeld, "2100", "Refundable Deposits Held", AccountCategory.Liability, LedgerDirection.Credit),
+        // Added by the Billing↔Finance integration template (ADR-027 follow-up) — see
+        // LedgerAccountType.ResidentAdvance's doc comment.
+        (LedgerAccountType.ResidentAdvance, "2200", "Resident Advance / Unallocated Credit", AccountCategory.Liability, LedgerDirection.Credit),
         (LedgerAccountType.OpeningBalanceEquity, "3900", "Opening Balance Equity", AccountCategory.Equity, LedgerDirection.Credit),
         (LedgerAccountType.AssociationRevenue, "4000", "Association Revenue", AccountCategory.Income, LedgerDirection.Credit),
+        // Added by the Billing↔Finance integration template — differentiated income per charge type;
+        // the receivable side stays unified on ResidentReceivable (see LedgerPosting.Create).
+        (LedgerAccountType.ServiceChargeIncome, "4010", "Service Charge Income", AccountCategory.Income, LedgerDirection.Credit),
+        (LedgerAccountType.GasRecoveryIncome, "4020", "Gas Recovery Income", AccountCategory.Income, LedgerDirection.Credit),
+        (LedgerAccountType.FineIncome, "4030", "Fine Income", AccountCategory.Income, LedgerDirection.Credit),
         (LedgerAccountType.AdjustmentsAndWaivers, "4900", "Adjustments and Waivers", AccountCategory.Income, LedgerDirection.Debit),
     ];
 

@@ -76,7 +76,7 @@ public class VoidInvoiceCommandHandlerTests
         (Invoice invoice, _) = Invoice.Issue(
             TenantId, BuildingId, FlatId, "INV-TEST-2026-000001", InvoiceSource.ServiceCharge,
             new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31), new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31),
-            [line], OriginalPostingId, Now);
+            [line], OriginalPostingId, LedgerAccountType.AssociationRevenue, null, Now);
         return invoice;
     }
 

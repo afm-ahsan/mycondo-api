@@ -124,7 +124,8 @@ public class FinancialReportDbTests : IClassFixture<PostgresApiFactory>
         InvoiceLineInput line = new(null, "Service Charge", "Maintenance", "FixedAmount", amount, null, 1, amount, "Test line");
         (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
             tenantId, buildingId, flatId, invoiceNumber, InvoiceSource.ServiceCharge,
-            invoiceDate, invoiceDate, invoiceDate, invoiceDate, [line], LedgerPostingId.New(), clock.UtcNow);
+            invoiceDate, invoiceDate, invoiceDate, invoiceDate, [line], LedgerPostingId.New(),
+            LedgerAccountType.AssociationRevenue, null, clock.UtcNow);
 
         mutate?.Invoke(invoice);
 

@@ -77,7 +77,8 @@ public sealed class ConfirmBookingPaymentCommandHandler(
 
             (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
                 tenantId, booking.BuildingId, booking.FlatId, invoiceNumber, InvoiceSource.FacilityBooking, bookingDate,
-                bookingDate, invoiceDate, bookingDate, [lineInput], chargePosted.Posting.Id, nowUtc);
+                bookingDate, invoiceDate, bookingDate, [lineInput], chargePosted.Posting.Id,
+                LedgerAccountType.AssociationRevenue, responsibleParty: null, nowUtc);
 
             invoices.Add(invoice);
             invoices.AddLines(lines);

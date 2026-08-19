@@ -125,6 +125,12 @@ public static class PermissionCatalogue
         ("billing.invoice.generate", "Run invoice batch generation", "billing", true),
         ("billing.invoice.void", "Void an unpaid invoice", "billing", true),
 
+        // Seed_Fine_Permissions (Billing↔Finance integration template)
+        ("billing.fine.view", "View fines", "billing", true),
+        ("billing.fine.assess", "Assess a fine against a flat", "billing", true),
+        ("billing.fine.waive", "Waive part or all of an assessed fine", "billing", true),
+        ("billing.fine.reverse", "Reverse a fine assessed in error", "billing", true),
+
         // Seed_Utility_Permissions (Slice F)
         ("utility.meter.view", "View electricity/gas meters", "utility", true),
         ("utility.meter.manage", "Install, assign, and manage meters", "utility", true),

@@ -160,6 +160,9 @@ public static class DependencyInjection
         services.AddScoped<Seed.ArpDevelopmentBootstrapSeeder>();
         services.AddScoped<Seed.DevelopmentTenantSeeder>();
 
+        // Every-environment seeder (not Development-only — see its own doc comment for why).
+        services.AddScoped<Seed.FinanceChartOfAccountBackfillSeeder>();
+
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();

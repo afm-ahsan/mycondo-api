@@ -98,7 +98,7 @@ public class CorrectReadingCommandHandlerTests
             TenantId, BuildingId, FlatId, "INV-AISHA-2026-000001", InvoiceSource.Utility, PeriodStart, PeriodEnd,
             PeriodEnd, PeriodEnd,
             [new InvoiceLineInput(null, "Standard Electricity", "Electricity", "Fixed", 800m, null, 1m, 800m, "Fixed charge")],
-            LedgerPostingId.New(), Now);
+            LedgerPostingId.New(), LedgerAccountType.AssociationRevenue, null, Now);
         _invoices.GetByIdAsync(invoiceId, Arg.Any<CancellationToken>()).Returns(invoice);
 
         CorrectReadingCommand command = new(original.Id.Value, 0m, 55m, PeriodEnd, null, "Meter misread");

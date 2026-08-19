@@ -13,9 +13,13 @@ public sealed record InvoiceDto(
     decimal SubtotalAmount,
     decimal TotalAmount,
     decimal AmountPaid,
+    decimal WaivedAmount,
     decimal Balance,
     string Status,
     DateTimeOffset IssuedAtUtc,
     DateTimeOffset? VoidedAtUtc,
     Guid? VoidedBy,
-    string? VoidReason);
+    string? VoidReason,
+    DateTimeOffset? WaivedAtUtc,
+    Guid? WaivedBy,
+    string? WaiveReason);
