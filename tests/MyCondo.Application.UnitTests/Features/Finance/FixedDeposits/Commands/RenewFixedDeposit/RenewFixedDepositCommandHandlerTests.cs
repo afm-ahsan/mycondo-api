@@ -113,6 +113,30 @@ public class RenewFixedDepositCommandHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    /// <summary>The successor's principal and the ledger's FixedDeposit-asset movement must reconcile
+    /// exactly — the capitalization posting can never diverge from (NewPrincipal - OldPrincipal), which
+    /// is what "cannot exceed outstanding receivable" protects but doesn't by itself prove is exact.</summary>
+    [Fact]
+    public async Task Increased_Principal_Capitalization_Amount_Exactly_Equals_The_Principal_Delta()
+    {
+        FixedDeposit predecessor = SetUpActiveFixedDeposit(out FinancialAccount account, principal: 500_000m);
+        _accruals.GetTotalAccruedAsync(predecessor.Id, Arg.Any<CancellationToken>()).Returns(100_000m);
+        _receipts.GetTotalReceivedGrossAsync(predecessor.Id, Arg.Any<CancellationToken>()).Returns(0m);
+        const decimal newPrincipal = 517_250m;
+        decimal expectedDelta = newPrincipal - predecessor.Principal;
+
+        FixedDepositDto successor = await CreateHandler().Handle(
+            RenewalCommand(predecessor.Id.Value, account.Id.Value, newPrincipal), CancellationToken.None);
+
+        successor.Principal.Should().Be(newPrincipal);
+        (successor.Principal - predecessor.Principal).Should().Be(expectedDelta);
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r =>
+                r.Lines.Single(l => l.Role == LedgerAccountType.FixedDeposit).Amount == expectedDelta &&
+                r.Lines.Single(l => l.Role == LedgerAccountType.InterestReceivable).Amount == expectedDelta),
+            Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task Increased_Principal_Beyond_Outstanding_Receivable_Is_Rejected()
     {

@@ -132,8 +132,9 @@ public class ExpenseLedgerPostingIdempotencyTests : IClassFixture<MultiTenancyPo
         await db.SaveChangesAsync();
 
         FinancialPostingService service = new(
-            new AccountMappingRepository(db), new AccountingPeriodRepository(db), new LedgerPostingRepository(db),
-            new LedgerEntryRepository(db), new FixedClock(NowUtc), NullLogger<FinancialPostingService>.Instance);
+            new AccountMappingRepository(db), new ChartOfAccountRepository(db), new AccountingPeriodRepository(db),
+            new LedgerPostingRepository(db), new LedgerEntryRepository(db), new FixedClock(NowUtc),
+            NullLogger<FinancialPostingService>.Instance);
 
         FinancialPostingRequest request = new(
             tenantId, Today, "Expense: Elevator maintenance", "ExpenseRecording", expenseId,
@@ -248,8 +249,9 @@ public class ExpenseLedgerPostingIdempotencyTests : IClassFixture<MultiTenancyPo
     private static VoidExpenseCommandHandler BuildHandler(MyCondoDbContext db, Guid tenantId)
     {
         IFinancialPostingService financialPosting = new FinancialPostingService(
-            new AccountMappingRepository(db), new AccountingPeriodRepository(db), new LedgerPostingRepository(db),
-            new LedgerEntryRepository(db), new FixedClock(NowUtc), NullLogger<FinancialPostingService>.Instance);
+            new AccountMappingRepository(db), new ChartOfAccountRepository(db), new AccountingPeriodRepository(db),
+            new LedgerPostingRepository(db), new LedgerEntryRepository(db), new FixedClock(NowUtc),
+            NullLogger<FinancialPostingService>.Instance);
 
         return new VoidExpenseCommandHandler(
             new ExpenseRepository(db), financialPosting, db, new FixedCurrentUser(tenantId), new FixedClock(NowUtc),

@@ -8,6 +8,7 @@ using MyCondo.Domain.Features.Finance.AccountingPeriods.Exceptions;
 using MyCondo.Domain.Features.Finance.AccountMappings;
 using MyCondo.Domain.Features.Finance.AccountMappings.Exceptions;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
+using MyCondo.Domain.Features.Finance.ChartOfAccounts.Exceptions;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Flats;
 using NSubstitute;
@@ -30,6 +31,7 @@ public class FinancialPostingServiceTests
     private static readonly ChartOfAccountId ReceivableAccountId = ChartOfAccountId.New();
 
     private readonly IAccountMappingRepository _accountMappings = Substitute.For<IAccountMappingRepository>();
+    private readonly IChartOfAccountRepository _chartOfAccounts = Substitute.For<IChartOfAccountRepository>();
     private readonly IAccountingPeriodRepository _accountingPeriods = Substitute.For<IAccountingPeriodRepository>();
     private readonly ILedgerPostingRepository _ledgerPostings = Substitute.For<ILedgerPostingRepository>();
     private readonly ILedgerEntryRepository _ledgerEntries = Substitute.For<ILedgerEntryRepository>();
@@ -45,8 +47,16 @@ public class FinancialPostingServiceTests
     }
 
     private FinancialPostingService CreateService() => new(
-        _accountMappings, _accountingPeriods, _ledgerPostings, _ledgerEntries, _clock,
+        _accountMappings, _chartOfAccounts, _accountingPeriods, _ledgerPostings, _ledgerEntries, _clock,
         Substitute.For<ILogger<FinancialPostingService>>());
+
+    private ChartOfAccount StubActiveExplicitAccount(Guid? tenantId = null)
+    {
+        ChartOfAccount account = ChartOfAccount.Create(
+            tenantId ?? TenantId, $"1000-{Guid.NewGuid():N}"[..12], "Bank Account", AccountCategory.Asset, LedgerDirection.Debit);
+        _chartOfAccounts.GetByIdAsync(account.Id, Arg.Any<CancellationToken>()).Returns(account);
+        return account;
+    }
 
     private static FinancialPostingLine[] BalancedPaymentLines(decimal amount) =>
     [
@@ -153,13 +163,13 @@ public class FinancialPostingServiceTests
     [Fact]
     public async Task PostAsync_Resolves_A_Line_With_ExplicitAccountId_Without_Consulting_The_Role_Mapping()
     {
-        ChartOfAccountId specificBankAccountId = ChartOfAccountId.New();
+        ChartOfAccount specificBankAccount = StubActiveExplicitAccount();
         FinancialPostingLine[] lines =
         [
             new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Debit, 100_000m),
             new FinancialPostingLine(
                 LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, 100_000m,
-                ExplicitAccountId: specificBankAccountId),
+                ExplicitAccountId: specificBankAccount.Id),
         ];
         _accountMappings.ResolveAccountIdAsync(TenantId, "FixedDeposit", Arg.Any<CancellationToken>())
             .Returns(ChartOfAccountId.New());
@@ -168,26 +178,86 @@ public class FinancialPostingServiceTests
             new FinancialPostingRequest(TenantId, BusinessDate, "FD placement", "FixedDepositPlacement", null, lines),
             CancellationToken.None);
 
-        result.Entries.Should().ContainSingle(e => e.AccountType == LedgerAccountType.CashOrBank && e.ChartOfAccountId == specificBankAccountId);
+        result.Entries.Should().ContainSingle(e => e.AccountType == LedgerAccountType.CashOrBank && e.ChartOfAccountId == specificBankAccount.Id);
         await _accountMappings.DidNotReceive().ResolveAccountIdAsync(TenantId, "CashOrBank", Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task PostAsync_Resolves_Two_Same_Role_Lines_To_Different_Explicit_Accounts()
     {
-        ChartOfAccountId accountA = ChartOfAccountId.New();
-        ChartOfAccountId accountB = ChartOfAccountId.New();
+        ChartOfAccount accountA = StubActiveExplicitAccount();
+        ChartOfAccount accountB = StubActiveExplicitAccount();
         FinancialPostingLine[] lines =
         [
-            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, 40_000m, ExplicitAccountId: accountA),
-            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, 40_000m, ExplicitAccountId: accountB),
+            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, 40_000m, ExplicitAccountId: accountA.Id),
+            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, 40_000m, ExplicitAccountId: accountB.Id),
         ];
 
         FinancialPostingResult result = await CreateService().PostAsync(
             new FinancialPostingRequest(TenantId, BusinessDate, "Inter-account transfer", "FixedDepositRenewalPartialWithdrawal", null, lines),
             CancellationToken.None);
 
-        result.Entries.Should().ContainSingle(e => e.ChartOfAccountId == accountA);
-        result.Entries.Should().ContainSingle(e => e.ChartOfAccountId == accountB);
+        result.Entries.Should().ContainSingle(e => e.ChartOfAccountId == accountA.Id);
+        result.Entries.Should().ContainSingle(e => e.ChartOfAccountId == accountB.Id);
+    }
+
+    /// <summary>Defense-in-depth: the posting engine must not trust a caller-supplied
+    /// <see cref="FinancialPostingLine.ExplicitAccountId"/> at face value, even though today's only
+    /// callers already validate ownership before constructing the request.</summary>
+    [Fact]
+    public async Task PostAsync_Rejects_An_ExplicitAccountId_That_Does_Not_Exist()
+    {
+        ChartOfAccountId unknownAccountId = ChartOfAccountId.New();
+        FinancialPostingLine[] lines =
+        [
+            new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Debit, 100_000m, ExplicitAccountId: unknownAccountId),
+            new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Credit, 100_000m, ExplicitAccountId: unknownAccountId),
+        ];
+
+        Func<Task> act = () => CreateService().PostAsync(
+            new FinancialPostingRequest(TenantId, BusinessDate, "FD placement", "FixedDepositPlacement", null, lines),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidExplicitPostingAccountException>();
+        _ledgerPostings.DidNotReceive().Add(Arg.Any<LedgerPosting>());
+    }
+
+    [Fact]
+    public async Task PostAsync_Rejects_An_ExplicitAccountId_Belonging_To_Another_Tenant()
+    {
+        ChartOfAccount otherTenantsAccount = StubActiveExplicitAccount(tenantId: Guid.NewGuid());
+        FinancialPostingLine[] lines =
+        [
+            new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Debit, 100_000m, ExplicitAccountId: otherTenantsAccount.Id),
+            new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Credit, 100_000m, ExplicitAccountId: otherTenantsAccount.Id),
+        ];
+
+        Func<Task> act = () => CreateService().PostAsync(
+            new FinancialPostingRequest(TenantId, BusinessDate, "FD placement", "FixedDepositPlacement", null, lines),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidExplicitPostingAccountException>();
+        _ledgerPostings.DidNotReceive().Add(Arg.Any<LedgerPosting>());
+    }
+
+    [Fact]
+    public async Task PostAsync_Rejects_An_Inactive_ExplicitAccountId()
+    {
+        ChartOfAccount inactiveAccount = ChartOfAccount.Create(
+            TenantId, $"1000-{Guid.NewGuid():N}"[..12], "Closed Bank Account", AccountCategory.Asset, LedgerDirection.Debit);
+        inactiveAccount.Deactivate();
+        _chartOfAccounts.GetByIdAsync(inactiveAccount.Id, Arg.Any<CancellationToken>()).Returns(inactiveAccount);
+        FinancialPostingLine[] lines =
+        [
+            new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Debit, 100_000m, ExplicitAccountId: inactiveAccount.Id),
+            new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Credit, 100_000m, ExplicitAccountId: inactiveAccount.Id),
+        ];
+
+        Func<Task> act = () => CreateService().PostAsync(
+            new FinancialPostingRequest(TenantId, BusinessDate, "FD placement", "FixedDepositPlacement", null, lines),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidExplicitPostingAccountException>();
+        _ledgerPostings.DidNotReceive().Add(Arg.Any<LedgerPosting>());
     }
 }

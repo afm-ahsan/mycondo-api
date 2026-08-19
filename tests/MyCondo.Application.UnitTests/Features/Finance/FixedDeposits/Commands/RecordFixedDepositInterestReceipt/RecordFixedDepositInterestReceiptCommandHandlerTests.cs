@@ -125,6 +125,32 @@ public class RecordFixedDepositInterestReceiptCommandHandlerTests
     }
 
     [Fact]
+    public async Task Posts_The_Full_Gross_Amount_To_CashOrBank_When_Deduction_Is_Zero()
+    {
+        FixedDeposit fd = SetUpActiveFixedDeposit();
+        FinancialAccount account = SetUpReceivingAccount();
+        _accruals.GetTotalAccruedAsync(fd.Id, Arg.Any<CancellationToken>()).Returns(60_000m);
+        _receipts.GetTotalReceivedGrossAsync(fd.Id, Arg.Any<CancellationToken>()).Returns(0m);
+
+        FixedDepositInterestReceiptDto result = await CreateHandler().Handle(
+            new RecordFixedDepositInterestReceiptCommand(fd.Id.Value, null, 60_000m, 0m, account.Id.Value, null, null),
+            CancellationToken.None);
+
+        result.GrossAmount.Should().Be(60_000m);
+        result.DeductionAmount.Should().Be(0m);
+        result.NetAmount.Should().Be(60_000m);
+
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r =>
+                r.Lines.Count == 2 &&
+                r.Lines.All(l => l.Role != LedgerAccountType.InterestDeductionExpense) &&
+                r.Lines.Any(l => l.Role == LedgerAccountType.CashOrBank && l.Direction == LedgerDirection.Debit &&
+                    l.Amount == 60_000m && l.ExplicitAccountId == account.ChartOfAccountId) &&
+                r.Lines.Any(l => l.Role == LedgerAccountType.InterestReceivable && l.Direction == LedgerDirection.Credit && l.Amount == 60_000m)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Omits_The_CashOrBank_Line_When_Fully_Deducted_At_Source()
     {
         FixedDeposit fd = SetUpActiveFixedDeposit();

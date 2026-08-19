@@ -6,12 +6,14 @@ using MyCondo.Domain.Features.Finance.AccountingPeriods.Exceptions;
 using MyCondo.Domain.Features.Finance.AccountMappings;
 using MyCondo.Domain.Features.Finance.AccountMappings.Exceptions;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
+using MyCondo.Domain.Features.Finance.ChartOfAccounts.Exceptions;
 using MyCondo.Domain.Features.Payments.Ledger;
 
 namespace MyCondo.Application.Features.Finance.Services;
 
 public sealed class FinancialPostingService(
     IAccountMappingRepository accountMappings,
+    IChartOfAccountRepository chartOfAccounts,
     IAccountingPeriodRepository accountingPeriods,
     ILedgerPostingRepository ledgerPostings,
     ILedgerEntryRepository ledgerEntries,
@@ -37,12 +39,19 @@ public sealed class FinancialPostingService(
             }
         }
 
+        Dictionary<ChartOfAccountId, bool> validatedExplicitAccounts = [];
         Dictionary<LedgerAccountType, ChartOfAccountId> resolvedRoleAccounts = [];
         List<ChartOfAccountId> resolvedLineAccounts = new(request.Lines.Count);
         foreach (FinancialPostingLine line in request.Lines)
         {
             if (line.ExplicitAccountId is ChartOfAccountId explicitAccountId)
             {
+                if (!validatedExplicitAccounts.ContainsKey(explicitAccountId))
+                {
+                    await ValidateExplicitAccountAsync(request.TenantId, explicitAccountId, cancellationToken);
+                    validatedExplicitAccounts[explicitAccountId] = true;
+                }
+
                 resolvedLineAccounts.Add(explicitAccountId);
                 continue;
             }
@@ -92,5 +101,28 @@ public sealed class FinancialPostingService(
             posting.Id, request.TenantId, request.PostingPurpose, entries.Count);
 
         return new FinancialPostingResult(posting, entries);
+    }
+
+    /// <summary>Defense-in-depth for <see cref="FinancialPostingLine.ExplicitAccountId"/>: the posting
+    /// engine is the single centralized entry point (ADR-027) and must not trust a caller-supplied
+    /// account id at face value, even though today's only callers (Financial Account commands) already
+    /// validate ownership before constructing the request.</summary>
+    private async Task ValidateExplicitAccountAsync(Guid tenantId, ChartOfAccountId accountId, CancellationToken cancellationToken)
+    {
+        ChartOfAccount? account = await chartOfAccounts.GetByIdAsync(accountId, cancellationToken);
+        if (account is null)
+        {
+            throw new InvalidExplicitPostingAccountException(tenantId, accountId, "account does not exist.");
+        }
+
+        if (account.TenantId != tenantId)
+        {
+            throw new InvalidExplicitPostingAccountException(tenantId, accountId, "account belongs to a different tenant.");
+        }
+
+        if (!account.IsActive)
+        {
+            throw new InvalidExplicitPostingAccountException(tenantId, accountId, "account is inactive.");
+        }
     }
 }
