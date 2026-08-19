@@ -6,6 +6,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Behaviors;
 using MyCondo.Application.Common.Events;
 using MyCondo.Application.Common.Services;
+using MyCondo.Application.Features.Finance.Services;
 
 namespace MyCondo.Application;
 
@@ -40,9 +41,11 @@ public static class DependencyInjection
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
         services.AddScoped<IResidentRoleCatalogueSeeder, ResidentRoleCatalogueSeeder>();
         services.AddScoped<IExpenseTypeCatalogueSeeder, ExpenseTypeCatalogueSeeder>();
+        services.AddScoped<IFinanceChartOfAccountSeeder, FinanceChartOfAccountSeeder>();
         services.AddScoped<IFlatAccessAuthorizer, FlatAccessAuthorizer>();
         services.AddScoped<IFlatDisplayNameResolver, FlatDisplayNameResolver>();
         services.AddSingleton<IImageValidationService, ImageValidationService>();
+        services.AddScoped<IFinancialPostingService, FinancialPostingService>();
 
         // Domain-event dispatch bypasses Mediator (see IDomainEventHandler comment for why).
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();

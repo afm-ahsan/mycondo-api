@@ -76,6 +76,7 @@ app.MapPaymentEndpoints();
 app.MapServiceChargeRuleEndpoints();
 app.MapInvoiceEndpoints();
 app.MapFinancialReportEndpoints();
+app.MapFinanceEndpoints();
 app.MapMeterEndpoints();
 app.MapRatePlanEndpoints();
 app.MapReadingEndpoints();

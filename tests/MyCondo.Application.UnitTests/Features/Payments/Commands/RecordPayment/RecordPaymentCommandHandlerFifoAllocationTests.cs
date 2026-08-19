@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.Commands.RecordPayment;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Domain.Abstractions;
@@ -36,8 +37,7 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
     private readonly IPaymentRepository _payments = Substitute.For<IPaymentRepository>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IPaymentAllocationRepository _allocations = Substitute.For<IPaymentAllocationRepository>();
-    private readonly ILedgerPostingRepository _ledgerPostings = Substitute.For<ILedgerPostingRepository>();
-    private readonly ILedgerEntryRepository _ledgerEntries = Substitute.For<ILedgerEntryRepository>();
+    private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -50,10 +50,27 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
             .Returns(ResidentAccount.Open(TenantId, FlatId, Now));
         _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
             .Returns(Substitute.For<IUnitOfWorkTransaction>());
+        StubFinancialPosting();
     }
 
+    /// <summary>Makes the mocked <see cref="IFinancialPostingService"/> behave like the real one — see
+    /// VoidInvoiceCommandHandlerTests for why.</summary>
+    private void StubFinancialPosting() =>
+        _financialPosting.PostAsync(Arg.Any<FinancialPostingRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                FinancialPostingRequest request = callInfo.Arg<FinancialPostingRequest>();
+                List<LedgerLine> lines = request.Lines
+                    .Select(l => new LedgerLine(l.Role, l.FlatId, l.Direction, l.Amount, l.LineDescription ?? request.Description))
+                    .ToList();
+                (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
+                    request.TenantId, request.BusinessDate, request.Description, request.PostingPurpose,
+                    request.SourceId, lines, Now);
+                return new FinancialPostingResult(posting, entries);
+            });
+
     private RecordPaymentCommandHandler CreateHandler() => new(
-        _accounts, _payments, _invoices, _allocations, _ledgerPostings, _ledgerEntries, _unitOfWork,
+        _accounts, _payments, _invoices, _allocations, _financialPosting, _unitOfWork,
         _currentUser, _clock, Substitute.For<ILogger<RecordPaymentCommandHandler>>());
 
     private static Invoice IssueInvoiceWithBalance(string invoiceNumber, decimal amount)

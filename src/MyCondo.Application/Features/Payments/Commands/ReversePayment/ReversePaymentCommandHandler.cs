@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Abstractions;
@@ -26,8 +27,7 @@ public sealed class ReversePaymentCommandHandler(
     IPaymentRepository payments,
     IPaymentAllocationRepository paymentAllocations,
     IInvoiceRepository invoices,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -72,25 +72,24 @@ public sealed class ReversePaymentCommandHandler(
         }
 
         string description = $"Reversal of payment {payment.Id}: {command.Reason}";
-        LedgerLine[] lines =
+        FinancialPostingLine[] lines =
         [
-            new LedgerLine(LedgerAccountType.ResidentReceivable, payment.FlatId, LedgerDirection.Debit, payment.Amount, description),
-            new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, payment.Amount, description),
+            new FinancialPostingLine(LedgerAccountType.ResidentReceivable, payment.FlatId, LedgerDirection.Debit, payment.Amount),
+            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, payment.Amount),
         ];
 
-        (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
-            tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "PaymentReversal",
-            payment.LedgerPostingId.Value, lines, nowUtc);
-
-        ledgerPostings.Add(posting);
-        ledgerEntries.AddRange(entries);
+        FinancialPostingResult reversal = await financialPosting.PostAsync(
+            new FinancialPostingRequest(
+                tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "PaymentReversal",
+                payment.LedgerPostingId.Value, lines),
+            cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
             "Payment {PaymentId} reversed for tenant {TenantId}, {InvoiceCount} invoice(s) restored to outstanding, reversal posting {PostingId}",
-            payment.Id, tenantId, allocations.Count, posting.Id);
+            payment.Id, tenantId, allocations.Count, reversal.Posting.Id);
 
         return payment.ToDto(allocationsWithInvoiceNumbers);
     }

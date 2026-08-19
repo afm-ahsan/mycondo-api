@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Abstractions;
@@ -29,8 +30,7 @@ public sealed class RecordPaymentCommandHandler(
     IPaymentRepository payments,
     IInvoiceRepository invoices,
     IPaymentAllocationRepository paymentAllocations,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -59,21 +59,19 @@ public sealed class RecordPaymentCommandHandler(
 
         await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
 
-        LedgerLine[] lines =
+        FinancialPostingLine[] lines =
         [
-            new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, command.Amount, description),
-            new LedgerLine(LedgerAccountType.ResidentReceivable, flatId, LedgerDirection.Credit, command.Amount, description),
+            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, command.Amount),
+            new FinancialPostingLine(LedgerAccountType.ResidentReceivable, flatId, LedgerDirection.Credit, command.Amount),
         ];
 
-        (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
-            tenantId, command.BusinessDate, description, "Payment", null, lines, nowUtc);
-
-        ledgerPostings.Add(posting);
-        ledgerEntries.AddRange(entries);
+        FinancialPostingResult posted = await financialPosting.PostAsync(
+            new FinancialPostingRequest(tenantId, command.BusinessDate, description, "Payment", null, lines),
+            cancellationToken);
 
         Payment payment = Payment.Record(
             tenantId, flatId, command.Amount, method, command.ReferenceNumber, command.BusinessDate,
-            currentUser.UserId, posting.Id, nowUtc);
+            currentUser.UserId, posted.Posting.Id, nowUtc);
         payments.Add(payment);
 
         IReadOnlyList<(PaymentAllocation Allocation, string InvoiceNumber)> allocations = await AllocateFifoAsync(

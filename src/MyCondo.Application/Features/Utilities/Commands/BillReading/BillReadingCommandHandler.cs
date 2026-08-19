@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Utilities.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
@@ -26,8 +27,7 @@ public sealed class BillReadingCommandHandler(
     IBuildingRepository buildings,
     IInvoiceRepository invoices,
     IInvoiceSequenceRepository sequences,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -72,21 +72,19 @@ public sealed class BillReadingCommandHandler(
 
         string description = $"Utility invoice {invoiceNumber} ({reading.UtilityType}) for flat, period {reading.PeriodStart}..{reading.PeriodEnd}";
 
-        LedgerLine[] postingLines =
+        FinancialPostingLine[] postingLines =
         [
-            new LedgerLine(LedgerAccountType.ResidentReceivable, reading.FlatId, LedgerDirection.Debit, lineInput.LineAmount, description),
-            new LedgerLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, lineInput.LineAmount, description),
+            new FinancialPostingLine(LedgerAccountType.ResidentReceivable, reading.FlatId, LedgerDirection.Debit, lineInput.LineAmount),
+            new FinancialPostingLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, lineInput.LineAmount),
         ];
 
-        (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
-            tenantId, invoiceDate, description, "UtilityBill", null, postingLines, nowUtc);
-
-        ledgerPostings.Add(posting);
-        ledgerEntries.AddRange(entries);
+        FinancialPostingResult posted = await financialPosting.PostAsync(
+            new FinancialPostingRequest(tenantId, invoiceDate, description, "UtilityBill", null, postingLines),
+            cancellationToken);
 
         (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
             tenantId, reading.BuildingId, reading.FlatId, invoiceNumber, InvoiceSource.Utility, reading.PeriodStart,
-            reading.PeriodEnd, invoiceDate, dueDate, [lineInput], posting.Id, nowUtc);
+            reading.PeriodEnd, invoiceDate, dueDate, [lineInput], posted.Posting.Id, nowUtc);
 
         invoices.Add(invoice);
         invoices.AddLines(lines);

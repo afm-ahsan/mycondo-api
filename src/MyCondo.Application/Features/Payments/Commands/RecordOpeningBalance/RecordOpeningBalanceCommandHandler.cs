@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Abstractions;
@@ -13,11 +14,9 @@ namespace MyCondo.Application.Features.Payments.Commands.RecordOpeningBalance;
 
 public sealed class RecordOpeningBalanceCommandHandler(
     IResidentAccountRepository accounts,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
-    IClock clock,
     ILogger<RecordOpeningBalanceCommandHandler> logger
 ) : IRequestHandler<RecordOpeningBalanceCommand, IReadOnlyList<LedgerEntryDto>>
 {
@@ -37,26 +36,23 @@ public sealed class RecordOpeningBalanceCommandHandler(
         }
 
         string description = string.IsNullOrWhiteSpace(command.Description) ? "Opening balance" : command.Description;
-        DateTimeOffset nowUtc = clock.UtcNow;
 
-        LedgerLine[] lines =
+        FinancialPostingLine[] lines =
         [
-            new LedgerLine(LedgerAccountType.ResidentReceivable, flatId, LedgerDirection.Debit, command.Amount, description),
-            new LedgerLine(LedgerAccountType.OpeningBalanceEquity, null, LedgerDirection.Credit, command.Amount, description),
+            new FinancialPostingLine(LedgerAccountType.ResidentReceivable, flatId, LedgerDirection.Debit, command.Amount),
+            new FinancialPostingLine(LedgerAccountType.OpeningBalanceEquity, null, LedgerDirection.Credit, command.Amount),
         ];
 
-        (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
-            tenantId, command.BusinessDate, description, "OpeningBalance", null, lines, nowUtc);
-
-        ledgerPostings.Add(posting);
-        ledgerEntries.AddRange(entries);
+        FinancialPostingResult posted = await financialPosting.PostAsync(
+            new FinancialPostingRequest(tenantId, command.BusinessDate, description, "OpeningBalance", null, lines),
+            cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Opening balance {Amount} posted for flat {FlatId}, tenant {TenantId}, posting {PostingId}",
-            command.Amount, flatId, tenantId, posting.Id);
+            command.Amount, flatId, tenantId, posted.Posting.Id);
 
-        return entries.Select(e => e.ToDto(posting.ReferenceType, posting.ReferenceId)).ToList();
+        return posted.Entries.Select(e => e.ToDto(posted.Posting.ReferenceType, posted.Posting.ReferenceId)).ToList();
     }
 }

@@ -194,5 +194,19 @@ public static class PermissionCatalogue
 
         // Seed_Invoice_View_Own_Permission (Phase 3, ADR-021)
         ("invoice.view.own", "View own invoices via self-service (owned/occupied flats only)", "billing", true),
+
+        // Finance Foundation & Posting Engine (ADR-027) — Chart of Accounts, account mappings, funds,
+        // financial years/periods, and journal entries are tenant-wide configuration, not building-scoped.
+        ("finance.account.view", "View the chart of accounts", "finance", false),
+        ("finance.account.manage", "Create and deactivate accounts in the chart of accounts", "finance", false),
+        ("finance.mapping.manage", "Configure account mappings for posting roles", "finance", false),
+        ("finance.fund.view", "View funds", "finance", false),
+        ("finance.fund.manage", "Create and deactivate funds", "finance", false),
+        ("finance.journal.view", "View journal entries and lines", "finance", false),
+        ("finance.journal.create", "Post manual/adjustment journal entries", "finance", false),
+        ("finance.journal.reverse", "Reverse a posted journal entry", "finance", false),
+        ("finance.period.manage", "Create financial years and accounting periods", "finance", false),
+        ("finance.period.close", "Close an open accounting period or financial year", "finance", false),
+        ("finance.period.reopen", "Reopen a closed accounting period or financial year", "finance", false),
     ];
 }

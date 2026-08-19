@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Services;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Billing.InvoiceSequences;
@@ -26,8 +27,7 @@ public sealed class GenerateInvoiceBatchCommandHandler(
     IServiceChargeRuleRepository rules,
     IInvoiceRepository invoices,
     IInvoiceSequenceRepository sequences,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -136,21 +136,19 @@ public sealed class GenerateInvoiceBatchCommandHandler(
                 decimal subtotal = lineInputs.Sum(l => l.LineAmount);
                 string description = $"Service charge invoice {invoiceNumber} for flat {flat.FlatNumber}, period {command.PeriodStart}..{command.PeriodEnd}";
 
-                LedgerLine[] postingLines =
+                FinancialPostingLine[] postingLines =
                 [
-                    new LedgerLine(LedgerAccountType.ResidentReceivable, flat.Id, LedgerDirection.Debit, subtotal, description),
-                    new LedgerLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, subtotal, description),
+                    new FinancialPostingLine(LedgerAccountType.ResidentReceivable, flat.Id, LedgerDirection.Debit, subtotal),
+                    new FinancialPostingLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, subtotal),
                 ];
 
-                (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
-                    tenantId, invoiceDate, description, "Invoice", null, postingLines, nowUtc);
-
-                ledgerPostings.Add(posting);
-                ledgerEntries.AddRange(entries);
+                FinancialPostingResult posted = await financialPosting.PostAsync(
+                    new FinancialPostingRequest(tenantId, invoiceDate, description, "Invoice", null, postingLines),
+                    cancellationToken);
 
                 (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
                     tenantId, buildingId, flat.Id, invoiceNumber, InvoiceSource.ServiceCharge, command.PeriodStart,
-                    command.PeriodEnd, invoiceDate, dueDate, lineInputs, posting.Id, nowUtc);
+                    command.PeriodEnd, invoiceDate, dueDate, lineInputs, posted.Posting.Id, nowUtc);
 
                 invoices.Add(invoice);
                 invoices.AddLines(lines);

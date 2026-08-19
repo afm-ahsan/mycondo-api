@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -12,8 +13,7 @@ namespace MyCondo.Application.Features.Billing.Commands.VoidInvoice;
 
 public sealed class VoidInvoiceCommandHandler(
     IInvoiceRepository invoices,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -39,28 +39,28 @@ public sealed class VoidInvoiceCommandHandler(
         string description = $"Void of invoice {invoice.InvoiceNumber}: {command.Reason}";
 
         // Reverse of the original issue posting (Debit ResidentReceivable / Credit AssociationRevenue).
-        LedgerLine[] reversingLines =
+        FinancialPostingLine[] reversingLines =
         [
-            new LedgerLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Debit, invoice.TotalAmount, description),
-            new LedgerLine(LedgerAccountType.ResidentReceivable, invoice.FlatId, LedgerDirection.Credit, invoice.TotalAmount, description),
+            new FinancialPostingLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Debit, invoice.TotalAmount),
+            new FinancialPostingLine(LedgerAccountType.ResidentReceivable, invoice.FlatId, LedgerDirection.Credit, invoice.TotalAmount),
         ];
 
-        (LedgerPosting reversingPosting, IReadOnlyList<LedgerEntry> reversingEntries) = LedgerPosting.Create(
-            tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "InvoiceVoid", invoice.LedgerPostingId.Value,
-            reversingLines, nowUtc);
+        FinancialPostingResult reversal = await financialPosting.PostAsync(
+            new FinancialPostingRequest(
+                tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "InvoiceVoid",
+                invoice.LedgerPostingId.Value, reversingLines),
+            cancellationToken);
 
-        // Throws InvoiceAlreadyVoidException / InvoiceCannotBeVoidedException before anything below
-        // is staged — nothing is added to the change tracker unless this succeeds.
-        invoice.Void(command.Reason, currentUser.UserId, reversingPosting.Id, nowUtc);
-
-        ledgerPostings.Add(reversingPosting);
-        ledgerEntries.AddRange(reversingEntries);
+        // Throws InvoiceAlreadyVoidException / InvoiceCannotBeVoidedException before SaveChangesAsync
+        // is reached — the reversal posting is already staged on the change tracker at this point, but
+        // an unhandled exception here means SaveChangesAsync never runs, so nothing actually commits.
+        invoice.Void(command.Reason, currentUser.UserId, reversal.Posting.Id, nowUtc);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Invoice {InvoiceId} voided for tenant {TenantId}, reversal posting {PostingId}",
-            id, tenantId, reversingPosting.Id);
+            id, tenantId, reversal.Posting.Id);
 
         return invoice.ToDto();
     }

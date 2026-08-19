@@ -17,6 +17,7 @@ public sealed class RegisterUserCommandHandler(
     ICondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder,
     IResidentRoleCatalogueSeeder residentRoleCatalogueSeeder,
     IExpenseTypeCatalogueSeeder expenseTypeCatalogueSeeder,
+    IFinanceChartOfAccountSeeder financeChartOfAccountSeeder,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -83,6 +84,11 @@ public sealed class RegisterUserCommandHandler(
             // — a practical default expense category set (mycondo-docs expense-management task) instead
             // of an empty picker on the new tenant's first visit to Finance › Expense Types.
             await expenseTypeCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
+
+            // Seeds the Finance foundation's 6 system accounts + account mappings (ADR-027) — without
+            // this, every existing ledger-posting call site (Billing/Payments/Amenities/Utilities) would
+            // fail immediately with MissingAccountMappingException for a brand-new tenant.
+            await financeChartOfAccountSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
