@@ -53,4 +53,24 @@ public enum LedgerAccountType
     /// AccountsPayable" at recording time; "Dr AccountsPayable / Cr CashOrBank" at supplier-payment
     /// time). Tenant-wide, like every non-flat-scoped account type.</summary>
     AccountsPayable = 11,
+    /// <summary>Added by Template 4 (Banking, Fixed Deposits &amp; Interest) — the asset side of a Fixed
+    /// Deposit's principal ("Dr FixedDeposit / Cr CashOrBank" at placement; reversed at maturity/
+    /// withdrawal). One tenant-wide system account, same "role, not per-instrument" pattern as
+    /// <see cref="OperatingExpense"/> — individual FD instruments are tracked by the
+    /// <c>FixedDeposits.FixedDeposit</c> aggregate itself, not by a sub-account per certificate.</summary>
+    FixedDeposit = 12,
+    /// <summary>Added by Template 4 — accrued-but-not-yet-received FD interest ("Dr InterestReceivable /
+    /// Cr FDInterestIncome" at accrual; "Dr CashOrBank [+ Dr InterestDeductionExpense] / Cr
+    /// InterestReceivable" at receipt). Distinguishes "Interest Earned" from "Interest Received" per the
+    /// Template 4 spec.</summary>
+    InterestReceivable = 13,
+    /// <summary>Added by Template 4 — FD interest income, recognized at accrual time (not at receipt),
+    /// kept separate from <see cref="AssociationRevenue"/> so it stays independently reconcilable.
+    /// </summary>
+    FDInterestIncome = 14,
+    /// <summary>Added by Template 4 — the deduction-at-source portion (e.g. bank-withheld tax) of an FD
+    /// interest receipt. A single configurable system account (via <c>AccountMapping</c>), never a
+    /// hard-coded statutory rate/account — see <c>FixedDeposits.FixedDeposit.ExpectedDeductionRatePercent</c>'s
+    /// doc comment.</summary>
+    InterestDeductionExpense = 15,
 }

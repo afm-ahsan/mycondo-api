@@ -145,4 +145,49 @@ public class FinancialPostingServiceTests
 
         result.Entries.Should().OnlyContain(e => e.AccountingPeriodId == period.Id);
     }
+
+    /// <summary>Template 4's additive <see cref="FinancialPostingLine.ExplicitAccountId"/> escape hatch
+    /// (Financial Accounts, each with their own ledger account) — resolves directly to the supplied
+    /// account instead of consulting <see cref="IAccountMappingRepository"/> for that line, while a
+    /// same-request line with no override still resolves via its role as before.</summary>
+    [Fact]
+    public async Task PostAsync_Resolves_A_Line_With_ExplicitAccountId_Without_Consulting_The_Role_Mapping()
+    {
+        ChartOfAccountId specificBankAccountId = ChartOfAccountId.New();
+        FinancialPostingLine[] lines =
+        [
+            new FinancialPostingLine(LedgerAccountType.FixedDeposit, null, LedgerDirection.Debit, 100_000m),
+            new FinancialPostingLine(
+                LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, 100_000m,
+                ExplicitAccountId: specificBankAccountId),
+        ];
+        _accountMappings.ResolveAccountIdAsync(TenantId, "FixedDeposit", Arg.Any<CancellationToken>())
+            .Returns(ChartOfAccountId.New());
+
+        FinancialPostingResult result = await CreateService().PostAsync(
+            new FinancialPostingRequest(TenantId, BusinessDate, "FD placement", "FixedDepositPlacement", null, lines),
+            CancellationToken.None);
+
+        result.Entries.Should().ContainSingle(e => e.AccountType == LedgerAccountType.CashOrBank && e.ChartOfAccountId == specificBankAccountId);
+        await _accountMappings.DidNotReceive().ResolveAccountIdAsync(TenantId, "CashOrBank", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PostAsync_Resolves_Two_Same_Role_Lines_To_Different_Explicit_Accounts()
+    {
+        ChartOfAccountId accountA = ChartOfAccountId.New();
+        ChartOfAccountId accountB = ChartOfAccountId.New();
+        FinancialPostingLine[] lines =
+        [
+            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, 40_000m, ExplicitAccountId: accountA),
+            new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, 40_000m, ExplicitAccountId: accountB),
+        ];
+
+        FinancialPostingResult result = await CreateService().PostAsync(
+            new FinancialPostingRequest(TenantId, BusinessDate, "Inter-account transfer", "FixedDepositRenewalPartialWithdrawal", null, lines),
+            CancellationToken.None);
+
+        result.Entries.Should().ContainSingle(e => e.ChartOfAccountId == accountA);
+        result.Entries.Should().ContainSingle(e => e.ChartOfAccountId == accountB);
+    }
 }

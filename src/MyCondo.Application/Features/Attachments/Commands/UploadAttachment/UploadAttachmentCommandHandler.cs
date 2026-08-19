@@ -6,6 +6,7 @@ using MyCondo.Application.Features.Attachments.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Attachments;
 using MyCondo.Domain.Features.Expenses.Expenses;
+using MyCondo.Domain.Features.Finance.FixedDeposits;
 using MyCondo.Domain.Features.Leasing.OccupancyRegistrations;
 using MyCondo.Domain.Features.Leasing.HouseholdMembers;
 using MyCondo.Domain.Features.Property.Buildings;
@@ -29,6 +30,7 @@ public sealed class UploadAttachmentCommandHandler(
     IResidentHouseholdMemberRepository residentHouseholdMembers,
     IHouseholdMemberRepository leasingHouseholdMembers,
     IExpenseRepository expenses,
+    IFixedDepositRepository fixedDeposits,
     IFileStorageService fileStorage,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
@@ -134,6 +136,15 @@ public sealed class UploadAttachmentCommandHandler(
                 if (expense.TenantId != tenantId)
                 {
                     throw new NotFoundException(nameof(Expense), ownerId);
+                }
+
+                break;
+            case AttachmentOwnerType.FixedDeposit:
+                FixedDeposit fixedDeposit = await fixedDeposits.GetByIdAsync(new FixedDepositId(ownerId), cancellationToken)
+                    ?? throw new NotFoundException(nameof(FixedDeposit), ownerId);
+                if (fixedDeposit.TenantId != tenantId)
+                {
+                    throw new NotFoundException(nameof(FixedDeposit), ownerId);
                 }
 
                 break;

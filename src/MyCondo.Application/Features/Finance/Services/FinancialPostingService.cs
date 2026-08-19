@@ -37,17 +37,30 @@ public sealed class FinancialPostingService(
             }
         }
 
-        Dictionary<LedgerAccountType, ChartOfAccountId> resolvedAccounts = [];
-        foreach (LedgerAccountType role in request.Lines.Select(l => l.Role).Distinct())
+        Dictionary<LedgerAccountType, ChartOfAccountId> resolvedRoleAccounts = [];
+        List<ChartOfAccountId> resolvedLineAccounts = new(request.Lines.Count);
+        foreach (FinancialPostingLine line in request.Lines)
         {
-            ChartOfAccountId? accountId = await accountMappings.ResolveAccountIdAsync(
-                request.TenantId, role.ToString(), cancellationToken);
-            if (accountId is null)
+            if (line.ExplicitAccountId is ChartOfAccountId explicitAccountId)
             {
-                throw new MissingAccountMappingException(request.TenantId, role.ToString());
+                resolvedLineAccounts.Add(explicitAccountId);
+                continue;
             }
 
-            resolvedAccounts[role] = accountId.Value;
+            if (!resolvedRoleAccounts.TryGetValue(line.Role, out ChartOfAccountId roleAccountId))
+            {
+                ChartOfAccountId? accountId = await accountMappings.ResolveAccountIdAsync(
+                    request.TenantId, line.Role.ToString(), cancellationToken);
+                if (accountId is null)
+                {
+                    throw new MissingAccountMappingException(request.TenantId, line.Role.ToString());
+                }
+
+                roleAccountId = accountId.Value;
+                resolvedRoleAccounts[line.Role] = roleAccountId;
+            }
+
+            resolvedLineAccounts.Add(roleAccountId);
         }
 
         AccountingPeriod? period = await accountingPeriods.FindCoveringAsync(
@@ -66,9 +79,9 @@ public sealed class FinancialPostingService(
             request.TenantId, request.BusinessDate, request.Description, request.PostingPurpose,
             request.SourceId, lines, nowUtc);
 
-        foreach ((LedgerEntry entry, FinancialPostingLine line) in entries.Zip(request.Lines))
+        foreach ((LedgerEntry entry, ChartOfAccountId accountId) in entries.Zip(resolvedLineAccounts))
         {
-            entry.SetFinanceDimensions(resolvedAccounts[line.Role], request.FundId, period?.Id);
+            entry.SetFinanceDimensions(accountId, request.FundId, period?.Id);
         }
 
         ledgerPostings.Add(posting);

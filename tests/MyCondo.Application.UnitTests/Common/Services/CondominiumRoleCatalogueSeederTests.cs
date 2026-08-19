@@ -30,6 +30,7 @@ public class CondominiumRoleCatalogueSeederTests
         "document.upload", "notification.view", "visitor.override", "vehicle.override",
         "report.operational.view", "notification.manage", "report.financial.view",
         "billing.fine.view", "billing.fine.assess",
+        "finance.bankaccount.view", "finance.fixeddeposit.view", "finance.fixeddeposit.interest.record",
         "visitor.view", "visitor.create", "visitor.checkin", "visitor.checkout", "visitor.block.manage",
         "vehicle.view", "vehicle.create", "vehicle.checkin", "vehicle.checkout", "vehicle.block.manage",
         "parcel.view", "parcel.receive", "parcel.handover", "parcel.notify", "parcel.escalate",
@@ -99,11 +100,13 @@ public class CondominiumRoleCatalogueSeederTests
 
         // Simulate the pre-existing grants: everything Accountant had before this closure item, minus
         // the two new Fine permissions. Includes Template 3's expense.pay/expensetype.manage/
-        // expensecategory.* additions so this Fine-focused test's assertion stays scoped to Fine grants.
+        // expensecategory.* additions and Template 4's finance.bankaccount.*/finance.fixeddeposit.*
+        // additions so this Fine-focused test's assertion stays scoped to Fine grants.
         List<RolePermission> priorGrants = catalogue
             .Where(p => p.Name is "billing.rule.view" or "billing.generate" or "invoice.view" or "payment.view"
                 or "payment.record" or "expense.view" or "expense.manage" or "expense.pay" or "expensetype.view"
-                or "expensetype.manage" or "expensecategory.view" or "expensecategory.manage" or "report.financial.view")
+                or "expensetype.manage" or "expensecategory.view" or "expensecategory.manage" or "report.financial.view"
+                or "finance.bankaccount.view" or "finance.fixeddeposit.view" or "finance.fixeddeposit.interest.record")
             .Select(p => new RolePermission(tenantId, existingAccountant.Id, p.Id, DateTimeOffset.UtcNow, null))
             .ToList();
         rolePermissions.GetForRoleAsync(existingAccountant.Id, Arg.Any<CancellationToken>()).Returns(priorGrants);

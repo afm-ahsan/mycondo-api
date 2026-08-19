@@ -220,5 +220,14 @@ public static class PermissionCatalogue
         ("finance.period.manage", "Create financial years and accounting periods", "finance", false),
         ("finance.period.close", "Close an open accounting period or financial year", "finance", false),
         ("finance.period.reopen", "Reopen a closed accounting period or financial year", "finance", false),
+
+        // Template 4 (Banking, Fixed Deposits & Interest) — Financial Accounts and Fixed Deposits are
+        // tenant-wide Association treasury data, not building-scoped, same as the finance.* set above.
+        ("finance.bankaccount.view", "View financial (cash/bank/MFS) accounts", "finance", false),
+        ("finance.bankaccount.manage", "Create, update, and deactivate financial (cash/bank/MFS) accounts", "finance", false),
+        ("finance.fixeddeposit.view", "View Fixed Deposit instruments and their interest history", "finance", false),
+        ("finance.fixeddeposit.place", "Place a new Fixed Deposit", "finance", false),
+        ("finance.fixeddeposit.manage", "Renew, withdraw, or void a Fixed Deposit", "finance", false),
+        ("finance.fixeddeposit.interest.record", "Record Fixed Deposit interest accrual and receipt", "finance", false),
     ];
 }

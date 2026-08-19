@@ -40,6 +40,12 @@ public sealed class FinanceChartOfAccountSeeder(
         // AccountsPayable's doc comments.
         (LedgerAccountType.AccountsPayable, "2300", "Accounts Payable", AccountCategory.Liability, LedgerDirection.Credit),
         (LedgerAccountType.OperatingExpense, "5000", "Operating Expenses", AccountCategory.Expense, LedgerDirection.Debit),
+        // Added by Template 4 (Banking, Fixed Deposits & Interest) — see LedgerAccountType.FixedDeposit/
+        // InterestReceivable/FDInterestIncome/InterestDeductionExpense's doc comments.
+        (LedgerAccountType.FixedDeposit, "1200", "Fixed Deposits", AccountCategory.Asset, LedgerDirection.Debit),
+        (LedgerAccountType.InterestReceivable, "1300", "FD Interest Receivable", AccountCategory.Asset, LedgerDirection.Debit),
+        (LedgerAccountType.FDInterestIncome, "4040", "FD Interest Income", AccountCategory.Income, LedgerDirection.Credit),
+        (LedgerAccountType.InterestDeductionExpense, "5100", "Interest Deduction / Withholding", AccountCategory.Expense, LedgerDirection.Debit),
     ];
 
     public async Task SeedAsync(Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken)

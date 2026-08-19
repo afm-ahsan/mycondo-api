@@ -49,6 +49,10 @@ public sealed class CondominiumRoleCatalogueSeeder(
             // (view + assess) — not waive/reverse, mirroring its existing exclusion of invoice.void/
             // payment.reverse (correction authority stays with the tenant-wide Treasurer role).
             "billing.fine.view", "billing.fine.assess",
+            // Template 4: Accountant records routine monthly interest but doesn't place/renew/withdraw/
+            // void an FD itself — that correction/commitment authority stays with Treasurer, same
+            // "operational subset" split as the fine permissions above.
+            "finance.bankaccount.view", "finance.fixeddeposit.view", "finance.fixeddeposit.interest.record",
         ]),
         ("SecurityOfficer", "condominium.security", "Security, visitor, vehicle, and parcel oversight for a single condominium/building.",
         [

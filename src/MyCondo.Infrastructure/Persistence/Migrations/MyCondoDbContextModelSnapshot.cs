@@ -1446,6 +1446,85 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.ToTable("chart_of_accounts", "finance");
                 });
 
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.FinancialAccounts.FinancialAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("account_number");
+
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("account_type");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<string>("BranchName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("branch_name");
+
+                    b.Property<Guid>("ChartOfAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chart_of_account_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid?>("FundId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fund_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_financial_accounts");
+
+                    b.HasIndex("TenantId", "IsActive")
+                        .HasDatabaseName("ix_financial_accounts_tenant_id_is_active");
+
+                    b.ToTable("financial_accounts", "finance");
+                });
+
             modelBuilder.Entity("MyCondo.Domain.Features.Finance.FinancialYears.FinancialYear", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1499,6 +1578,317 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_financial_years_tenant_id_start_date_end_date");
 
                     b.ToTable("financial_years", "finance");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.FixedDeposits.FixedDeposit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<string>("BranchName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("branch_name");
+
+                    b.Property<string>("CalculationMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("calculation_method");
+
+                    b.Property<string>("CertificateNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("certificate_number");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal?>("ExpectedDeductionRatePercent")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("numeric(6,3)")
+                        .HasColumnName("expected_deduction_rate_percent");
+
+                    b.Property<decimal?>("ExpectedGrossInterest")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("expected_gross_interest");
+
+                    b.Property<Guid?>("FundId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fund_id");
+
+                    b.Property<Guid>("FundingFinancialAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("funding_financial_account_id");
+
+                    b.Property<decimal>("InterestRatePercent")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("numeric(6,3)")
+                        .HasColumnName("interest_rate_percent");
+
+                    b.Property<DateOnly>("MaturityDate")
+                        .HasColumnType("date")
+                        .HasColumnName("maturity_date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("PaymentFrequency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("payment_frequency");
+
+                    b.Property<Guid?>("PlacementPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("placement_posting_id");
+
+                    b.Property<Guid?>("PredecessorFixedDepositId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("predecessor_fixed_deposit_id");
+
+                    b.Property<decimal>("Principal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("principal");
+
+                    b.Property<Guid?>("ReceivingFinancialAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receiving_financial_account_id");
+
+                    b.Property<Guid?>("RenewalAdjustmentPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("renewal_adjustment_posting_id");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("SuccessorFixedDepositId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("successor_fixed_deposit_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("void_reason");
+
+                    b.Property<Guid?>("VoidReversalPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("void_reversal_posting_id");
+
+                    b.Property<Guid?>("WithdrawalPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("withdrawal_posting_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fixed_deposits");
+
+                    b.HasIndex("TenantId", "CertificateNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_fixed_deposits_tenant_id_certificate_number");
+
+                    b.HasIndex("TenantId", "FundId")
+                        .HasDatabaseName("ix_fixed_deposits_tenant_id_fund_id");
+
+                    b.HasIndex("TenantId", "FundingFinancialAccountId")
+                        .HasDatabaseName("ix_fixed_deposits_tenant_id_funding_financial_account_id");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_fixed_deposits_tenant_id_status");
+
+                    b.ToTable("fixed_deposits", "finance");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.FixedDeposits.FixedDepositInterestAccrual", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("AccountingDate")
+                        .HasColumnType("date")
+                        .HasColumnName("accounting_date");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("FixedDepositId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fixed_deposit_id");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("gross_amount");
+
+                    b.Property<bool>("IsReversed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_reversed");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("period_end");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date")
+                        .HasColumnName("period_start");
+
+                    b.Property<Guid>("PostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("posting_id");
+
+                    b.Property<Guid?>("ReversalPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reversal_posting_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fixed_deposit_interest_accruals");
+
+                    b.HasIndex("TenantId", "FixedDepositId")
+                        .HasDatabaseName("ix_fd_interest_accruals_tenant_id_fixed_deposit_id");
+
+                    b.ToTable("fixed_deposit_interest_accruals", "finance");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.FixedDeposits.FixedDepositInterestReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("AccountingDate")
+                        .HasColumnType("date")
+                        .HasColumnName("accounting_date");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("DeductionAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("deduction_amount");
+
+                    b.Property<Guid>("FixedDepositId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fixed_deposit_id");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("gross_amount");
+
+                    b.Property<bool>("IsReversed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_reversed");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("posting_id");
+
+                    b.Property<Guid>("ReceivingFinancialAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receiving_financial_account_id");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<Guid?>("ReversalPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reversal_posting_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fixed_deposit_interest_receipts");
+
+                    b.HasIndex("TenantId", "FixedDepositId")
+                        .HasDatabaseName("ix_fd_interest_receipts_tenant_id_fixed_deposit_id");
+
+                    b.ToTable("fixed_deposit_interest_receipts", "finance");
                 });
 
             modelBuilder.Entity("MyCondo.Domain.Features.Finance.Funds.Fund", b =>

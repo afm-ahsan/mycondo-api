@@ -47,6 +47,10 @@ public sealed class DefaultRoleCatalogueSeeder(
             // Billing↔Finance integration template: Fine assess/waive/reverse are correction-authority
             // actions, same category as invoice.void/payment.reverse above — Treasurer gets the full set.
             "billing.fine.view", "billing.fine.assess", "billing.fine.waive", "billing.fine.reverse",
+            // Template 4: Treasurer gets full Banking/Fixed Deposit authority — placement, renewal/
+            // withdrawal/void, and interest recording are all tenant-wide treasury decisions.
+            "finance.bankaccount.view", "finance.bankaccount.manage", "finance.fixeddeposit.view",
+            "finance.fixeddeposit.place", "finance.fixeddeposit.manage", "finance.fixeddeposit.interest.record",
         ]),
         ("Secretary", "default.secretary", "Administrative/communications support — the point of contact for residents.",
         [
@@ -75,6 +79,8 @@ public sealed class DefaultRoleCatalogueSeeder(
             "expensetype.view", "expensecategory.view", "complaint.view", "workorder.view", "document.view",
             "report.financial.view", "report.operational.view", "role.view", "permission.view",
             "audit.view",
+            // Template 4: read-only Banking/Fixed Deposit visibility for compliance/external audit.
+            "finance.bankaccount.view", "finance.fixeddeposit.view",
         ]),
     ];
 
