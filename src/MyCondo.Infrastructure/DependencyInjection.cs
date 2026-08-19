@@ -13,6 +13,7 @@ using MyCondo.Domain.Features.Attachments;
 using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Billing.InvoiceSequences;
 using MyCondo.Domain.Features.Billing.ServiceChargeRules;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Finance.AccountingPeriods;
@@ -163,6 +164,7 @@ public static class DependencyInjection
         // Every-environment seeders (not Development-only — see each one's own doc comment for why).
         services.AddScoped<Seed.FinanceChartOfAccountBackfillSeeder>();
         services.AddScoped<Seed.TenantRoleCatalogueBackfillSeeder>();
+        services.AddScoped<Seed.ExpenseCategoryCatalogueBackfillSeeder>();
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
@@ -185,6 +187,7 @@ public static class DependencyInjection
         services.AddScoped<IGateRepository, GateRepository>();
         services.AddScoped<IResidentRepository, ResidentRepository>();
         services.AddScoped<IResidentHouseholdMemberRepository, ResidentHouseholdMemberRepository>();
+        services.AddScoped<IExpenseCategoryRepository, ExpenseCategoryRepository>();
         services.AddScoped<IExpenseTypeRepository, ExpenseTypeRepository>();
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();

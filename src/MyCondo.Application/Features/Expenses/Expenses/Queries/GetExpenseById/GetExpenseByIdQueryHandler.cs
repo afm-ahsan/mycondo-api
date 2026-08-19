@@ -2,8 +2,11 @@ using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Expenses.Expenses.DTOs;
+using MyCondo.Application.Features.Expenses.Expenses.Mappings;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Property.Buildings;
 
 namespace MyCondo.Application.Features.Expenses.Expenses.Queries.GetExpenseById;
@@ -11,7 +14,9 @@ namespace MyCondo.Application.Features.Expenses.Expenses.Queries.GetExpenseById;
 public sealed class GetExpenseByIdQueryHandler(
     IExpenseRepository expenses,
     IExpenseTypeRepository expenseTypes,
+    IExpenseCategoryRepository expenseCategories,
     IBuildingRepository buildings,
+    IFundRepository funds,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetExpenseByIdQuery, ExpenseDto>
 {
@@ -31,13 +36,17 @@ public sealed class GetExpenseByIdQueryHandler(
             throw new NotFoundException(nameof(Expense), query.ExpenseId);
         }
 
-        Building? building = await buildings.GetByIdAsync(expense.BuildingId, cancellationToken);
+        Building? building = expense.BuildingId is BuildingId buildingId
+            ? await buildings.GetByIdAsync(buildingId, cancellationToken)
+            : null;
         ExpenseType? expenseType = await expenseTypes.GetByIdAsync(expense.ExpenseTypeId, cancellationToken);
+        ExpenseCategory? expenseCategory = expenseType?.ExpenseCategoryId is ExpenseCategoryId categoryId
+            ? await expenseCategories.GetByIdAsync(categoryId, cancellationToken)
+            : null;
+        Fund? fund = expense.FundId is FundId fundId ? await funds.GetByIdAsync(fundId, cancellationToken) : null;
 
-        return new ExpenseDto(
-            expense.Id.Value, expense.BuildingId.Value, building?.Name ?? "Unknown", expense.ExpenseTypeId.Value,
-            expenseType?.Name ?? "Unknown", expense.ExpenseDate, expense.Description, expense.Payee,
-            expense.ReferenceNumber, expense.Amount, expense.PaymentMethod.ToString(), expense.Notes,
-            expense.Status.ToString(), expense.VoidReason, expense.CreatedBy, expense.CreatedAtUtc, expense.UpdatedAtUtc);
+        return expense.ToDto(
+            building?.Name, expenseType?.Name ?? "Unknown", expenseCategory?.Id.Value, expenseCategory?.Name,
+            fund?.Name);
     }
 }

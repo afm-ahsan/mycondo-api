@@ -32,7 +32,8 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "property.view", "property.update", "resident.view", "resident.create", "resident.update",
             "ownership.view", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
-            "payment.view", "payment.record", "expense.view", "expense.manage", "expensetype.view",
+            "payment.view", "payment.record", "expense.view", "expense.manage", "expense.approve",
+            "expensetype.view", "expensecategory.view",
             "complaint.view", "complaint.create", "complaint.assign", "complaint.manage",
             "workorder.view", "workorder.create", "workorder.assign", "workorder.complete",
             "document.view", "document.upload", "notification.view",
@@ -41,7 +42,8 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "billing.rule.view", "billing.rule.manage", "billing.generate", "invoice.view",
             "invoice.void", "payment.view", "payment.record", "payment.reverse", "expense.view",
-            "expense.manage", "expensetype.view", "expensetype.manage", "report.financial.view",
+            "expense.manage", "expense.approve", "expense.pay", "expensetype.view", "expensetype.manage",
+            "expensecategory.view", "expensecategory.manage", "report.financial.view",
             // Billing↔Finance integration template: Fine assess/waive/reverse are correction-authority
             // actions, same category as invoice.void/payment.reverse above — Treasurer gets the full set.
             "billing.fine.view", "billing.fine.assess", "billing.fine.waive", "billing.fine.reverse",
@@ -70,7 +72,7 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "tenant.view", "user.view", "property.view", "resident.view", "ownership.view",
             "lease.view", "billing.rule.view", "invoice.view", "payment.view", "expense.view",
-            "expensetype.view", "complaint.view", "workorder.view", "document.view",
+            "expensetype.view", "expensecategory.view", "complaint.view", "workorder.view", "document.view",
             "report.financial.view", "report.operational.view", "role.view", "permission.view",
             "audit.view",
         ]),

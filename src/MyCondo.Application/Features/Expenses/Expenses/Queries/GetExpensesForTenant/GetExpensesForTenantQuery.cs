@@ -7,6 +7,7 @@ namespace MyCondo.Application.Features.Expenses.Expenses.Queries.GetExpensesForT
 public sealed record GetExpensesForTenantQuery(
     Guid? BuildingId,
     Guid? ExpenseTypeId,
+    Guid? FundId,
     string? Status,
     DateOnly? FromDate,
     DateOnly? ToDate,

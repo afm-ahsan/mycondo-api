@@ -5,13 +5,16 @@ namespace MyCondo.Application.Features.Expenses.Expenses.Commands.UpdateExpense;
 
 public sealed record UpdateExpenseCommand(
     Guid ExpenseId,
-    Guid BuildingId,
+    Guid? BuildingId,
     Guid ExpenseTypeId,
+    Guid? FundId,
     DateOnly ExpenseDate,
+    DateOnly? AccountingDate,
     string Description,
     string? Payee,
     string? ReferenceNumber,
     decimal Amount,
+    bool IsPaid,
     string PaymentMethod,
     string? Notes
 ) : IRequest<ExpenseDto>;

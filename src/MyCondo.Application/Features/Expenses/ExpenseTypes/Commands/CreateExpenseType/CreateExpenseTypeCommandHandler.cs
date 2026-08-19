@@ -4,12 +4,14 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Expenses.ExpenseTypes.DTOs;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 
 namespace MyCondo.Application.Features.Expenses.ExpenseTypes.Commands.CreateExpenseType;
 
 public sealed class CreateExpenseTypeCommandHandler(
     IExpenseTypeRepository expenseTypes,
+    IExpenseCategoryRepository expenseCategories,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -21,6 +23,20 @@ public sealed class CreateExpenseTypeCommandHandler(
         if (currentUser.TenantId is not Guid tenantId)
         {
             throw new ForbiddenException("Authentication required.");
+        }
+
+        ExpenseCategoryId expenseCategoryId = new(command.ExpenseCategoryId);
+        ExpenseCategory expenseCategory = await expenseCategories.GetByIdAsync(expenseCategoryId, cancellationToken)
+            ?? throw new NotFoundException(nameof(ExpenseCategory), command.ExpenseCategoryId);
+
+        if (expenseCategory.TenantId != tenantId)
+        {
+            throw new NotFoundException(nameof(ExpenseCategory), command.ExpenseCategoryId);
+        }
+
+        if (!expenseCategory.IsActive)
+        {
+            throw new ConflictException($"Expense category '{expenseCategory.Name}' is inactive and cannot be used for new expense types.");
         }
 
         string normalizedCode = command.Code.Trim().ToUpperInvariant();
@@ -36,7 +52,8 @@ public sealed class CreateExpenseTypeCommandHandler(
         }
 
         ExpenseType expenseType = ExpenseType.Create(
-            tenantId, command.Name, normalizedCode, command.Description, command.DisplayOrder, clock.UtcNow);
+            tenantId, expenseCategoryId, command.Name, normalizedCode, command.Description, command.DisplayOrder,
+            clock.UtcNow);
 
         expenseTypes.Add(expenseType);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -45,7 +62,7 @@ public sealed class CreateExpenseTypeCommandHandler(
             "ExpenseType {ExpenseTypeId} '{Name}' created for tenant {TenantId}", expenseType.Id, expenseType.Name, tenantId);
 
         return new ExpenseTypeDto(
-            expenseType.Id.Value, expenseType.Name, expenseType.Code, expenseType.Description,
-            expenseType.IsActive, expenseType.DisplayOrder);
+            expenseType.Id.Value, expenseCategory.Id.Value, expenseCategory.Name, expenseType.Name, expenseType.Code,
+            expenseType.Description, expenseType.IsActive, expenseType.DisplayOrder);
     }
 }

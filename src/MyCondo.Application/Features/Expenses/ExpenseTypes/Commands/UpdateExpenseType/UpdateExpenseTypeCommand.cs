@@ -5,6 +5,7 @@ namespace MyCondo.Application.Features.Expenses.ExpenseTypes.Commands.UpdateExpe
 
 public sealed record UpdateExpenseTypeCommand(
     Guid ExpenseTypeId,
+    Guid ExpenseCategoryId,
     string Name,
     string Code,
     string? Description,

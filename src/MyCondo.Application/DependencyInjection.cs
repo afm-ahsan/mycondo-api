@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
         services.AddScoped<IResidentRoleCatalogueSeeder, ResidentRoleCatalogueSeeder>();
+        services.AddScoped<IExpenseCategoryCatalogueSeeder, ExpenseCategoryCatalogueSeeder>();
         services.AddScoped<IExpenseTypeCatalogueSeeder, ExpenseTypeCatalogueSeeder>();
         services.AddScoped<IFinanceChartOfAccountSeeder, FinanceChartOfAccountSeeder>();
         services.AddScoped<IFlatAccessAuthorizer, FlatAccessAuthorizer>();

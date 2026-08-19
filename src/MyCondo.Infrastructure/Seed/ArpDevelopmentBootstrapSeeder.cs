@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Services;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
@@ -131,6 +132,7 @@ public sealed class ArpDevelopmentBootstrapSeeder(
         PermissionRepository permissions = new(db);
         RolePermissionRepository rolePermissions = new(db);
         RoleAssignmentRepository roleAssignments = new(db);
+        ExpenseCategoryRepository expenseCategories = new(db);
         ExpenseTypeRepository expenseTypes = new(db);
         ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
@@ -140,7 +142,8 @@ public sealed class ArpDevelopmentBootstrapSeeder(
         await organizationAdminBootstrapper.BootstrapAsync(tenant.Id.Value, admin, nowUtc, cancellationToken);
 
         await SeedCataloguesAsync(
-            roles, permissions, rolePermissions, expenseTypes, loggerFactory, tenant.Id.Value, nowUtc, cancellationToken);
+            roles, permissions, rolePermissions, expenseCategories, expenseTypes, loggerFactory, tenant.Id.Value,
+            nowUtc, db, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -157,18 +160,21 @@ public sealed class ArpDevelopmentBootstrapSeeder(
         RoleRepository roles = new(db);
         PermissionRepository permissions = new(db);
         RolePermissionRepository rolePermissions = new(db);
+        ExpenseCategoryRepository expenseCategories = new(db);
         ExpenseTypeRepository expenseTypes = new(db);
         ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
         await SeedCataloguesAsync(
-            roles, permissions, rolePermissions, expenseTypes, loggerFactory, tenantId, nowUtc, cancellationToken);
+            roles, permissions, rolePermissions, expenseCategories, expenseTypes, loggerFactory, tenantId, nowUtc,
+            db, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task SeedCataloguesAsync(
         RoleRepository roles, PermissionRepository permissions, RolePermissionRepository rolePermissions,
-        ExpenseTypeRepository expenseTypes, ILoggerFactory loggerFactory, Guid tenantId, DateTimeOffset nowUtc,
+        ExpenseCategoryRepository expenseCategories, ExpenseTypeRepository expenseTypes,
+        ILoggerFactory loggerFactory, Guid tenantId, DateTimeOffset nowUtc, MyCondoDbContext db,
         CancellationToken cancellationToken)
     {
         DefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder = new(
@@ -177,12 +183,19 @@ public sealed class ArpDevelopmentBootstrapSeeder(
             roles, permissions, rolePermissions, loggerFactory.CreateLogger<CondominiumRoleCatalogueSeeder>());
         ResidentRoleCatalogueSeeder residentRoleCatalogueSeeder = new(
             roles, permissions, rolePermissions, loggerFactory.CreateLogger<ResidentRoleCatalogueSeeder>());
+        ExpenseCategoryCatalogueSeeder expenseCategoryCatalogueSeeder = new(
+            expenseCategories, expenseTypes, loggerFactory.CreateLogger<ExpenseCategoryCatalogueSeeder>());
         ExpenseTypeCatalogueSeeder expenseTypeCatalogueSeeder = new(
-            expenseTypes, loggerFactory.CreateLogger<ExpenseTypeCatalogueSeeder>());
+            expenseTypes, expenseCategories, loggerFactory.CreateLogger<ExpenseTypeCatalogueSeeder>());
 
         await defaultRoleCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
         await condominiumRoleCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
         await residentRoleCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
+
+        // Category must be saved before the type seeder resolves categories — see
+        // RegisterUserCommandHandler's identical ordering comment.
+        await expenseCategoryCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
         await expenseTypeCatalogueSeeder.SeedAsync(tenantId, nowUtc, cancellationToken);
     }
 

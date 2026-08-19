@@ -9,7 +9,8 @@ public class CreateExpenseCommandValidatorTests
     private readonly CreateExpenseCommandValidator _validator = new();
 
     private static CreateExpenseCommand ValidCommand(decimal amount = 100m, string paymentMethod = "Cash") => new(
-        Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 8, 1), "Cleaning", null, null, amount, paymentMethod, null);
+        Guid.NewGuid(), Guid.NewGuid(), null, new DateOnly(2026, 8, 1), null, "Cleaning", null, null, amount, false,
+        paymentMethod, null);
 
     [Fact]
     public void Valid_Command_Passes()

@@ -1,5 +1,6 @@
 using MyCondo.Domain.Common;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Property.Buildings;
 
 namespace MyCondo.Domain.Features.Expenses.Expenses;
@@ -14,6 +15,7 @@ public interface IExpenseRepository
         Guid tenantId,
         BuildingId? buildingId,
         ExpenseTypeId? expenseTypeId,
+        FundId? fundId,
         ExpenseStatus? status,
         DateOnly? fromDate,
         DateOnly? toDate,

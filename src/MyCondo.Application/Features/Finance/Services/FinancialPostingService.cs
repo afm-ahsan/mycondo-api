@@ -68,7 +68,7 @@ public sealed class FinancialPostingService(
 
         foreach ((LedgerEntry entry, FinancialPostingLine line) in entries.Zip(request.Lines))
         {
-            entry.SetFinanceDimensions(resolvedAccounts[line.Role], fundId: null, period?.Id);
+            entry.SetFinanceDimensions(resolvedAccounts[line.Role], request.FundId, period?.Id);
         }
 
         ledgerPostings.Add(posting);

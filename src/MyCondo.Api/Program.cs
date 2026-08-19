@@ -58,6 +58,7 @@ app.MapUserEndpoints();
 app.MapPropertyEndpoints();
 app.MapFlatOwnershipEndpoints();
 app.MapResidentEndpoints();
+app.MapExpenseCategoryEndpoints();
 app.MapExpenseTypeEndpoints();
 app.MapExpenseEndpoints();
 app.MapMeEndpoints();

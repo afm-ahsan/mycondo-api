@@ -1,3 +1,4 @@
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Finance.AccountMappings;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
@@ -32,6 +33,7 @@ public interface ITenantScopedUnitOfWork : IAsyncDisposable
     IRolePermissionRepository RolePermissions { get; }
     IRoleAssignmentRepository RoleAssignments { get; }
     ITenantModuleRepository TenantModules { get; }
+    IExpenseCategoryRepository ExpenseCategories { get; }
     IExpenseTypeRepository ExpenseTypes { get; }
     IChartOfAccountRepository ChartOfAccounts { get; }
     IAccountMappingRepository AccountMappings { get; }

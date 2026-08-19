@@ -36,6 +36,10 @@ public sealed class FinanceChartOfAccountSeeder(
         (LedgerAccountType.GasRecoveryIncome, "4020", "Gas Recovery Income", AccountCategory.Income, LedgerDirection.Credit),
         (LedgerAccountType.FineIncome, "4030", "Fine Income", AccountCategory.Income, LedgerDirection.Credit),
         (LedgerAccountType.AdjustmentsAndWaivers, "4900", "Adjustments and Waivers", AccountCategory.Income, LedgerDirection.Debit),
+        // Added by Template 3 (Expense Accounting Integration) — see LedgerAccountType.OperatingExpense/
+        // AccountsPayable's doc comments.
+        (LedgerAccountType.AccountsPayable, "2300", "Accounts Payable", AccountCategory.Liability, LedgerDirection.Credit),
+        (LedgerAccountType.OperatingExpense, "5000", "Operating Expenses", AccountCategory.Expense, LedgerDirection.Debit),
     ];
 
     public async Task SeedAsync(Guid tenantId, DateTimeOffset nowUtc, CancellationToken cancellationToken)

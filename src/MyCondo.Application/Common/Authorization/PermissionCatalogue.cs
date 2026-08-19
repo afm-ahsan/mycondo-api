@@ -49,8 +49,14 @@ public static class PermissionCatalogue
         ("payment.reverse", "Reverse payments", "payment", true),
         ("expense.view", "View expenses", "expense", true),
         ("expense.manage", "Create, update, and void expenses", "expense", true),
+        // Added by Template 3 (Expense Accounting Integration) — approval/posting and supplier-payment
+        // are distinct, higher-trust actions from plain record/edit (expense.manage).
+        ("expense.approve", "Approve and post expenses to the ledger", "expense", true),
+        ("expense.pay", "Record supplier payments for posted, unpaid expenses", "expense", true),
         ("expensetype.view", "View expense types", "expensetype", false),
         ("expensetype.manage", "Create, update, and deactivate expense types", "expensetype", false),
+        ("expensecategory.view", "View expense categories", "expensecategory", false),
+        ("expensecategory.manage", "Create, update, and deactivate expense categories", "expensecategory", false),
         ("complaint.view", "View complaints", "complaint", true),
         ("complaint.create", "Create complaints", "complaint", true),
         ("complaint.assign", "Assign complaints to staff", "complaint", true),

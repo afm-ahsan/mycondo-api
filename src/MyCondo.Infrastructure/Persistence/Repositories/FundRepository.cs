@@ -15,4 +15,7 @@ public sealed class FundRepository(MyCondoDbContext db) : IFundRepository
             .Where(x => x.TenantId == tenantId)
             .OrderBy(x => x.Code)
             .ToListAsync(cancellationToken);
+
+    public Task<Fund?> GetByIdAsync(FundId id, CancellationToken cancellationToken) =>
+        db.Set<Fund>().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 }

@@ -8,7 +8,6 @@ public sealed class UpdateExpenseCommandValidator : AbstractValidator<UpdateExpe
     public UpdateExpenseCommandValidator()
     {
         RuleFor(x => x.ExpenseId).NotEmpty();
-        RuleFor(x => x.BuildingId).NotEmpty();
         RuleFor(x => x.ExpenseTypeId).NotEmpty();
         RuleFor(x => x.Description).NotEmpty().MaximumLength(500);
         RuleFor(x => x.Payee).MaximumLength(200);

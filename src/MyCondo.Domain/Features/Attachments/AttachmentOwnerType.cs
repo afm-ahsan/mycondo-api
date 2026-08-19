@@ -14,4 +14,6 @@ public enum AttachmentOwnerType
     User = 4,
     ResidentHouseholdMember = 5,
     LeasingHouseholdMember = 6,
+    /// <summary>Added by Template 3 — an Expense's supporting document (invoice/voucher/receipt).</summary>
+    Expense = 7,
 }

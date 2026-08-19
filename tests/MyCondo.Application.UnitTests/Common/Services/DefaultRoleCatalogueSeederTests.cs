@@ -19,7 +19,8 @@ public class DefaultRoleCatalogueSeederTests
         "billing.fine.waive", "billing.generate", "billing.rule.manage", "billing.rule.view",
         "complaint.assign", "complaint.create", "complaint.manage", "complaint.view",
         "document.delete", "document.upload", "document.view", "expense.manage", "expense.view",
-        "expensetype.manage", "expensetype.view",
+        "expense.approve", "expense.pay", "expensetype.manage", "expensetype.view",
+        "expensecategory.view", "expensecategory.manage",
         "invoice.view", "invoice.void", "lease.manage", "lease.view", "notification.manage",
         "notification.view", "ownership.manage", "ownership.view", "payment.record",
         "payment.reverse", "payment.view", "permission.view", "property.create", "property.delete",
@@ -72,7 +73,10 @@ public class DefaultRoleCatalogueSeederTests
         addedRoles.Should().OnlyContain(r => r.Code != null && r.Code.StartsWith("default."));
         addedRoles.Should().NotContain(r => r.Name == "Vendor" || r.Name == "Guard");
 
-        addedGrants.Should().HaveCount(85);
+        // 85 pre-Template-3 + 7 new grants (Template 3): BuildingAdmin gets expense.approve +
+        // expensecategory.view (2); Treasurer gets expense.approve, expense.pay, expensecategory.view,
+        // expensecategory.manage (4); Auditor gets expensecategory.view (1).
+        addedGrants.Should().HaveCount(92);
         addedGrants.Should().OnlyContain(g => g.TenantId == tenantId);
     }
 

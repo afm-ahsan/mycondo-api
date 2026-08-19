@@ -98,6 +98,13 @@ public static class DatabaseSeederExtensions
             // startup, not just from the next restart onward. See
             // FinanceChartOfAccountBackfillSeeder's doc comment.
             await sp.GetRequiredService<FinanceChartOfAccountBackfillSeeder>().SeedAsync(cancellationToken);
+
+            // 06 Expense category catalogue backfill (Template 3) — every environment: a tenant
+            // bootstrapped before Template 3 introduced Expense Categories has expense types with no
+            // category and none of the default categories. Includes the OperatingExpense/AccountsPayable
+            // system accounts via step 05 above (FinanceChartOfAccountSeeder's set), and this step's own
+            // category/type reconciliation. See ExpenseCategoryCatalogueBackfillSeeder's doc comment.
+            await sp.GetRequiredService<ExpenseCategoryCatalogueBackfillSeeder>().SeedAsync(cancellationToken);
         }
         finally
         {

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Payments.Payments;
@@ -9,10 +10,10 @@ using MyCondo.Infrastructure.Persistence;
 namespace MyCondo.MultiTenancyTests;
 
 /// <summary>
-/// Real RLS enforcement tests for expenses.expense_types/expenses.expenses (Phase 4, mycondo-docs
-/// expense-management domain decision) — same pattern as FlatOwnershipRlsTests, scoped to the two new
-/// tables. Requires a Docker daemon; not executed in the environment this was authored in — see
-/// MultiTenancyPostgresFixture's doc comment.
+/// Real RLS enforcement tests for expenses.expense_categories/expenses.expense_types/expenses.expenses
+/// (Template 3 extends the pre-existing Phase 4 expense_types/expenses coverage with the new
+/// expense_categories table) — same pattern as FlatOwnershipRlsTests. Requires a Docker daemon; not
+/// executed in the environment this was authored in — see MultiTenancyPostgresFixture's doc comment.
 /// </summary>
 public class ExpensesRlsTests : IClassFixture<MultiTenancyPostgresFixture>
 {
@@ -24,20 +25,54 @@ public class ExpensesRlsTests : IClassFixture<MultiTenancyPostgresFixture>
     }
 
     [Fact]
-    public async Task ExpenseTypes_Cross_Tenant_Isolation()
+    public async Task ExpenseCategories_Cross_Tenant_Isolation()
     {
         Guid tenantA = Guid.NewGuid();
         Guid tenantB = Guid.NewGuid();
 
         await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
         {
-            dbA.Set<ExpenseType>().Add(ExpenseType.Create(tenantA, "Cleaning", "CLN", null, 1, DateTimeOffset.UtcNow));
+            dbA.Set<ExpenseCategory>().Add(ExpenseCategory.Create(tenantA, "Utilities", "UTIL", null, 1, DateTimeOffset.UtcNow));
             await dbA.SaveChangesAsync();
         }
 
         await using (MyCondoDbContext dbB = _fixture.CreateDbContext(tenantB))
         {
-            dbB.Set<ExpenseType>().Add(ExpenseType.Create(tenantB, "Security", "SEC", null, 1, DateTimeOffset.UtcNow));
+            dbB.Set<ExpenseCategory>().Add(ExpenseCategory.Create(tenantB, "Security", "SEC", null, 1, DateTimeOffset.UtcNow));
+            await dbB.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext asTenantA = _fixture.CreateDbContext(tenantA))
+        {
+            List<ExpenseCategory> visible = await asTenantA.Set<ExpenseCategory>().ToListAsync();
+            visible.Should().ContainSingle(c => c.Code == "UTIL");
+            visible.Should().NotContain(c => c.Code == "SEC");
+        }
+
+        await using (MyCondoDbContext noTenant = _fixture.CreateDbContext(tenantId: null))
+        {
+            List<ExpenseCategory> visible = await noTenant.Set<ExpenseCategory>().ToListAsync();
+            visible.Should().BeEmpty("a connection with no tenant context set must default-deny, not see every tenant's expense categories");
+        }
+    }
+
+    [Fact]
+    public async Task ExpenseTypes_Cross_Tenant_Isolation()
+    {
+        Guid tenantA = Guid.NewGuid();
+        Guid tenantB = Guid.NewGuid();
+        ExpenseCategoryId categoryA = ExpenseCategoryId.New();
+        ExpenseCategoryId categoryB = ExpenseCategoryId.New();
+
+        await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
+        {
+            dbA.Set<ExpenseType>().Add(ExpenseType.Create(tenantA, categoryA, "Cleaning", "CLN", null, 1, DateTimeOffset.UtcNow));
+            await dbA.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext dbB = _fixture.CreateDbContext(tenantB))
+        {
+            dbB.Set<ExpenseType>().Add(ExpenseType.Create(tenantB, categoryB, "Security", "SEC", null, 1, DateTimeOffset.UtcNow));
             await dbB.SaveChangesAsync();
         }
 
@@ -68,16 +103,18 @@ public class ExpensesRlsTests : IClassFixture<MultiTenancyPostgresFixture>
         await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
         {
             dbA.Set<Expense>().Add(Expense.Record(
-                tenantA, buildingA, expenseTypeA, DateOnly.FromDateTime(DateTime.UtcNow), "Tenant A expense", null,
-                null, 100m, PaymentMethod.Cash, null, DateTimeOffset.UtcNow));
+                tenantA, buildingA, expenseTypeA, fundId: null, DateOnly.FromDateTime(DateTime.UtcNow),
+                accountingDate: null, "Tenant A expense", null, null, 100m, isPaid: false, PaymentMethod.Cash,
+                null, DateTimeOffset.UtcNow));
             await dbA.SaveChangesAsync();
         }
 
         await using (MyCondoDbContext dbB = _fixture.CreateDbContext(tenantB))
         {
             dbB.Set<Expense>().Add(Expense.Record(
-                tenantB, buildingB, expenseTypeB, DateOnly.FromDateTime(DateTime.UtcNow), "Tenant B expense", null,
-                null, 200m, PaymentMethod.Cash, null, DateTimeOffset.UtcNow));
+                tenantB, buildingB, expenseTypeB, fundId: null, DateOnly.FromDateTime(DateTime.UtcNow),
+                accountingDate: null, "Tenant B expense", null, null, 200m, isPaid: false, PaymentMethod.Cash,
+                null, DateTimeOffset.UtcNow));
             await dbB.SaveChangesAsync();
         }
 
@@ -96,6 +133,35 @@ public class ExpensesRlsTests : IClassFixture<MultiTenancyPostgresFixture>
     }
 
     [Fact]
+    public async Task Association_Wide_Expense_With_No_Building_Is_Still_Tenant_Isolated()
+    {
+        Guid tenantA = Guid.NewGuid();
+        Guid tenantB = Guid.NewGuid();
+        ExpenseTypeId expenseTypeA = ExpenseTypeId.New();
+
+        await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
+        {
+            dbA.Set<Expense>().Add(Expense.Record(
+                tenantA, buildingId: null, expenseTypeA, fundId: null, DateOnly.FromDateTime(DateTime.UtcNow),
+                accountingDate: null, "Association-wide expense", null, null, 500m, isPaid: false,
+                PaymentMethod.Cash, null, DateTimeOffset.UtcNow));
+            await dbA.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext asTenantB = _fixture.CreateDbContext(tenantB))
+        {
+            List<Expense> visible = await asTenantB.Set<Expense>().ToListAsync();
+            visible.Should().BeEmpty("tenant B must never see tenant A's association-wide expense");
+        }
+
+        await using (MyCondoDbContext asTenantA = _fixture.CreateDbContext(tenantA))
+        {
+            List<Expense> visible = await asTenantA.Set<Expense>().ToListAsync();
+            visible.Should().ContainSingle(e => e.BuildingId == null && e.Description == "Association-wide expense");
+        }
+    }
+
+    [Fact]
     public async Task Insert_Expense_For_Wrong_Tenant_Is_Rejected_By_Rls()
     {
         Guid tenantA = Guid.NewGuid();
@@ -105,8 +171,9 @@ public class ExpensesRlsTests : IClassFixture<MultiTenancyPostgresFixture>
 
         // Row claims tenantA while the connection's context is tenantB — WITH CHECK must reject it.
         dbAsTenantB.Set<Expense>().Add(Expense.Record(
-            tenantA, BuildingId.New(), ExpenseTypeId.New(), DateOnly.FromDateTime(DateTime.UtcNow), "Wrong tenant",
-            null, null, 100m, PaymentMethod.Cash, null, DateTimeOffset.UtcNow));
+            tenantA, BuildingId.New(), ExpenseTypeId.New(), fundId: null, DateOnly.FromDateTime(DateTime.UtcNow),
+            accountingDate: null, "Wrong tenant", null, null, 100m, isPaid: false, PaymentMethod.Cash, null,
+            DateTimeOffset.UtcNow));
 
         Func<Task> act = () => dbAsTenantB.SaveChangesAsync();
 
@@ -114,6 +181,7 @@ public class ExpensesRlsTests : IClassFixture<MultiTenancyPostgresFixture>
     }
 
     [Theory]
+    [InlineData("expenses.expense_categories")]
     [InlineData("expenses.expense_types")]
     [InlineData("expenses.expenses")]
     public async Task Expenses_Tables_Have_Rls_Enabled_And_Forced(string qualifiedTableName)

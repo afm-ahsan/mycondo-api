@@ -1,3 +1,4 @@
+using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Flats;
 
@@ -19,14 +20,18 @@ public sealed record FinancialPostingLine(
 /// same columns, no rename (ADR-027). <paramref name="SourceId"/> is optional: several existing call
 /// sites have no natural per-posting source id and rely on an upstream domain-level dedup check
 /// instead (e.g. batch invoice generation) — the database idempotency guard only applies when it's
-/// supplied.</summary>
+/// supplied. <paramref name="FundId"/> is optional (added by Template 3) and, when supplied, is stamped
+/// onto every resulting <see cref="LedgerEntry"/> via <see cref="LedgerEntry.SetFinanceDimensions"/> —
+/// posting-level rather than per-line since every existing/known caller attributes a whole posting to at
+/// most one fund.</summary>
 public sealed record FinancialPostingRequest(
     Guid TenantId,
     DateOnly BusinessDate,
     string Description,
     string PostingPurpose,
     Guid? SourceId,
-    IReadOnlyList<FinancialPostingLine> Lines);
+    IReadOnlyList<FinancialPostingLine> Lines,
+    FundId? FundId = null);
 
 public sealed record FinancialPostingResult(LedgerPosting Posting, IReadOnlyList<LedgerEntry> Entries);
 

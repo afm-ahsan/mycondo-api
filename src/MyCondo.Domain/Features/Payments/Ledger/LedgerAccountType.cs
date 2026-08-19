@@ -41,4 +41,16 @@ public enum LedgerAccountType
     /// this requires a <see cref="LedgerEntry.FlatId"/> — see <see cref="LedgerPosting.Create"/>.
     /// </summary>
     ResidentAdvance = 9,
+    /// <summary>Added by Template 3 (Expense Accounting Integration) — the debit side of every Expense
+    /// posting, whether unpaid ("Dr OperatingExpense / Cr AccountsPayable") or immediately paid
+    /// ("Dr OperatingExpense / Cr CashOrBank"). A single tenant-wide expense account rather than one per
+    /// <c>ExpenseCategory</c>/<c>ExpenseType</c> — category/type-level analysis is achieved by reporting
+    /// through the source <c>Expense</c> each posting references (<see cref="LedgerPosting.ReferenceId"/>),
+    /// not by growing this enum per tenant-configurable category (see ADR-027/ADR-028's account-mapping
+    /// extensibility design, which targets new *roles*, not per-tenant-entity accounts).</summary>
+    OperatingExpense = 10,
+    /// <summary>Added by Template 3 — liability for an unpaid Expense ("Dr OperatingExpense / Cr
+    /// AccountsPayable" at recording time; "Dr AccountsPayable / Cr CashOrBank" at supplier-payment
+    /// time). Tenant-wide, like every non-flat-scoped account type.</summary>
+    AccountsPayable = 11,
 }

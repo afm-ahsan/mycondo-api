@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 
 namespace MyCondo.Infrastructure.Persistence.Configurations;
@@ -16,6 +17,12 @@ public sealed class ExpenseTypeConfiguration : IEntityTypeConfiguration<ExpenseT
             .ValueGeneratedNever();
 
         builder.Property(x => x.TenantId).IsRequired();
+        // Nullable at storage level only to accommodate rows created before Template 3 — see
+        // ExpenseType's doc comment.
+        builder.Property(x => x.ExpenseCategoryId)
+            .HasConversion(
+                id => id == null ? (Guid?)null : id.Value.Value,
+                value => value == null ? (ExpenseCategoryId?)null : new ExpenseCategoryId(value.Value));
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Code).HasMaxLength(20).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(500);
@@ -30,6 +37,9 @@ public sealed class ExpenseTypeConfiguration : IEntityTypeConfiguration<ExpenseT
         builder.HasIndex(x => new { x.TenantId, x.Name })
             .IsUnique()
             .HasDatabaseName("ux_expense_types_tenant_id_name");
+
+        builder.HasIndex(x => new { x.TenantId, x.ExpenseCategoryId })
+            .HasDatabaseName("ix_expense_types_tenant_id_expense_category_id");
 
         builder.Ignore(x => x.DomainEvents);
     }
