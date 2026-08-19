@@ -49,13 +49,13 @@ public partial class GrantAppRoleRuntimePrivileges : Migration
         {
             migrationBuilder.Sql(
                 $"""
-                GRANT USAGE ON SCHEMA {schema} TO mycondo_app;
-                GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {schema} TO mycondo_app;
-                GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO mycondo_app;
-                ALTER DEFAULT PRIVILEGES FOR ROLE mycondo_migrator IN SCHEMA {schema}
-                    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO mycondo_app;
-                ALTER DEFAULT PRIVILEGES FOR ROLE mycondo_migrator IN SCHEMA {schema}
-                    GRANT USAGE, SELECT ON SEQUENCES TO mycondo_app;
+                GRANT USAGE ON SCHEMA {schema} TO condobd_app;
+                GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {schema} TO condobd_app;
+                GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO condobd_app;
+                ALTER DEFAULT PRIVILEGES FOR ROLE condobd_app IN SCHEMA {schema}
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO condobd_app;
+                ALTER DEFAULT PRIVILEGES FOR ROLE condobd_app IN SCHEMA {schema}
+                    GRANT USAGE, SELECT ON SEQUENCES TO condobd_app;
                 """);
         }
     }
@@ -67,13 +67,13 @@ public partial class GrantAppRoleRuntimePrivileges : Migration
         {
             migrationBuilder.Sql(
                 $"""
-                ALTER DEFAULT PRIVILEGES FOR ROLE mycondo_migrator IN SCHEMA {schema}
-                    REVOKE USAGE, SELECT ON SEQUENCES FROM mycondo_app;
-                ALTER DEFAULT PRIVILEGES FOR ROLE mycondo_migrator IN SCHEMA {schema}
-                    REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM mycondo_app;
-                REVOKE ALL ON ALL SEQUENCES IN SCHEMA {schema} FROM mycondo_app;
-                REVOKE ALL ON ALL TABLES IN SCHEMA {schema} FROM mycondo_app;
-                REVOKE USAGE ON SCHEMA {schema} FROM mycondo_app;
+                ALTER DEFAULT PRIVILEGES FOR ROLE condobd_app IN SCHEMA {schema}
+                    REVOKE USAGE, SELECT ON SEQUENCES FROM condobd_app;
+                ALTER DEFAULT PRIVILEGES FOR ROLE condobd_app IN SCHEMA {schema}
+                    REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM condobd_app;
+                REVOKE ALL ON ALL SEQUENCES IN SCHEMA {schema} FROM condobd_app;
+                REVOKE ALL ON ALL TABLES IN SCHEMA {schema} FROM condobd_app;
+                REVOKE USAGE ON SCHEMA {schema} FROM condobd_app;
                 """);
         }
     }
