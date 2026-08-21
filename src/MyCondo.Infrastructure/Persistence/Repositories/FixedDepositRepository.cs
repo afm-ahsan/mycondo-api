@@ -53,5 +53,18 @@ public sealed class FixedDepositRepository(MyCondoDbContext db) : IFixedDepositR
         return new PagedResult<FixedDeposit>(items, page, pageSize, total);
     }
 
+    public async Task<decimal> GetActivePrincipalTotalAsync(Guid tenantId, CancellationToken cancellationToken) =>
+        await db.Set<FixedDeposit>()
+            .AsNoTracking()
+            .Where(x => x.TenantId == tenantId && x.Status == FixedDepositStatus.Active)
+            .SumAsync(x => (decimal?)x.Principal, cancellationToken) ?? 0m;
+
+    public async Task<List<FixedDeposit>> GetAllForTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
+        await db.Set<FixedDeposit>()
+            .AsNoTracking()
+            .Where(x => x.TenantId == tenantId && x.Status != FixedDepositStatus.Voided)
+            .OrderByDescending(x => x.StartDate).ThenBy(x => x.CertificateNumber)
+            .ToListAsync(cancellationToken);
+
     public void Add(FixedDeposit fixedDeposit) => db.Set<FixedDeposit>().Add(fixedDeposit);
 }

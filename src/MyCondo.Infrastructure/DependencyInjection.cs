@@ -23,6 +23,7 @@ using MyCondo.Domain.Features.Finance.FinancialAccounts;
 using MyCondo.Domain.Features.Finance.FinancialYears;
 using MyCondo.Domain.Features.Finance.FixedDeposits;
 using MyCondo.Domain.Features.Finance.Funds;
+using MyCondo.Domain.Features.Finance.Reports;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RefreshTokens;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
@@ -216,6 +217,7 @@ public static class DependencyInjection
         services.AddScoped<IFixedDepositRepository, FixedDepositRepository>();
         services.AddScoped<IFixedDepositInterestAccrualRepository, FixedDepositInterestAccrualRepository>();
         services.AddScoped<IFixedDepositInterestReceiptRepository, FixedDepositInterestReceiptRepository>();
+        services.AddScoped<IFinanceReportRepository, FinanceReportRepository>();
         services.AddScoped<IResidentAccountRepository, ResidentAccountRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepository>();

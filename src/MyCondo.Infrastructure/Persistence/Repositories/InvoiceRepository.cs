@@ -147,6 +147,28 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<FlatReceivableLine>> GetOpenReceivablesByFlatAsync(
+        Guid tenantId, BuildingId? buildingId, CancellationToken cancellationToken)
+    {
+        IQueryable<Invoice> query = db.Set<Invoice>()
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId
+                && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid || i.Status == InvoiceStatus.PartiallyWaived));
+
+        if (buildingId is not null)
+        {
+            query = query.Where(i => i.BuildingId == buildingId);
+        }
+
+        return await query
+            .GroupBy(i => i.FlatId)
+            .Select(g => new FlatReceivableLine(
+                g.Key,
+                g.Sum(i => i.TotalAmount - i.AmountPaid - i.WaivedAmount),
+                g.Count()))
+            .ToListAsync(cancellationToken);
+    }
+
     public void Add(Invoice invoice) => db.Set<Invoice>().Add(invoice);
 
     public void AddLines(IEnumerable<InvoiceLine> lines) => db.Set<InvoiceLine>().AddRange(lines);

@@ -229,5 +229,14 @@ public static class PermissionCatalogue
         ("finance.fixeddeposit.place", "Place a new Fixed Deposit", "finance", false),
         ("finance.fixeddeposit.manage", "Renew, withdraw, or void a Fixed Deposit", "finance", false),
         ("finance.fixeddeposit.interest.record", "Record Fixed Deposit interest accrual and receipt", "finance", false),
+
+        // Template 5 (Core & Accounting Reporting) — core/management and accounting reports read
+        // tenant-wide ledger data, not building-scoped. finance.journal.view is reused (not
+        // redefined) for General Ledger / Account Ledger — it was reserved unconsumed since
+        // Template 1 for exactly this "Reporting-phase" cross-account journal browser. Resident/Flat
+        // Financial Statement self-service access is a separate, narrower key so a generic report
+        // grant never exposes every resident's statement (Template 5 "Resident Privacy" rule).
+        ("finance.report.view", "View core and accounting financial reports (all residents/flats/funds)", "finance", false),
+        ("finance.report.statement.own.view", "View own resident/flat financial statement via self-service", "finance", true),
     ];
 }
