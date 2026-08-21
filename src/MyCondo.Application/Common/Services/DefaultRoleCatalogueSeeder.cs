@@ -51,6 +51,10 @@ public sealed class DefaultRoleCatalogueSeeder(
             // withdrawal/void, and interest recording are all tenant-wide treasury decisions.
             "finance.bankaccount.view", "finance.bankaccount.manage", "finance.fixeddeposit.view",
             "finance.fixeddeposit.place", "finance.fixeddeposit.manage", "finance.fixeddeposit.interest.record",
+            // Template 6 (governance): Treasurer is the one performing the sensitive actions the Finance
+            // audit log records (period close/reopen, reversals, mapping changes, FD lifecycle) — needs
+            // audit.view to review their own trail, not just Auditor's external-oversight use of it.
+            "audit.view",
         ]),
         ("Secretary", "default.secretary", "Administrative/communications support — the point of contact for residents.",
         [

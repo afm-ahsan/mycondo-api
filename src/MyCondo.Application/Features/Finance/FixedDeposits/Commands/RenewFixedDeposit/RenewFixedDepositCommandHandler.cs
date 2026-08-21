@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -6,6 +7,7 @@ using MyCondo.Application.Features.Finance.FixedDeposits.DTOs;
 using MyCondo.Application.Features.Finance.FixedDeposits.Mappings;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.FinancialAccounts;
 using MyCondo.Domain.Features.Finance.FixedDeposits;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -32,6 +34,7 @@ public sealed class RenewFixedDepositCommandHandler(
     IFixedDepositInterestReceiptRepository receipts,
     IFinancialAccountRepository financialAccounts,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -135,6 +138,9 @@ public sealed class RenewFixedDepositCommandHandler(
 
         predecessor.MarkRenewed(successorId, renewalAdjustmentPostingId, clock.UtcNow);
         fixedDeposits.Add(successor);
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, clock.UtcNow, currentUser.UserId, "FixedDeposit.Renew", nameof(FixedDeposit), predecessorId.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { successorId = successorId.Value, newCertificateNumber, principalDifference })));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

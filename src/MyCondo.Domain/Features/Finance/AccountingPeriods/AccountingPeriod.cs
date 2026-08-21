@@ -57,6 +57,19 @@ public sealed class AccountingPeriod : AggregateRoot<AccountingPeriodId>, ITenan
 
     public bool Covers(DateOnly businessDate) => businessDate >= StartDate && businessDate <= EndDate;
 
+    /// <summary>Open → SoftClosed only. Softening an already-closed or already-soft-closed period is
+    /// rejected rather than silently no-op'd, matching <see cref="Close"/>'s existing guard shape.</summary>
+    public void SoftClose()
+    {
+        if (Status != AccountingPeriodStatus.Open)
+        {
+            throw new AccountingPeriodAlreadyClosedException(Id);
+        }
+
+        Status = AccountingPeriodStatus.SoftClosed;
+    }
+
+    /// <summary>Open or SoftClosed → Closed. Idempotent re-close is rejected, same as before Template 6.</summary>
     public void Close()
     {
         if (Status == AccountingPeriodStatus.Closed)
@@ -67,5 +80,15 @@ public sealed class AccountingPeriod : AggregateRoot<AccountingPeriodId>, ITenan
         Status = AccountingPeriodStatus.Closed;
     }
 
-    public void Reopen() => Status = AccountingPeriodStatus.Open;
+    /// <summary>SoftClosed or Closed → Open. Reopening an already-open period is now rejected — prior to
+    /// Template 6 this was an unconditional no-op, which silently masked accidental reopen calls.</summary>
+    public void Reopen()
+    {
+        if (Status == AccountingPeriodStatus.Open)
+        {
+            throw new AccountingPeriodAlreadyOpenException(Id);
+        }
+
+        Status = AccountingPeriodStatus.Open;
+    }
 }

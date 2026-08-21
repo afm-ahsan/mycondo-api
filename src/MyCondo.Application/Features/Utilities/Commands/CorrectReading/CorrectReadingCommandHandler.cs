@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -7,6 +8,7 @@ using MyCondo.Application.Features.Utilities.DTOs;
 using MyCondo.Application.Features.Utilities.Mappings;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Utilities.Readings;
 
@@ -24,6 +26,7 @@ public sealed class CorrectReadingCommandHandler(
     IReadingRepository readings,
     IInvoiceRepository invoices,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -69,10 +72,13 @@ public sealed class CorrectReadingCommandHandler(
             FinancialPostingResult reversal = await financialPosting.PostAsync(
                 new FinancialPostingRequest(
                     tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), voidDescription, "InvoiceVoid",
-                    invoice.LedgerPostingId.Value, reversingLines),
+                    invoice.LedgerPostingId.Value, reversingLines, IsPrivilegedAdjustment: true),
                 cancellationToken);
 
             invoice.Void(command.Reason, currentUser.UserId, reversal.Posting.Id, nowUtc);
+            auditLog.Add(FinanceAuditLogEntry.Record(
+                tenantId, nowUtc, currentUser.UserId, "Invoice.Void", nameof(Invoice), invoice.Id.Value.ToString(),
+                metadata: JsonSerializer.Serialize(new { reason = command.Reason, viaReadingCorrection = true })));
         }
 
         Reading correction = Reading.Record(

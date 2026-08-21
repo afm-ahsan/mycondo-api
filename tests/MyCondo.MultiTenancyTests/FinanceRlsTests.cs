@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -96,12 +97,41 @@ public class FinanceRlsTests : IClassFixture<MultiTenancyPostgresFixture>
         await act.Should().ThrowAsync<DbUpdateException>();
     }
 
+    [Fact]
+    public async Task FinanceAuditLog_Cross_Tenant_Isolation()
+    {
+        Guid tenantA = Guid.NewGuid();
+        Guid tenantB = Guid.NewGuid();
+
+        await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
+        {
+            dbA.Set<FinanceAuditLogEntry>().Add(
+                FinanceAuditLogEntry.Record(tenantA, DateTimeOffset.UtcNow, null, "AccountingPeriod.Close"));
+            await dbA.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext dbB = _fixture.CreateDbContext(tenantB))
+        {
+            dbB.Set<FinanceAuditLogEntry>().Add(
+                FinanceAuditLogEntry.Record(tenantB, DateTimeOffset.UtcNow, null, "AccountingPeriod.Reopen"));
+            await dbB.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext asTenantA = _fixture.CreateDbContext(tenantA))
+        {
+            List<FinanceAuditLogEntry> visible = await asTenantA.Set<FinanceAuditLogEntry>().ToListAsync();
+            visible.Should().ContainSingle(e => e.Action == "AccountingPeriod.Close");
+            visible.Should().NotContain(e => e.Action == "AccountingPeriod.Reopen");
+        }
+    }
+
     [Theory]
     [InlineData("finance.chart_of_accounts")]
     [InlineData("finance.account_mappings")]
     [InlineData("finance.funds")]
     [InlineData("finance.financial_years")]
     [InlineData("finance.accounting_periods")]
+    [InlineData("finance.finance_audit_log")]
     public async Task Finance_Tables_Have_Rls_Enabled_And_Forced(string qualifiedTableName)
     {
         await using MyCondoDbContext db = _fixture.CreateDbContext(tenantId: null);

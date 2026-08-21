@@ -7,6 +7,7 @@ using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Payments.Payments;
@@ -30,6 +31,7 @@ public class VoidExpenseCommandHandlerTests
 
     private readonly IExpenseRepository _expenses = Substitute.For<IExpenseRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -63,7 +65,7 @@ public class VoidExpenseCommandHandlerTests
             });
 
     private VoidExpenseCommandHandler CreateHandler() => new(
-        _expenses, _financialPosting, _unitOfWork, _currentUser, _clock,
+        _expenses, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<VoidExpenseCommandHandler>>());
 
     private static Expense RecordExpense(Guid tenantId, bool isPaid = false) => Expense.Record(

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -5,6 +6,7 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Expenses.Expenses;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 
 namespace MyCondo.Application.Features.Expenses.Expenses.Commands.VoidExpense;
@@ -22,6 +24,7 @@ namespace MyCondo.Application.Features.Expenses.Expenses.Commands.VoidExpense;
 public sealed class VoidExpenseCommandHandler(
     IExpenseRepository expenses,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -76,7 +79,7 @@ public sealed class VoidExpenseCommandHandler(
             FinancialPostingResult paymentReversal = await financialPosting.PostAsync(
                 new FinancialPostingRequest(
                     tenantId, businessDate, $"Reversal of Expense payment: {command.Reason}", "ExpensePaymentVoid",
-                    paymentPostingId.Value, paymentReversalLines, expense.FundId),
+                    paymentPostingId.Value, paymentReversalLines, expense.FundId, IsPrivilegedAdjustment: true),
                 cancellationToken);
 
             paymentReversalPostingId = paymentReversal.Posting.Id;
@@ -103,13 +106,16 @@ public sealed class VoidExpenseCommandHandler(
             FinancialPostingResult reversal = await financialPosting.PostAsync(
                 new FinancialPostingRequest(
                     tenantId, businessDate, $"Reversal of Expense: {command.Reason}", "ExpenseVoid",
-                    postingId.Value, reversalLines, expense.FundId),
+                    postingId.Value, reversalLines, expense.FundId, IsPrivilegedAdjustment: true),
                 cancellationToken);
 
             reversalPostingId = reversal.Posting.Id;
         }
 
         expense.Void(command.Reason, clock.UtcNow, reversalPostingId, paymentReversalPostingId);
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, clock.UtcNow, currentUser.UserId, "Expense.Void", nameof(Expense), expenseId.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { reason = command.Reason })));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

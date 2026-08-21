@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -6,6 +7,7 @@ using MyCondo.Application.Features.Finance.FixedDeposits.DTOs;
 using MyCondo.Application.Features.Finance.FixedDeposits.Mappings;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.FinancialAccounts;
 using MyCondo.Domain.Features.Finance.FixedDeposits;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -22,6 +24,7 @@ public sealed class WithdrawFixedDepositCommandHandler(
     IFixedDepositInterestReceiptRepository receipts,
     IFinancialAccountRepository financialAccounts,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -77,6 +80,9 @@ public sealed class WithdrawFixedDepositCommandHandler(
             cancellationToken);
 
         fixedDeposit.MarkWithdrawn(posted.Posting.Id, receivingAccountId, clock.UtcNow);
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, clock.UtcNow, currentUser.UserId, "FixedDeposit.Withdraw", nameof(FixedDeposit), fixedDepositId.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { principal = fixedDeposit.Principal })));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

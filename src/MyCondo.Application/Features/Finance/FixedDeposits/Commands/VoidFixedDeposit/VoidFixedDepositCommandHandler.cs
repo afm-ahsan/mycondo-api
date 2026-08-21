@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -6,6 +7,7 @@ using MyCondo.Application.Features.Finance.FixedDeposits.DTOs;
 using MyCondo.Application.Features.Finance.FixedDeposits.Mappings;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.FinancialAccounts;
 using MyCondo.Domain.Features.Finance.FixedDeposits;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -27,6 +29,7 @@ public sealed class VoidFixedDepositCommandHandler(
     IFixedDepositInterestReceiptRepository receipts,
     IFinancialAccountRepository financialAccounts,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -76,10 +79,13 @@ public sealed class VoidFixedDepositCommandHandler(
         FinancialPostingResult reversal = await financialPosting.PostAsync(
             new FinancialPostingRequest(
                 tenantId, accountingDate, $"Reversal of Fixed Deposit placement: {command.Reason}",
-                "FixedDepositVoid", fixedDepositId.Value, postingLines, fixedDeposit.FundId),
+                "FixedDepositVoid", fixedDepositId.Value, postingLines, fixedDeposit.FundId, IsPrivilegedAdjustment: true),
             cancellationToken);
 
         fixedDeposit.Void(command.Reason, reversal.Posting.Id, clock.UtcNow);
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, clock.UtcNow, currentUser.UserId, "FixedDeposit.Void", nameof(FixedDeposit), fixedDepositId.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { reason = command.Reason })));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

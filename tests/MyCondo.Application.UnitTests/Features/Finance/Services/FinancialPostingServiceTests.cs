@@ -142,6 +142,42 @@ public class FinancialPostingServiceTests
     }
 
     [Fact]
+    public async Task PostAsync_Throws_When_The_Business_Date_Falls_In_A_SoftClosed_Period_And_Is_Not_Privileged()
+    {
+        AccountingPeriod period = AccountingPeriod.Create(
+            TenantId, Domain.Features.Finance.FinancialYears.FinancialYearId.New(), "2026-03",
+            BusinessDate.AddDays(-10), BusinessDate.AddDays(10));
+        period.SoftClose();
+        _accountingPeriods.FindCoveringAsync(TenantId, BusinessDate, Arg.Any<CancellationToken>()).Returns(period);
+
+        Func<Task> act = () => CreateService().PostAsync(
+            new FinancialPostingRequest(TenantId, BusinessDate, "Invoice", "Invoice", null, BalancedPaymentLines(500m)),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<AccountingPeriodSoftClosedException>();
+        _ledgerPostings.DidNotReceive().Add(Arg.Any<LedgerPosting>());
+    }
+
+    [Fact]
+    public async Task PostAsync_Allows_A_Privileged_Adjustment_In_A_SoftClosed_Period()
+    {
+        AccountingPeriod period = AccountingPeriod.Create(
+            TenantId, Domain.Features.Finance.FinancialYears.FinancialYearId.New(), "2026-03",
+            BusinessDate.AddDays(-10), BusinessDate.AddDays(10));
+        period.SoftClose();
+        _accountingPeriods.FindCoveringAsync(TenantId, BusinessDate, Arg.Any<CancellationToken>()).Returns(period);
+
+        FinancialPostingResult result = await CreateService().PostAsync(
+            new FinancialPostingRequest(
+                TenantId, BusinessDate, "Reversal", "PaymentReversal", null, BalancedPaymentLines(500m),
+                IsPrivilegedAdjustment: true),
+            CancellationToken.None);
+
+        result.Entries.Should().OnlyContain(e => e.AccountingPeriodId == period.Id);
+        _ledgerPostings.Received(1).Add(result.Posting);
+    }
+
+    [Fact]
     public async Task PostAsync_Stamps_The_Covering_Open_Period_Onto_Every_Entry()
     {
         AccountingPeriod period = AccountingPeriod.Create(

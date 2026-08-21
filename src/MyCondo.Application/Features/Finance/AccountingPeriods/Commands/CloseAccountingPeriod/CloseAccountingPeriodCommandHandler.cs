@@ -5,13 +5,16 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Finance.AccountingPeriods.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Finance.AccountingPeriods;
+using MyCondo.Domain.Features.Finance.Audit;
 
 namespace MyCondo.Application.Features.Finance.AccountingPeriods.Commands.CloseAccountingPeriod;
 
 public sealed class CloseAccountingPeriodCommandHandler(
     IAccountingPeriodRepository accountingPeriods,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
+    IClock clock,
     ILogger<CloseAccountingPeriodCommandHandler> logger
 ) : IRequestHandler<CloseAccountingPeriodCommand, AccountingPeriodDto>
 {
@@ -31,6 +34,9 @@ public sealed class CloseAccountingPeriodCommandHandler(
         }
 
         period.Close();
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, clock.UtcNow, currentUser.UserId, "AccountingPeriod.Close",
+            nameof(AccountingPeriod), id.Value.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Accounting period {AccountingPeriodId} closed for tenant {TenantId}", id, tenantId);

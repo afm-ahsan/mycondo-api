@@ -7,6 +7,7 @@ using MyCondo.Application.Features.Payments.Commands.ReversePayment;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
@@ -35,6 +36,7 @@ public class ReversePaymentCommandHandlerTests
     private readonly IPaymentAllocationRepository _paymentAllocations = Substitute.For<IPaymentAllocationRepository>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -64,7 +66,7 @@ public class ReversePaymentCommandHandlerTests
             });
 
     private ReversePaymentCommandHandler CreateHandler() => new(
-        _payments, _paymentAllocations, _invoices, _financialPosting, _unitOfWork, _currentUser, _clock,
+        _payments, _paymentAllocations, _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<ReversePaymentCommandHandler>>());
 
     private static Invoice IssuedInvoice(string invoiceNumber, decimal totalAmount)

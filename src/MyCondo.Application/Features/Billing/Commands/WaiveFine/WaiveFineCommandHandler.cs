@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -7,6 +8,7 @@ using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 
 namespace MyCondo.Application.Features.Billing.Commands.WaiveFine;
@@ -25,6 +27,7 @@ namespace MyCondo.Application.Features.Billing.Commands.WaiveFine;
 public sealed class WaiveFineCommandHandler(
     IInvoiceRepository invoices,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -58,12 +61,15 @@ public sealed class WaiveFineCommandHandler(
         FinancialPostingResult waived = await financialPosting.PostAsync(
             new FinancialPostingRequest(
                 tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "FineWaiver",
-                invoice.Id.Value, waiverLines),
+                invoice.Id.Value, waiverLines, IsPrivilegedAdjustment: true),
             cancellationToken);
 
         // Throws InvoiceAlreadyVoidException / InvoiceAlreadyWaivedException / ArgumentOutOfRangeException
         // before SaveChangesAsync — the waiver posting is already staged but nothing commits if this throws.
         invoice.Waive(command.Amount, command.Reason, currentUser.UserId, waived.Posting.Id, nowUtc);
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "Fine.Waive", nameof(Invoice), id.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { reason = command.Reason, amount = command.Amount })));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

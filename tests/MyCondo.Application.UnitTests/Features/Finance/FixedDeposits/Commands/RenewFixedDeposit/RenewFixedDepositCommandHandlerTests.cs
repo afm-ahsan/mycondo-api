@@ -6,6 +6,7 @@ using MyCondo.Application.Features.Finance.FixedDeposits.Commands.RenewFixedDepo
 using MyCondo.Application.Features.Finance.FixedDeposits.DTOs;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Finance.FinancialAccounts;
 using MyCondo.Domain.Features.Finance.FixedDeposits;
@@ -29,6 +30,7 @@ public class RenewFixedDepositCommandHandlerTests
     private readonly IFixedDepositInterestReceiptRepository _receipts = Substitute.For<IFixedDepositInterestReceiptRepository>();
     private readonly IFinancialAccountRepository _financialAccounts = Substitute.For<IFinancialAccountRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -59,7 +61,7 @@ public class RenewFixedDepositCommandHandlerTests
             });
 
     private RenewFixedDepositCommandHandler CreateHandler() => new(
-        _fixedDeposits, _accruals, _receipts, _financialAccounts, _financialPosting, _unitOfWork, _currentUser,
+        _fixedDeposits, _accruals, _receipts, _financialAccounts, _financialPosting, _auditLog, _unitOfWork, _currentUser,
         _clock, Substitute.For<ILogger<RenewFixedDepositCommandHandler>>());
 
     private FixedDeposit SetUpActiveFixedDeposit(out FinancialAccount fundingAccount, decimal principal = 500_000m)

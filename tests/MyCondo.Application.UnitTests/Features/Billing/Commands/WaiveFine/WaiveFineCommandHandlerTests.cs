@@ -6,6 +6,7 @@ using MyCondo.Application.Features.Billing.Commands.WaiveFine;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
@@ -27,6 +28,7 @@ public class WaiveFineCommandHandlerTests
 
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -54,7 +56,7 @@ public class WaiveFineCommandHandlerTests
             });
 
     private WaiveFineCommandHandler CreateHandler() => new(
-        _invoices, _financialPosting, _unitOfWork, _currentUser, _clock,
+        _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<WaiveFineCommandHandler>>());
 
     private static Invoice AssessedFine(decimal amount = 500m)

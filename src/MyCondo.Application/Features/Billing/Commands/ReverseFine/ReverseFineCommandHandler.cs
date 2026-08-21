@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -7,6 +8,7 @@ using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 
 namespace MyCondo.Application.Features.Billing.Commands.ReverseFine;
@@ -23,6 +25,7 @@ namespace MyCondo.Application.Features.Billing.Commands.ReverseFine;
 public sealed class ReverseFineCommandHandler(
     IInvoiceRepository invoices,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -56,10 +59,13 @@ public sealed class ReverseFineCommandHandler(
         FinancialPostingResult reversal = await financialPosting.PostAsync(
             new FinancialPostingRequest(
                 tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "InvoiceVoid",
-                invoice.LedgerPostingId.Value, reversingLines),
+                invoice.LedgerPostingId.Value, reversingLines, IsPrivilegedAdjustment: true),
             cancellationToken);
 
         invoice.Void(command.Reason, currentUser.UserId, reversal.Posting.Id, nowUtc);
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "Fine.Reverse", nameof(Invoice), id.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { reason = command.Reason })));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -74,9 +74,17 @@ public sealed class FinancialPostingService(
 
         AccountingPeriod? period = await accountingPeriods.FindCoveringAsync(
             request.TenantId, request.BusinessDate, cancellationToken);
-        if (period is not null && period.Status == AccountingPeriodStatus.Closed)
+        if (period is not null)
         {
-            throw new AccountingPeriodClosedException(period.Id, request.BusinessDate);
+            if (period.Status == AccountingPeriodStatus.Closed)
+            {
+                throw new AccountingPeriodClosedException(period.Id, request.BusinessDate);
+            }
+
+            if (period.Status == AccountingPeriodStatus.SoftClosed && !request.IsPrivilegedAdjustment)
+            {
+                throw new AccountingPeriodSoftClosedException(period.Id, request.BusinessDate);
+            }
         }
 
         DateTimeOffset nowUtc = clock.UtcNow;

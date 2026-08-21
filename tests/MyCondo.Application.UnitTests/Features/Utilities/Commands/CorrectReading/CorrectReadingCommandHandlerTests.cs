@@ -6,6 +6,7 @@ using MyCondo.Application.Features.Utilities.Commands.CorrectReading;
 using MyCondo.Application.Features.Utilities.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
@@ -30,6 +31,7 @@ public class CorrectReadingCommandHandlerTests
     private readonly IReadingRepository _readings = Substitute.For<IReadingRepository>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -58,7 +60,7 @@ public class CorrectReadingCommandHandlerTests
             });
 
     private CorrectReadingCommandHandler CreateHandler() => new(
-        _readings, _invoices, _financialPosting, _unitOfWork, _currentUser, _clock,
+        _readings, _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<CorrectReadingCommandHandler>>());
 
     private static Reading FinalizedReading(decimal previous = 0m, decimal present = 50m)

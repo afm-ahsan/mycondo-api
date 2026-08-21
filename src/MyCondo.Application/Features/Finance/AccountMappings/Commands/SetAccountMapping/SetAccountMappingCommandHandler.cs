@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -5,6 +6,7 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Finance.AccountMappings.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Finance.AccountMappings;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 
 namespace MyCondo.Application.Features.Finance.AccountMappings.Commands.SetAccountMapping;
@@ -12,8 +14,10 @@ namespace MyCondo.Application.Features.Finance.AccountMappings.Commands.SetAccou
 public sealed class SetAccountMappingCommandHandler(
     IAccountMappingRepository accountMappings,
     IChartOfAccountRepository chartOfAccounts,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
+    IClock clock,
     ILogger<SetAccountMappingCommandHandler> logger
 ) : IRequestHandler<SetAccountMappingCommand, AccountMappingDto>
 {
@@ -33,6 +37,7 @@ public sealed class SetAccountMappingCommandHandler(
         }
 
         AccountMapping? existing = await accountMappings.GetByRoleAsync(tenantId, command.PostingRole, cancellationToken);
+        Guid? previousAccountId = existing?.ChartOfAccountId.Value;
         AccountMapping mapping;
         if (existing is null)
         {
@@ -44,6 +49,10 @@ public sealed class SetAccountMappingCommandHandler(
             existing.Remap(accountId);
             mapping = existing;
         }
+
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, clock.UtcNow, currentUser.UserId, "AccountMapping.Set", nameof(AccountMapping), mapping.Id.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { postingRole = command.PostingRole, previousAccountId, newAccountId = accountId.Value })));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

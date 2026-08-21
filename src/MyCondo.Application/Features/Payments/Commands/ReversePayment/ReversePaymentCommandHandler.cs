@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
@@ -7,6 +8,7 @@ using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
@@ -28,6 +30,7 @@ public sealed class ReversePaymentCommandHandler(
     IPaymentAllocationRepository paymentAllocations,
     IInvoiceRepository invoices,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -94,9 +97,12 @@ public sealed class ReversePaymentCommandHandler(
         FinancialPostingResult reversal = await financialPosting.PostAsync(
             new FinancialPostingRequest(
                 tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "PaymentReversal",
-                payment.LedgerPostingId.Value, lines),
+                payment.LedgerPostingId.Value, lines, IsPrivilegedAdjustment: true),
             cancellationToken);
 
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "Payment.Reverse", nameof(Payment), payment.Id.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { reason = command.Reason })));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 

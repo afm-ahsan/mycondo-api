@@ -254,7 +254,8 @@ public class ExpenseLedgerPostingIdempotencyTests : IClassFixture<MultiTenancyPo
             NullLogger<FinancialPostingService>.Instance);
 
         return new VoidExpenseCommandHandler(
-            new ExpenseRepository(db), financialPosting, db, new FixedCurrentUser(tenantId), new FixedClock(NowUtc),
+            new ExpenseRepository(db), financialPosting, new FinanceAuditLogRepository(db), db,
+            new FixedCurrentUser(tenantId), new FixedClock(NowUtc),
             NullLogger<VoidExpenseCommandHandler>.Instance);
     }
 

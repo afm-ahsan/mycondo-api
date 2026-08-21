@@ -5,6 +5,7 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Finance.FixedDeposits.Commands.VoidFixedDeposit;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Finance.FinancialAccounts;
 using MyCondo.Domain.Features.Finance.FixedDeposits;
@@ -27,6 +28,7 @@ public class VoidFixedDepositCommandHandlerTests
     private readonly IFixedDepositInterestReceiptRepository _receipts = Substitute.For<IFixedDepositInterestReceiptRepository>();
     private readonly IFinancialAccountRepository _financialAccounts = Substitute.For<IFinancialAccountRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -57,7 +59,7 @@ public class VoidFixedDepositCommandHandlerTests
             });
 
     private VoidFixedDepositCommandHandler CreateHandler() => new(
-        _fixedDeposits, _accruals, _receipts, _financialAccounts, _financialPosting, _unitOfWork, _currentUser,
+        _fixedDeposits, _accruals, _receipts, _financialAccounts, _financialPosting, _auditLog, _unitOfWork, _currentUser,
         _clock, Substitute.For<ILogger<VoidFixedDepositCommandHandler>>());
 
     private FixedDeposit SetUpActiveFixedDeposit(out FinancialAccount fundingAccount)

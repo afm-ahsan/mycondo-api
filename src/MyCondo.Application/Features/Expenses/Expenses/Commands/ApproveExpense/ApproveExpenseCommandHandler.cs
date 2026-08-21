@@ -9,6 +9,7 @@ using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -32,6 +33,7 @@ public sealed class ApproveExpenseCommandHandler(
     IBuildingRepository buildings,
     IFundRepository funds,
     IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -66,6 +68,15 @@ public sealed class ApproveExpenseCommandHandler(
             throw new ConflictException($"Expense {expense.Id} is {expense.Status} and cannot be approved.");
         }
 
+        // Separation of duties (Template 6): the person who recorded an Expense may not also approve
+        // it, even if they hold expense.approve — a distinct permission gates *who can ever approve*,
+        // this guards *this specific one*. expense.CreatedBy is stamped automatically at creation by
+        // AuditInterceptor, so this needs no extra plumbing on the create path.
+        if (expense.CreatedBy is Guid creatorId && creatorId == currentUser.UserId)
+        {
+            throw new ForbiddenException("You cannot approve an Expense you recorded yourself.");
+        }
+
         LedgerAccountType creditRole = expense.IsPaid ? LedgerAccountType.CashOrBank : LedgerAccountType.AccountsPayable;
         FinancialPostingLine[] postingLines =
         [
@@ -84,6 +95,8 @@ public sealed class ApproveExpenseCommandHandler(
             : null;
 
         expense.MarkPosted(posted.Posting.Id, financialAccountId, clock.UtcNow);
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, clock.UtcNow, currentUser.UserId, "Expense.Approve", nameof(Expense), expenseId.Value.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         Building? building = expense.BuildingId is BuildingId buildingId

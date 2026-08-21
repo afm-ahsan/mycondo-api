@@ -7,6 +7,7 @@ using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Billing.ServiceChargeRules;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
@@ -35,6 +36,7 @@ public class VoidInvoiceCommandHandlerTests
 
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -65,7 +67,7 @@ public class VoidInvoiceCommandHandlerTests
             });
 
     private VoidInvoiceCommandHandler CreateHandler() => new(
-        _invoices, _financialPosting, _unitOfWork, _currentUser, _clock,
+        _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<VoidInvoiceCommandHandler>>());
 
     private static Invoice UnpaidInvoice(decimal amount = 1800m)

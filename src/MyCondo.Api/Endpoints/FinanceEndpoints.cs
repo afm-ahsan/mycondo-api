@@ -3,11 +3,14 @@ using MyCondo.Api.Authorization;
 using MyCondo.Application.Features.Finance.AccountingPeriods.Commands.CloseAccountingPeriod;
 using MyCondo.Application.Features.Finance.AccountingPeriods.Commands.CreateAccountingPeriod;
 using MyCondo.Application.Features.Finance.AccountingPeriods.Commands.ReopenAccountingPeriod;
+using MyCondo.Application.Features.Finance.AccountingPeriods.Commands.SoftCloseAccountingPeriod;
 using MyCondo.Application.Features.Finance.AccountingPeriods.DTOs;
 using MyCondo.Application.Features.Finance.AccountingPeriods.Queries.GetAccountingPeriods;
 using MyCondo.Application.Features.Finance.AccountMappings.Commands.SetAccountMapping;
 using MyCondo.Application.Features.Finance.AccountMappings.DTOs;
 using MyCondo.Application.Features.Finance.AccountMappings.Queries.GetAccountMappings;
+using MyCondo.Application.Features.Finance.Audit.DTOs;
+using MyCondo.Application.Features.Finance.Audit.Queries.GetFinanceAuditLog;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.Commands.CreateChartOfAccount;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.DTOs;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.Queries.GetChartOfAccounts;
@@ -102,6 +105,11 @@ public static class FinanceEndpoints
             .RequirePermission("finance.period.manage")
             .Produces<AccountingPeriodDto>(StatusCodes.Status200OK);
 
+        periods.MapPost("/{id:guid}/soft-close", async (Guid id, ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new SoftCloseAccountingPeriodCommand(id), ct)))
+            .RequirePermission("finance.period.close")
+            .Produces<AccountingPeriodDto>(StatusCodes.Status200OK);
+
         periods.MapPost("/{id:guid}/close", async (Guid id, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new CloseAccountingPeriodCommand(id), ct)))
             .RequirePermission("finance.period.close")
@@ -111,6 +119,13 @@ public static class FinanceEndpoints
                 Results.Ok(await sender.Send(new ReopenAccountingPeriodCommand(id), ct)))
             .RequirePermission("finance.period.reopen")
             .Produces<AccountingPeriodDto>(StatusCodes.Status200OK);
+
+        RouteGroupBuilder auditLog = app.MapGroup("/api/v1/finance/audit-log").WithTags("Finance");
+
+        auditLog.MapGet("/", async (int take, ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new GetFinanceAuditLogQuery(take == 0 ? 100 : take), ct)))
+            .RequirePermission("audit.view")
+            .Produces<List<FinanceAuditLogEntryDto>>(StatusCodes.Status200OK);
 
         return app;
     }

@@ -42,4 +42,77 @@ public class AccountingPeriodTests
 
         act.Should().Throw<AccountingPeriodAlreadyClosedException>();
     }
+
+    [Fact]
+    public void SoftClose_From_Open_Sets_SoftClosed()
+    {
+        AccountingPeriod period = AccountingPeriod.Create(TenantId, FinancialYearId, "2026-03", Start, End);
+
+        period.SoftClose();
+
+        period.Status.Should().Be(AccountingPeriodStatus.SoftClosed);
+    }
+
+    [Fact]
+    public void SoftClose_Then_SoftClose_Again_Throws()
+    {
+        AccountingPeriod period = AccountingPeriod.Create(TenantId, FinancialYearId, "2026-03", Start, End);
+        period.SoftClose();
+
+        Action act = () => period.SoftClose();
+
+        act.Should().Throw<AccountingPeriodAlreadyClosedException>();
+    }
+
+    [Fact]
+    public void SoftClose_Then_Close_Succeeds()
+    {
+        AccountingPeriod period = AccountingPeriod.Create(TenantId, FinancialYearId, "2026-03", Start, End);
+        period.SoftClose();
+
+        period.Close();
+
+        period.Status.Should().Be(AccountingPeriodStatus.Closed);
+    }
+
+    [Fact]
+    public void SoftClose_On_A_Closed_Period_Throws()
+    {
+        AccountingPeriod period = AccountingPeriod.Create(TenantId, FinancialYearId, "2026-03", Start, End);
+        period.Close();
+
+        Action act = () => period.SoftClose();
+
+        act.Should().Throw<AccountingPeriodAlreadyClosedException>();
+    }
+
+    [Fact]
+    public void Reopen_On_An_Already_Open_Period_Throws()
+    {
+        AccountingPeriod period = AccountingPeriod.Create(TenantId, FinancialYearId, "2026-03", Start, End);
+
+        Action act = () => period.Reopen();
+
+        act.Should().Throw<AccountingPeriodAlreadyOpenException>();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Reopen_From_Closed_Or_SoftClosed_Sets_Open(bool softClosedFirst)
+    {
+        AccountingPeriod period = AccountingPeriod.Create(TenantId, FinancialYearId, "2026-03", Start, End);
+        if (softClosedFirst)
+        {
+            period.SoftClose();
+        }
+        else
+        {
+            period.Close();
+        }
+
+        period.Reopen();
+
+        period.Status.Should().Be(AccountingPeriodStatus.Open);
+    }
 }

@@ -7,18 +7,18 @@ using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Finance.AccountingPeriods;
 using MyCondo.Domain.Features.Finance.Audit;
 
-namespace MyCondo.Application.Features.Finance.AccountingPeriods.Commands.ReopenAccountingPeriod;
+namespace MyCondo.Application.Features.Finance.AccountingPeriods.Commands.SoftCloseAccountingPeriod;
 
-public sealed class ReopenAccountingPeriodCommandHandler(
+public sealed class SoftCloseAccountingPeriodCommandHandler(
     IAccountingPeriodRepository accountingPeriods,
     IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
-    ILogger<ReopenAccountingPeriodCommandHandler> logger
-) : IRequestHandler<ReopenAccountingPeriodCommand, AccountingPeriodDto>
+    ILogger<SoftCloseAccountingPeriodCommandHandler> logger
+) : IRequestHandler<SoftCloseAccountingPeriodCommand, AccountingPeriodDto>
 {
-    public async ValueTask<AccountingPeriodDto> Handle(ReopenAccountingPeriodCommand command, CancellationToken cancellationToken)
+    public async ValueTask<AccountingPeriodDto> Handle(SoftCloseAccountingPeriodCommand command, CancellationToken cancellationToken)
     {
         if (currentUser.TenantId is not Guid tenantId)
         {
@@ -33,13 +33,13 @@ public sealed class ReopenAccountingPeriodCommandHandler(
             throw new NotFoundException(nameof(AccountingPeriod), command.AccountingPeriodId);
         }
 
-        period.Reopen();
+        period.SoftClose();
         auditLog.Add(FinanceAuditLogEntry.Record(
-            tenantId, clock.UtcNow, currentUser.UserId, "AccountingPeriod.Reopen",
+            tenantId, clock.UtcNow, currentUser.UserId, "AccountingPeriod.SoftClose",
             nameof(AccountingPeriod), id.Value.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        logger.LogInformation("Accounting period {AccountingPeriodId} reopened for tenant {TenantId}", id, tenantId);
+        logger.LogInformation("Accounting period {AccountingPeriodId} soft-closed for tenant {TenantId}", id, tenantId);
 
         return new AccountingPeriodDto(
             period.Id.Value, period.FinancialYearId.Value, period.Name, period.StartDate, period.EndDate, period.Status.ToString());

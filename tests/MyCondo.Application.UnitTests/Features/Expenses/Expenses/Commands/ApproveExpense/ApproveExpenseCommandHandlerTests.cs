@@ -8,6 +8,7 @@ using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -36,6 +37,7 @@ public class ApproveExpenseCommandHandlerTests
     private readonly IBuildingRepository _buildings = Substitute.For<IBuildingRepository>();
     private readonly IFundRepository _funds = Substitute.For<IFundRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -71,7 +73,7 @@ public class ApproveExpenseCommandHandlerTests
             });
 
     private ApproveExpenseCommandHandler CreateHandler() => new(
-        _expenses, _expenseTypes, _expenseCategories, _buildings, _funds, _financialPosting, _unitOfWork,
+        _expenses, _expenseTypes, _expenseCategories, _buildings, _funds, _financialPosting, _auditLog, _unitOfWork,
         _currentUser, _clock, Substitute.For<ILogger<ApproveExpenseCommandHandler>>());
 
     private static Expense RecordExpense(Guid tenantId, FundId? fundId, bool isPaid) => Expense.Record(

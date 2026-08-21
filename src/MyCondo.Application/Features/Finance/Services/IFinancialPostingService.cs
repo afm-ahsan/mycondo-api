@@ -31,7 +31,11 @@ public sealed record FinancialPostingLine(
 /// supplied. <paramref name="FundId"/> is optional (added by Template 3) and, when supplied, is stamped
 /// onto every resulting <see cref="LedgerEntry"/> via <see cref="LedgerEntry.SetFinanceDimensions"/> —
 /// posting-level rather than per-line since every existing/known caller attributes a whole posting to at
-/// most one fund.</summary>
+/// most one fund. <paramref name="IsPrivilegedAdjustment"/> (added by Template 6) marks a posting as a
+/// correction to something already recorded — reversal, void, or waiver — rather than a new/original
+/// charge; only such postings are admitted into a <see cref="Domain.Features.Finance.AccountingPeriods.AccountingPeriodStatus.SoftClosed"/>
+/// period. Callers set it only where the action itself is inherently corrective (its own endpoint
+/// permission already gates who may call it) — never to work around a soft-close for an ordinary charge.</summary>
 public sealed record FinancialPostingRequest(
     Guid TenantId,
     DateOnly BusinessDate,
@@ -39,7 +43,8 @@ public sealed record FinancialPostingRequest(
     string PostingPurpose,
     Guid? SourceId,
     IReadOnlyList<FinancialPostingLine> Lines,
-    FundId? FundId = null);
+    FundId? FundId = null,
+    bool IsPrivilegedAdjustment = false);
 
 public sealed record FinancialPostingResult(LedgerPosting Posting, IReadOnlyList<LedgerEntry> Entries);
 
