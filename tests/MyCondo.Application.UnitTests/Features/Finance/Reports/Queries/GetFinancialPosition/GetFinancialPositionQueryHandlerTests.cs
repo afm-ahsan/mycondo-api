@@ -54,6 +54,28 @@ public class GetFinancialPositionQueryHandlerTests
     }
 
     [Fact]
+    public async Task Income_And_Expense_Are_Never_Included_In_Any_Balance_Sheet_Section()
+    {
+        List<TrialBalanceAccountLine> lines =
+        [
+            new(new ChartOfAccountId(Guid.NewGuid()), "1000", "Cash & Bank", AccountCategory.Asset, LedgerDirection.Debit, 10_000m, 0m),
+            new(new ChartOfAccountId(Guid.NewGuid()), "4000", "Service Charge Income", AccountCategory.Income, LedgerDirection.Credit, 0m, 12_000m),
+            new(new ChartOfAccountId(Guid.NewGuid()), "5000", "Operating Expense", AccountCategory.Expense, LedgerDirection.Debit, 4_000m, 0m),
+        ];
+        _reports.GetTrialBalanceAsync(TenantId, Today, Arg.Any<CancellationToken>()).Returns(lines);
+
+        FinancialPositionReportDto result = await CreateHandler().Handle(new GetFinancialPositionQuery(null), CancellationToken.None);
+
+        // Only the Asset line (10,000) appears anywhere in Assets/Liabilities/Equity — Income and
+        // Expense contribute solely to RetainedSurplusDeficit (8,000), never a second time to a section.
+        result.Assets.Total.Should().Be(10_000m);
+        result.Liabilities.Total.Should().Be(0m);
+        result.Equity.Total.Should().Be(0m);
+        result.RetainedSurplusDeficit.Should().Be(8_000m);
+        result.TotalLiabilitiesAndEquity.Should().Be(8_000m);
+    }
+
+    [Fact]
     public async Task Zero_Balance_Accounts_Are_Excluded_From_Sections()
     {
         _reports.GetTrialBalanceAsync(TenantId, Today, Arg.Any<CancellationToken>()).Returns(

@@ -100,6 +100,21 @@ public class PlaceFixedDepositCommandHandlerTests
     }
 
     [Fact]
+    public async Task Stamps_The_Chosen_FundId_Onto_The_Placement_Posting_And_The_FixedDeposit()
+    {
+        FinancialAccount account = SetUpFundingAccount();
+        Fund fund = Fund.Create(TenantId, "RSV", "Reserve Fund", null);
+        _funds.GetByIdAsync(fund.Id, Arg.Any<CancellationToken>()).Returns(fund);
+
+        FixedDepositDto result = await CreateHandler().Handle(
+            ValidCommand(account.Id.Value) with { FundId = fund.Id.Value }, CancellationToken.None);
+
+        result.FundName.Should().Be("Reserve Fund");
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.FundId == fund.Id), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Throws_Conflict_When_Certificate_Number_Already_Exists()
     {
         FinancialAccount account = SetUpFundingAccount();
