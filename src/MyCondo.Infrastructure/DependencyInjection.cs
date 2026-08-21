@@ -20,6 +20,7 @@ using MyCondo.Domain.Features.Finance.AccountingPeriods;
 using MyCondo.Domain.Features.Finance.AccountMappings;
 using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Finance.BankReconciliations;
+using MyCondo.Domain.Features.Finance.Integrity;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Finance.FinancialAccounts;
 using MyCondo.Domain.Features.Finance.FinancialYears;
@@ -223,6 +224,7 @@ public static class DependencyInjection
         services.AddScoped<IFinanceAuditLogRepository, FinanceAuditLogRepository>();
         services.AddScoped<IBankReconciliationRepository, BankReconciliationRepository>();
         services.AddScoped<IBankStatementLineRepository, BankStatementLineRepository>();
+        services.AddScoped<IFinanceIntegrityRepository, FinanceIntegrityRepository>();
         services.AddScoped<IResidentAccountRepository, ResidentAccountRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepository>();

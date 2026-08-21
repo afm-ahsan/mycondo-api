@@ -11,6 +11,8 @@ using MyCondo.Application.Features.Finance.AccountMappings.DTOs;
 using MyCondo.Application.Features.Finance.AccountMappings.Queries.GetAccountMappings;
 using MyCondo.Application.Features.Finance.Audit.DTOs;
 using MyCondo.Application.Features.Finance.Audit.Queries.GetFinanceAuditLog;
+using MyCondo.Application.Features.Finance.Integrity.DTOs;
+using MyCondo.Application.Features.Finance.Integrity.Queries.GetFinancialIntegrityDashboard;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.Commands.CreateChartOfAccount;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.DTOs;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.Queries.GetChartOfAccounts;
@@ -126,6 +128,12 @@ public static class FinanceEndpoints
                 Results.Ok(await sender.Send(new GetFinanceAuditLogQuery(take == 0 ? 100 : take), ct)))
             .RequirePermission("audit.view")
             .Produces<List<FinanceAuditLogEntryDto>>(StatusCodes.Status200OK);
+
+        app.MapGet("/api/v1/finance/integrity-dashboard", async (ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new GetFinancialIntegrityDashboardQuery(), ct)))
+            .WithTags("Finance")
+            .RequirePermission("finance.report.view")
+            .Produces<FinancialIntegrityDashboardDto>(StatusCodes.Status200OK);
 
         return app;
     }
