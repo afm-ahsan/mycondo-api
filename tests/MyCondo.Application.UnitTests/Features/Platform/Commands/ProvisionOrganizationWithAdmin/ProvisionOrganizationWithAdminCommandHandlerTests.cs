@@ -5,6 +5,7 @@ using MyCondo.Application.Common.Authorization;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
@@ -42,6 +43,7 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
     private readonly IRolePermissionRepository _uowRolePermissions = Substitute.For<IRolePermissionRepository>();
     private readonly IRoleAssignmentRepository _uowRoleAssignments = Substitute.For<IRoleAssignmentRepository>();
     private readonly ITenantModuleRepository _uowTenantModules = Substitute.For<ITenantModuleRepository>();
+    private readonly IExpenseCategoryRepository _uowExpenseCategories = Substitute.For<IExpenseCategoryRepository>();
     private readonly IExpenseTypeRepository _uowExpenseTypes = Substitute.For<IExpenseTypeRepository>();
 
     public ProvisionOrganizationWithAdminCommandHandlerTests()
@@ -54,6 +56,14 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         _uowPermissions.GetAllAsync(Arg.Any<CancellationToken>()).Returns(FullPermissionCatalogue());
         _uowRoles.GetAllForTenantAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns([]);
         _uowRolePermissions.GetForRoleAsync(Arg.Any<RoleId>(), Arg.Any<CancellationToken>()).Returns([]);
+
+        // ExpenseCategoryCatalogueSeeder runs (and is "saved") before ExpenseTypeCatalogueSeeder reads
+        // categories back — mirror that with a substitute that returns whatever's been Added so far,
+        // the same way a real repository would after the handler's intermediate SaveChangesAsync.
+        List<ExpenseCategory> addedCategories = [];
+        _uowExpenseCategories.Add(Arg.Do<ExpenseCategory>(addedCategories.Add));
+        _uowExpenseCategories.GetAllForTenantAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(_ => addedCategories.ToList());
         _uowExpenseTypes.GetAllForTenantAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns([]);
 
         _uow.Tenants.Returns(_uowTenants);
@@ -63,6 +73,7 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         _uow.RolePermissions.Returns(_uowRolePermissions);
         _uow.RoleAssignments.Returns(_uowRoleAssignments);
         _uow.TenantModules.Returns(_uowTenantModules);
+        _uow.ExpenseCategories.Returns(_uowExpenseCategories);
         _uow.ExpenseTypes.Returns(_uowExpenseTypes);
 
         _uowFactory.Create(Arg.Any<Guid>()).Returns(_uow);
@@ -127,7 +138,11 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
             NowUtc,
             _currentPlatformUser.PlatformUserId,
             Arg.Any<CancellationToken>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        // Two saves (Template 3): one intermediate save after the Expense Category catalogue is seeded
+        // (so the Expense Type catalogue seeder can resolve categories via a database-style read — see
+        // ExpenseCategoryCatalogueSeeder/ExpenseTypeCatalogueSeeder's ordering comment), then the final
+        // save for everything else.
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

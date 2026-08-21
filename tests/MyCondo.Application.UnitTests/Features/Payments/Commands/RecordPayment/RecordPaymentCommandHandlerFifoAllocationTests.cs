@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.Commands.RecordPayment;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Domain.Abstractions;
@@ -36,8 +37,7 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
     private readonly IPaymentRepository _payments = Substitute.For<IPaymentRepository>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IPaymentAllocationRepository _allocations = Substitute.For<IPaymentAllocationRepository>();
-    private readonly ILedgerPostingRepository _ledgerPostings = Substitute.For<ILedgerPostingRepository>();
-    private readonly ILedgerEntryRepository _ledgerEntries = Substitute.For<ILedgerEntryRepository>();
+    private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -50,10 +50,27 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
             .Returns(ResidentAccount.Open(TenantId, FlatId, Now));
         _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
             .Returns(Substitute.For<IUnitOfWorkTransaction>());
+        StubFinancialPosting();
     }
 
+    /// <summary>Makes the mocked <see cref="IFinancialPostingService"/> behave like the real one — see
+    /// VoidInvoiceCommandHandlerTests for why.</summary>
+    private void StubFinancialPosting() =>
+        _financialPosting.PostAsync(Arg.Any<FinancialPostingRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                FinancialPostingRequest request = callInfo.Arg<FinancialPostingRequest>();
+                List<LedgerLine> lines = request.Lines
+                    .Select(l => new LedgerLine(l.Role, l.FlatId, l.Direction, l.Amount, l.LineDescription ?? request.Description))
+                    .ToList();
+                (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
+                    request.TenantId, request.BusinessDate, request.Description, request.PostingPurpose,
+                    request.SourceId, lines, Now);
+                return new FinancialPostingResult(posting, entries);
+            });
+
     private RecordPaymentCommandHandler CreateHandler() => new(
-        _accounts, _payments, _invoices, _allocations, _ledgerPostings, _ledgerEntries, _unitOfWork,
+        _accounts, _payments, _invoices, _allocations, _financialPosting, _unitOfWork,
         _currentUser, _clock, Substitute.For<ILogger<RecordPaymentCommandHandler>>());
 
     private static Invoice IssueInvoiceWithBalance(string invoiceNumber, decimal amount)
@@ -64,7 +81,7 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
 
         (Invoice invoice, _) = Invoice.Issue(
             TenantId, BuildingId, FlatId, invoiceNumber, InvoiceSource.ServiceCharge, BusinessDate, BusinessDate,
-            BusinessDate, BusinessDate, [line], LedgerPostingId.New(), Now);
+            BusinessDate, BusinessDate, [line], LedgerPostingId.New(), LedgerAccountType.AssociationRevenue, null, Now);
 
         return invoice;
     }
@@ -120,7 +137,7 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
     }
 
     [Fact]
-    public async Task Overpayment_Pays_Off_All_Outstanding_Invoices_And_Leaves_Remainder_Unallocated()
+    public async Task Overpayment_Pays_Off_All_Outstanding_Invoices_And_Posts_Remainder_As_ResidentAdvance()
     {
         Invoice invoiceA = IssueInvoiceWithBalance("INV-A-2026-000001", 500m);
         Invoice invoiceB = IssueInvoiceWithBalance("INV-A-2026-000002", 800m);
@@ -133,9 +150,33 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
         invoiceA.Status.Should().Be(InvoiceStatus.Paid);
         invoiceB.Status.Should().Be(InvoiceStatus.Paid);
         result.Allocations.Sum(a => a.AllocatedAmount).Should().Be(1300m);
-        // The remaining 200 is not force-allocated anywhere — it stays as unapplied credit,
-        // already representable via the flat's net ledger balance going negative.
         result.Amount.Should().Be(1500m);
+
+        // The remaining 200 is posted as ResidentAdvance (Billing↔Finance integration template §12),
+        // not left as unapplied credit implicit in a negative ResidentReceivable balance.
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.Lines.Any(l =>
+                l.Role == LedgerAccountType.ResidentAdvance && l.FlatId == FlatId && l.Amount == 200m)),
+            Arg.Any<CancellationToken>());
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.Lines.Any(l =>
+                l.Role == LedgerAccountType.ResidentReceivable && l.FlatId == FlatId && l.Amount == 1300m)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Exact_Payment_With_No_Remainder_Does_Not_Post_A_ResidentAdvance_Line()
+    {
+        Invoice invoice = IssueInvoiceWithBalance("INV-A-2026-000001", 1000m);
+        _invoices.GetOutstandingForFlatForUpdateAsync(TenantId, FlatId, Arg.Any<CancellationToken>())
+            .Returns(new List<Invoice> { invoice });
+
+        RecordPaymentCommand command = new(FlatId.Value, 1000m, "Cash", null, BusinessDate, null);
+        await CreateHandler().Handle(command, CancellationToken.None);
+
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.Lines.All(l => l.Role != LedgerAccountType.ResidentAdvance)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -27,13 +27,31 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
     public decimal SubtotalAmount { get; private set; }
     public decimal TotalAmount { get; private set; }
     public decimal AmountPaid { get; private set; }
+    public decimal WaivedAmount { get; private set; }
     public InvoiceStatus Status { get; private set; }
     public LedgerPostingId LedgerPostingId { get; private set; }
+    /// <summary>Which tenant-wide income account this invoice's issuance posting credited — recorded
+    /// at issuance so <c>VoidInvoiceCommandHandler</c> can reverse against the exact same account
+    /// without re-deriving it from <see cref="Source"/> (which alone cannot distinguish, e.g., Gas from
+    /// Electricity utility invoices). See ADR-027's Billing↔Finance integration.</summary>
+    public LedgerAccountType IncomeAccountType { get; private set; }
     public DateTimeOffset IssuedAtUtc { get; private set; }
     public DateTimeOffset? VoidedAtUtc { get; private set; }
     public Guid? VoidedBy { get; private set; }
     public string? VoidReason { get; private set; }
     public LedgerPostingId? VoidLedgerPostingId { get; private set; }
+    public DateTimeOffset? WaivedAtUtc { get; private set; }
+    public Guid? WaivedBy { get; private set; }
+    public string? WaiveReason { get; private set; }
+    public LedgerPostingId? WaiveLedgerPostingId { get; private set; }
+    /// <summary>Historical responsible-party snapshot (Owner/Tenant + the resident/ownership/occupancy
+    /// identifiers behind them) as of <see cref="IssuedAtUtc"/> — see
+    /// <see cref="ResponsiblePartySnapshot"/>. Null when neither an active owner nor an active tenant
+    /// could be resolved for the flat at issuance time; never recomputed afterward.</summary>
+    public ResponsiblePartyType? ResponsiblePartyType { get; private set; }
+    public Guid? ResponsibleResidentId { get; private set; }
+    public Guid? ResponsibleFlatOwnershipId { get; private set; }
+    public Guid? ResponsibleOccupancyRegistrationId { get; private set; }
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -41,8 +59,9 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
     public DateTimeOffset? UpdatedAtUtc { get; set; }
     public Guid? UpdatedBy { get; set; }
 
-    /// <summary>Derived, never stored — no drift risk between this and <see cref="AmountPaid"/>.</summary>
-    public decimal Balance => TotalAmount - AmountPaid;
+    /// <summary>Derived, never stored — no drift risk against <see cref="AmountPaid"/>/
+    /// <see cref="WaivedAmount"/>.</summary>
+    public decimal Balance => TotalAmount - AmountPaid - WaivedAmount;
 
     private Invoice()
     {
@@ -62,6 +81,8 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         DateOnly dueDate,
         decimal subtotalAmount,
         LedgerPostingId ledgerPostingId,
+        LedgerAccountType incomeAccountType,
+        ResponsiblePartySnapshot? responsibleParty,
         DateTimeOffset nowUtc) : base(id)
     {
         TenantId = tenantId;
@@ -76,8 +97,14 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         SubtotalAmount = subtotalAmount;
         TotalAmount = subtotalAmount;
         AmountPaid = 0m;
+        WaivedAmount = 0m;
         Status = InvoiceStatus.Issued;
         LedgerPostingId = ledgerPostingId;
+        IncomeAccountType = incomeAccountType;
+        ResponsiblePartyType = responsibleParty?.PartyType;
+        ResponsibleResidentId = responsibleParty?.ResponsibleResidentId;
+        ResponsibleFlatOwnershipId = responsibleParty?.FlatOwnershipId;
+        ResponsibleOccupancyRegistrationId = responsibleParty?.OccupancyRegistrationId;
         IssuedAtUtc = nowUtc;
         Version = 1;
         CreatedAtUtc = nowUtc;
@@ -88,7 +115,10 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
     /// <see cref="SubtotalAmount"/>, kept as a separate field for forward compatibility rather than
     /// computed as an alias. <paramref name="dueDate"/> is expected to be <paramref name="periodEnd"/>
     /// (late-fee/grace-period policy is unresolved — see Slice E's final report — so no other default
-    /// is invented here).</summary>
+    /// is invented here). <paramref name="incomeAccountType"/> is the tenant-wide income account the
+    /// caller already credited in the same posting — recorded so <see cref="Void"/>'s reversal can
+    /// reuse it directly. <paramref name="responsibleParty"/> is an optional historical snapshot; see
+    /// <see cref="ResponsiblePartySnapshot"/>.</summary>
     public static (Invoice Invoice, IReadOnlyList<InvoiceLine> Lines) Issue(
         Guid tenantId,
         BuildingId buildingId,
@@ -101,6 +131,8 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         DateOnly dueDate,
         IReadOnlyList<InvoiceLineInput> lines,
         LedgerPostingId ledgerPostingId,
+        LedgerAccountType incomeAccountType,
+        ResponsiblePartySnapshot? responsibleParty,
         DateTimeOffset nowUtc)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(invoiceNumber);
@@ -127,7 +159,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         InvoiceId invoiceId = InvoiceId.New();
         Invoice invoice = new(
             invoiceId, tenantId, buildingId, flatId, invoiceNumber, source, periodStart, periodEnd, invoiceDate,
-            dueDate, subtotal, ledgerPostingId, nowUtc);
+            dueDate, subtotal, ledgerPostingId, incomeAccountType, responsibleParty, nowUtc);
 
         List<InvoiceLine> invoiceLines = lines
             .Select(input => new InvoiceLine(InvoiceLineId.New(), tenantId, invoiceId, input, nowUtc))
@@ -152,7 +184,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         }
 
         AmountPaid += amount;
-        Status = AmountPaid >= TotalAmount ? InvoiceStatus.Paid : InvoiceStatus.PartiallyPaid;
+        RecomputeStatus();
         Version++;
     }
 
@@ -180,11 +212,51 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         }
 
         AmountPaid -= amount;
-        Status = AmountPaid <= 0 ? InvoiceStatus.Issued : InvoiceStatus.PartiallyPaid;
+        RecomputeStatus();
         Version++;
     }
 
-    /// <summary>Restricted to invoices with <c>AmountPaid == 0</c> — see
+    /// <summary>Writes off part or all of the outstanding balance without any cash changing hands —
+    /// e.g. a fine waiver. One-time only per invoice (<see cref="WaivedAmount"/> must be zero going
+    /// in): a second waiver attempt on an already-waived invoice is rejected rather than silently
+    /// accumulating, which keeps this call idempotent-by-construction alongside the caller's ledger
+    /// posting (same invoice id used as the posting's SourceId). <paramref name="waiveLedgerPostingId"/>
+    /// is the Dr AdjustmentsAndWaivers / Cr ResidentReceivable posting the caller already created in
+    /// the same transaction as this call.</summary>
+    public void Waive(decimal amount, string reason, Guid? waivedBy, LedgerPostingId waiveLedgerPostingId, DateTimeOffset nowUtc)
+    {
+        if (Status == InvoiceStatus.Void)
+        {
+            throw new InvoiceAlreadyVoidException(Id);
+        }
+
+        if (WaivedAmount > 0)
+        {
+            throw new InvoiceAlreadyWaivedException(Id);
+        }
+
+        if (amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Waived amount must be positive.");
+        }
+
+        if (amount > Balance)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Waived amount cannot exceed the invoice's outstanding balance.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        WaivedAmount = amount;
+        WaivedAtUtc = nowUtc;
+        WaivedBy = waivedBy;
+        WaiveReason = reason.Trim();
+        WaiveLedgerPostingId = waiveLedgerPostingId;
+        RecomputeStatus();
+        Version++;
+    }
+
+    /// <summary>Restricted to invoices with <c>AmountPaid == 0</c> and <c>WaivedAmount == 0</c> — see
     /// <see cref="InvoiceCannotBeVoidedException"/>. <paramref name="voidLedgerPostingId"/> is the
     /// reversing posting the caller already created in the same transaction as this call.</summary>
     public void Void(string reason, Guid? voidedBy, LedgerPostingId voidLedgerPostingId, DateTimeOffset nowUtc)
@@ -194,7 +266,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
             throw new InvoiceAlreadyVoidException(Id);
         }
 
-        if (AmountPaid > 0)
+        if (AmountPaid > 0 || WaivedAmount > 0)
         {
             throw new InvoiceCannotBeVoidedException(Id);
         }
@@ -207,5 +279,26 @@ public sealed class Invoice : AggregateRoot<InvoiceId>, IAuditable, ITenantScope
         VoidReason = reason.Trim();
         VoidLedgerPostingId = voidLedgerPostingId;
         Version++;
+    }
+
+    /// <summary>Single source of truth for deriving <see cref="Status"/> from the current
+    /// (<see cref="AmountPaid"/>, <see cref="WaivedAmount"/>, <see cref="TotalAmount"/>) triple —
+    /// shared by <see cref="ApplyPayment"/>, <see cref="ReverseAppliedPayment"/>, and
+    /// <see cref="Waive"/> so the precedence rule lives in exactly one place. A waiver "wins" the
+    /// label whenever one has occurred (fully settled + ever waived → Waived, not Paid; still
+    /// outstanding + ever waived → PartiallyWaived, not PartiallyPaid) since the waiver is the more
+    /// operationally significant fact for a Fine.</summary>
+    private void RecomputeStatus()
+    {
+        if (Balance <= 0)
+        {
+            Status = WaivedAmount > 0 && AmountPaid <= 0 ? InvoiceStatus.Waived : InvoiceStatus.Paid;
+        }
+        else
+        {
+            Status = WaivedAmount > 0
+                ? InvoiceStatus.PartiallyWaived
+                : (AmountPaid > 0 ? InvoiceStatus.PartiallyPaid : InvoiceStatus.Issued);
+        }
     }
 }

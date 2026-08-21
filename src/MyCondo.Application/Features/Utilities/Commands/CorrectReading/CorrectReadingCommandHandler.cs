@@ -1,11 +1,14 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Utilities.DTOs;
 using MyCondo.Application.Features.Utilities.Mappings;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Utilities.Readings;
 
@@ -22,8 +25,8 @@ namespace MyCondo.Application.Features.Utilities.Commands.CorrectReading;
 public sealed class CorrectReadingCommandHandler(
     IReadingRepository readings,
     IInvoiceRepository invoices,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -60,20 +63,22 @@ public sealed class CorrectReadingCommandHandler(
                 ?? throw new NotFoundException(nameof(Invoice), billedInvoiceId.Value.Value);
 
             string voidDescription = $"Void of invoice {invoice.InvoiceNumber} (reading correction): {command.Reason}";
-            LedgerLine[] reversingLines =
+            FinancialPostingLine[] reversingLines =
             [
-                new LedgerLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Debit, invoice.TotalAmount, voidDescription),
-                new LedgerLine(LedgerAccountType.ResidentReceivable, invoice.FlatId, LedgerDirection.Credit, invoice.TotalAmount, voidDescription),
+                new FinancialPostingLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Debit, invoice.TotalAmount),
+                new FinancialPostingLine(LedgerAccountType.ResidentReceivable, invoice.FlatId, LedgerDirection.Credit, invoice.TotalAmount),
             ];
 
-            (LedgerPosting reversingPosting, IReadOnlyList<LedgerEntry> reversingEntries) = LedgerPosting.Create(
-                tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), voidDescription, "InvoiceVoid",
-                invoice.LedgerPostingId.Value, reversingLines, nowUtc);
+            FinancialPostingResult reversal = await financialPosting.PostAsync(
+                new FinancialPostingRequest(
+                    tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), voidDescription, "InvoiceVoid",
+                    invoice.LedgerPostingId.Value, reversingLines, IsPrivilegedAdjustment: true),
+                cancellationToken);
 
-            invoice.Void(command.Reason, currentUser.UserId, reversingPosting.Id, nowUtc);
-
-            ledgerPostings.Add(reversingPosting);
-            ledgerEntries.AddRange(reversingEntries);
+            invoice.Void(command.Reason, currentUser.UserId, reversal.Posting.Id, nowUtc);
+            auditLog.Add(FinanceAuditLogEntry.Record(
+                tenantId, nowUtc, currentUser.UserId, "Invoice.Void", nameof(Invoice), invoice.Id.Value.ToString(),
+                metadata: JsonSerializer.Serialize(new { reason = command.Reason, viaReadingCorrection = true })));
         }
 
         Reading correction = Reading.Record(

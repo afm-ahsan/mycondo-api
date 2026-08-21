@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Application.Features.Amenities.Mappings;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Amenities.Bookings;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -19,8 +20,7 @@ namespace MyCondo.Application.Features.Amenities.Commands.InspectBooking;
 /// </summary>
 public sealed class InspectBookingCommandHandler(
     IBookingRepository bookings,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -65,31 +65,30 @@ public sealed class InspectBookingCommandHandler(
             decimal refunded = booking.DepositAmount - deducted;
             string description = $"Facility booking deposit settlement for booking {booking.Id}";
 
-            List<LedgerLine> settlementLines =
+            List<FinancialPostingLine> settlementLines =
             [
-                new LedgerLine(LedgerAccountType.RefundableDepositsHeld, null, LedgerDirection.Debit, booking.DepositAmount, description),
+                new FinancialPostingLine(LedgerAccountType.RefundableDepositsHeld, null, LedgerDirection.Debit, booking.DepositAmount),
             ];
 
             if (refunded > 0)
             {
-                settlementLines.Add(new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, refunded, description));
+                settlementLines.Add(new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, refunded));
             }
 
             if (deducted > 0)
             {
-                settlementLines.Add(new LedgerLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, deducted, description));
+                settlementLines.Add(new FinancialPostingLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, deducted));
             }
 
-            (LedgerPosting settlementPosting, IReadOnlyList<LedgerEntry> settlementEntries) = LedgerPosting.Create(
-                tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "FacilityBookingDepositSettlement",
-                booking.Id.Value, settlementLines, nowUtc);
-
-            ledgerPostings.Add(settlementPosting);
-            ledgerEntries.AddRange(settlementEntries);
+            FinancialPostingResult settlementPosted = await financialPosting.PostAsync(
+                new FinancialPostingRequest(
+                    tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description,
+                    "FacilityBookingDepositSettlement", booking.Id.Value, settlementLines),
+                cancellationToken);
 
             refundedAmount = refunded;
             deductedAmount = deducted;
-            settlementPostingId = settlementPosting.Id;
+            settlementPostingId = settlementPosted.Posting.Id;
         }
 
         booking.Inspect(

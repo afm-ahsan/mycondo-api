@@ -40,6 +40,8 @@ public class UploadAttachmentCommandHandlerTests
         Substitute.For<Domain.Features.Property.Buildings.IBuildingRepository>(),
         Substitute.For<Domain.Features.Property.Flats.IFlatRepository>(),
         _residentHouseholdMembers, _leasingHouseholdMembers,
+        Substitute.For<Domain.Features.Expenses.Expenses.IExpenseRepository>(),
+        Substitute.For<Domain.Features.Finance.FixedDeposits.IFixedDepositRepository>(),
         _fileStorage, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<UploadAttachmentCommandHandler>>());
 

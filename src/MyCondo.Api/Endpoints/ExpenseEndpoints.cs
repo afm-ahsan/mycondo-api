@@ -1,6 +1,8 @@
 using Mediator;
 using MyCondo.Api.Authorization;
+using MyCondo.Application.Features.Expenses.Expenses.Commands.ApproveExpense;
 using MyCondo.Application.Features.Expenses.Expenses.Commands.CreateExpense;
+using MyCondo.Application.Features.Expenses.Expenses.Commands.PayExpense;
 using MyCondo.Application.Features.Expenses.Expenses.Commands.UpdateExpense;
 using MyCondo.Application.Features.Expenses.Expenses.Commands.VoidExpense;
 using MyCondo.Application.Features.Expenses.Expenses.DTOs;
@@ -17,12 +19,12 @@ public static class ExpenseEndpoints
         RouteGroupBuilder expenses = app.MapGroup("/api/v1/expenses").WithTags("Expenses");
 
         expenses.MapGet("/", async (
-                Guid? buildingId, Guid? expenseTypeId, string? status, DateOnly? fromDate, DateOnly? toDate,
-                int? page, int? pageSize, ISender sender, CancellationToken ct) =>
+                Guid? buildingId, Guid? expenseTypeId, Guid? fundId, string? status, DateOnly? fromDate,
+                DateOnly? toDate, int? page, int? pageSize, ISender sender, CancellationToken ct) =>
             {
                 PagedResult<ExpenseDto> result = await sender.Send(
                     new GetExpensesForTenantQuery(
-                        buildingId, expenseTypeId, status, fromDate, toDate,
+                        buildingId, expenseTypeId, fundId, status, fromDate, toDate,
                         page is null or < 1 ? 1 : page.Value, pageSize is null or < 1 ? 20 : pageSize.Value),
                     ct);
                 return Results.Ok(result);
@@ -38,9 +40,14 @@ public static class ExpenseEndpoints
             .RequirePermission("expense.view")
             .Produces<ExpenseDto>(StatusCodes.Status200OK);
 
-        expenses.MapPost("/", async (CreateExpenseCommand command, ISender sender, CancellationToken ct) =>
+        expenses.MapPost("/", async (CreateExpenseRequest body, ISender sender, CancellationToken ct) =>
             {
-                ExpenseDto result = await sender.Send(command, ct);
+                ExpenseDto result = await sender.Send(
+                    new CreateExpenseCommand(
+                        body.BuildingId, body.ExpenseTypeId, body.FundId, body.ExpenseDate, body.AccountingDate,
+                        body.Description, body.Payee, body.ReferenceNumber, body.Amount, body.IsPaid,
+                        body.PaymentMethod, body.Notes),
+                    ct);
                 return Results.Ok(result);
             })
             .RequireAuthorization()
@@ -50,8 +57,9 @@ public static class ExpenseEndpoints
             {
                 ExpenseDto result = await sender.Send(
                     new UpdateExpenseCommand(
-                        id, body.BuildingId, body.ExpenseTypeId, body.ExpenseDate, body.Description, body.Payee,
-                        body.ReferenceNumber, body.Amount, body.PaymentMethod, body.Notes),
+                        id, body.BuildingId, body.ExpenseTypeId, body.FundId, body.ExpenseDate, body.AccountingDate,
+                        body.Description, body.Payee, body.ReferenceNumber, body.Amount, body.IsPaid,
+                        body.PaymentMethod, body.Notes),
                     ct);
                 return Results.Ok(result);
             })
@@ -66,18 +74,51 @@ public static class ExpenseEndpoints
             .RequireAuthorization()
             .Produces(StatusCodes.Status204NoContent);
 
+        expenses.MapPost("/{id:guid}/approve", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                ExpenseDto result = await sender.Send(new ApproveExpenseCommand(id), ct);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization()
+            .Produces<ExpenseDto>(StatusCodes.Status200OK);
+
+        expenses.MapPost("/{id:guid}/pay", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                ExpenseDto result = await sender.Send(new PayExpenseCommand(id), ct);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization()
+            .Produces<ExpenseDto>(StatusCodes.Status200OK);
+
         return app;
     }
 }
 
-public sealed record UpdateExpenseRequest(
-    Guid BuildingId,
+public sealed record CreateExpenseRequest(
+    Guid? BuildingId,
     Guid ExpenseTypeId,
+    Guid? FundId,
     DateOnly ExpenseDate,
+    DateOnly? AccountingDate,
     string Description,
     string? Payee,
     string? ReferenceNumber,
     decimal Amount,
+    bool IsPaid,
+    string PaymentMethod,
+    string? Notes);
+
+public sealed record UpdateExpenseRequest(
+    Guid? BuildingId,
+    Guid ExpenseTypeId,
+    Guid? FundId,
+    DateOnly ExpenseDate,
+    DateOnly? AccountingDate,
+    string Description,
+    string? Payee,
+    string? ReferenceNumber,
+    decimal Amount,
+    bool IsPaid,
     string PaymentMethod,
     string? Notes);
 

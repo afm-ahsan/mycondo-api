@@ -30,7 +30,7 @@ public class DeactivateExpenseTypeCommandHandlerTests
         _expenseTypes, _unitOfWork, _currentUser, _clock, Substitute.For<ILogger<DeactivateExpenseTypeCommandHandler>>());
 
     private static ExpenseType CreateType(Guid tenantId) =>
-        ExpenseType.Create(tenantId, "Cleaning", "CLN", null, 1, NowUtc);
+        ExpenseType.Create(tenantId, Domain.Features.Expenses.ExpenseCategories.ExpenseCategoryId.New(), "Cleaning", "CLN", null, 1, NowUtc);
 
     [Fact]
     public async Task Deactivates_An_Expense_Type_In_Callers_Tenant()

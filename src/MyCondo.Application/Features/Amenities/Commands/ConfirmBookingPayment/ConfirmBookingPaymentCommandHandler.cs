@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Application.Features.Amenities.Mappings;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Amenities.Bookings;
 using MyCondo.Domain.Features.Billing.InvoiceSequences;
@@ -22,8 +23,7 @@ public sealed class ConfirmBookingPaymentCommandHandler(
     IBuildingRepository buildings,
     IInvoiceRepository invoices,
     IInvoiceSequenceRepository sequences,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -61,17 +61,15 @@ public sealed class ConfirmBookingPaymentCommandHandler(
             string invoiceNumber = $"INV-{building.Code}-{invoiceDate.Year}-{seq:D6}";
             string description = $"Facility booking charge {invoiceNumber} for booking {booking.Id}";
 
-            LedgerLine[] chargeLines =
+            FinancialPostingLine[] chargeLines =
             [
-                new LedgerLine(LedgerAccountType.ResidentReceivable, booking.FlatId, LedgerDirection.Debit, booking.BookingChargeAmount, description),
-                new LedgerLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, booking.BookingChargeAmount, description),
+                new FinancialPostingLine(LedgerAccountType.ResidentReceivable, booking.FlatId, LedgerDirection.Debit, booking.BookingChargeAmount),
+                new FinancialPostingLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, booking.BookingChargeAmount),
             ];
 
-            (LedgerPosting chargePosting, IReadOnlyList<LedgerEntry> chargeEntries) = LedgerPosting.Create(
-                tenantId, invoiceDate, description, "FacilityBookingCharge", booking.Id.Value, chargeLines, nowUtc);
-
-            ledgerPostings.Add(chargePosting);
-            ledgerEntries.AddRange(chargeEntries);
+            FinancialPostingResult chargePosted = await financialPosting.PostAsync(
+                new FinancialPostingRequest(tenantId, invoiceDate, description, "FacilityBookingCharge", booking.Id.Value, chargeLines),
+                cancellationToken);
 
             InvoiceLineInput lineInput = new(
                 null, "Facility Booking Charge", "Amenities", "Fixed", booking.BookingChargeAmount, null, 1,
@@ -79,7 +77,8 @@ public sealed class ConfirmBookingPaymentCommandHandler(
 
             (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
                 tenantId, booking.BuildingId, booking.FlatId, invoiceNumber, InvoiceSource.FacilityBooking, bookingDate,
-                bookingDate, invoiceDate, bookingDate, [lineInput], chargePosting.Id, nowUtc);
+                bookingDate, invoiceDate, bookingDate, [lineInput], chargePosted.Posting.Id,
+                LedgerAccountType.AssociationRevenue, responsibleParty: null, nowUtc);
 
             invoices.Add(invoice);
             invoices.AddLines(lines);
@@ -91,18 +90,17 @@ public sealed class ConfirmBookingPaymentCommandHandler(
         {
             string description = $"Facility booking deposit held for booking {booking.Id}";
 
-            LedgerLine[] depositLines =
+            FinancialPostingLine[] depositLines =
             [
-                new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, booking.DepositAmount, description),
-                new LedgerLine(LedgerAccountType.RefundableDepositsHeld, null, LedgerDirection.Credit, booking.DepositAmount, description),
+                new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, booking.DepositAmount),
+                new FinancialPostingLine(LedgerAccountType.RefundableDepositsHeld, null, LedgerDirection.Credit, booking.DepositAmount),
             ];
 
-            (LedgerPosting depositPosting, IReadOnlyList<LedgerEntry> depositEntries) = LedgerPosting.Create(
-                tenantId, invoiceDate, description, "FacilityBookingDeposit", booking.Id.Value, depositLines, nowUtc);
+            FinancialPostingResult depositPosted = await financialPosting.PostAsync(
+                new FinancialPostingRequest(tenantId, invoiceDate, description, "FacilityBookingDeposit", booking.Id.Value, depositLines),
+                cancellationToken);
 
-            ledgerPostings.Add(depositPosting);
-            ledgerEntries.AddRange(depositEntries);
-            depositPostingId = depositPosting.Id;
+            depositPostingId = depositPosted.Posting.Id;
         }
 
         booking.ConfirmPayment(invoiceId, depositPostingId, nowUtc);

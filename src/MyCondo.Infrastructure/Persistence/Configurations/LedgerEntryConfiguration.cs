@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using MyCondo.Domain.Features.Finance.AccountingPeriods;
+using MyCondo.Domain.Features.Finance.ChartOfAccounts;
+using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Flats;
 
@@ -33,6 +36,23 @@ public sealed class LedgerEntryConfiguration : IEntityTypeConfiguration<LedgerEn
         builder.Property(x => x.BusinessDate).IsRequired();
         builder.Property(x => x.Description).IsRequired().HasMaxLength(500);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
+
+        // Finance-foundation dimensions (ADR-027) — additive, nullable; null for entries posted before
+        // the Finance foundation existed, per ADR-027's "don't fabricate historical dimensions" rule.
+        builder.Property(x => x.ChartOfAccountId)
+            .HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new ChartOfAccountId(value.Value) : (ChartOfAccountId?)null);
+
+        builder.Property(x => x.FundId)
+            .HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new FundId(value.Value) : (FundId?)null);
+
+        builder.Property(x => x.AccountingPeriodId)
+            .HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new AccountingPeriodId(value.Value) : (AccountingPeriodId?)null);
 
         builder.HasIndex(x => new { x.TenantId, x.PostingId })
             .HasDatabaseName("ix_ledger_entries_tenant_id_posting_id");

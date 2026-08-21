@@ -70,7 +70,10 @@ public static class DatabaseSeederExtensions
 
                 // 03 Development/demo tenant provisioning — ARP first so it's the canonical local-dev
                 // tenant, then the generic "demo" tenant only if ARP didn't already claim the "any
-                // tenant exists" slot DevelopmentTenantSeeder checks.
+                // tenant exists" slot DevelopmentTenantSeeder checks. Neither seeder goes through
+                // RegisterUserCommandHandler for its admin user (they write identity rows directly),
+                // so neither triggers Finance chart-of-account seeding on its own — step 04 below
+                // covers that in the same startup run.
                 await sp.GetRequiredService<ArpDevelopmentBootstrapSeeder>().SeedAsync(cancellationToken);
                 await sp.GetRequiredService<DevelopmentTenantSeeder>().SeedAsync(cancellationToken);
             }
@@ -80,6 +83,28 @@ public static class DatabaseSeederExtensions
                     "[DatabaseSeed] Skipping Development-only bootstrap/demo seeders — environment is {EnvironmentName}",
                     environment.EnvironmentName);
             }
+
+            // 04 Tenant role/permission catalogue backfill — every environment, not Development-only:
+            // a permission added to the catalogue (or a role's static permission list updated) after a
+            // tenant's first-user bootstrap never reaches that tenant's roles otherwise — reconciles
+            // OrganizationAdmin's blanket grant and the three role-catalogue seeders for every tenant.
+            // See TenantRoleCatalogueBackfillSeeder's doc comment.
+            await sp.GetRequiredService<TenantRoleCatalogueBackfillSeeder>().SeedAsync(cancellationToken);
+
+            // 05 Finance chart-of-accounts backfill — every environment, not Development-only: a real
+            // Staging/Production tenant bootstrapped before the Finance foundation (or before a later
+            // Finance role was added) has the exact same missing-mapping gap a dev tenant would. Runs
+            // after step 03 so a tenant created there (e.g. ARP) is already visible to it in the same
+            // startup, not just from the next restart onward. See
+            // FinanceChartOfAccountBackfillSeeder's doc comment.
+            await sp.GetRequiredService<FinanceChartOfAccountBackfillSeeder>().SeedAsync(cancellationToken);
+
+            // 06 Expense category catalogue backfill (Template 3) — every environment: a tenant
+            // bootstrapped before Template 3 introduced Expense Categories has expense types with no
+            // category and none of the default categories. Includes the OperatingExpense/AccountsPayable
+            // system accounts via step 05 above (FinanceChartOfAccountSeeder's set), and this step's own
+            // category/type reconciliation. See ExpenseCategoryCatalogueBackfillSeeder's doc comment.
+            await sp.GetRequiredService<ExpenseCategoryCatalogueBackfillSeeder>().SeedAsync(cancellationToken);
         }
         finally
         {

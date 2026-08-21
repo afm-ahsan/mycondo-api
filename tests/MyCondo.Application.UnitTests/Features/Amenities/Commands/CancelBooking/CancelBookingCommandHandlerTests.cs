@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Amenities.Commands.CancelBooking;
 using MyCondo.Application.Features.Amenities.DTOs;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Amenities.Bookings;
 using MyCondo.Domain.Features.Amenities.Facilities;
@@ -28,8 +29,7 @@ public class CancelBookingCommandHandlerTests
     private static readonly DateTimeOffset Now = DateTimeOffset.UtcNow;
 
     private readonly IBookingRepository _bookings = Substitute.For<IBookingRepository>();
-    private readonly ILedgerPostingRepository _ledgerPostings = Substitute.For<ILedgerPostingRepository>();
-    private readonly ILedgerEntryRepository _ledgerEntries = Substitute.For<ILedgerEntryRepository>();
+    private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -38,10 +38,27 @@ public class CancelBookingCommandHandlerTests
     {
         _currentUser.TenantId.Returns(TenantId);
         _clock.UtcNow.Returns(Now);
+        StubFinancialPosting();
     }
 
+    /// <summary>Makes the mocked <see cref="IFinancialPostingService"/> behave like the real one — see
+    /// VoidInvoiceCommandHandlerTests for why.</summary>
+    private void StubFinancialPosting() =>
+        _financialPosting.PostAsync(Arg.Any<FinancialPostingRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                FinancialPostingRequest request = callInfo.Arg<FinancialPostingRequest>();
+                List<LedgerLine> lines = request.Lines
+                    .Select(l => new LedgerLine(l.Role, l.FlatId, l.Direction, l.Amount, l.LineDescription ?? request.Description))
+                    .ToList();
+                (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
+                    request.TenantId, request.BusinessDate, request.Description, request.PostingPurpose,
+                    request.SourceId, lines, Now);
+                return new FinancialPostingResult(posting, entries);
+            });
+
     private CancelBookingCommandHandler CreateHandler() => new(
-        _bookings, _ledgerPostings, _ledgerEntries, _unitOfWork, _currentUser, _clock,
+        _bookings, _financialPosting, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<CancelBookingCommandHandler>>());
 
     private static Booking ConfirmedBookingStartingIn(TimeSpan untilStart, decimal deposit, int deadlineHours, decimal deductionPercentage)
@@ -76,7 +93,9 @@ public class CancelBookingCommandHandlerTests
 
         result.DepositDeductedAmount.Should().Be(1000m);
         result.DepositRefundedAmount.Should().Be(1000m);
-        _ledgerPostings.Received(1).Add(Arg.Is<LedgerPosting>(p => p.ReferenceType == "FacilityBookingCancellationSettlement"));
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.PostingPurpose == "FacilityBookingCancellationSettlement"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -92,6 +111,6 @@ public class CancelBookingCommandHandlerTests
 
         result.DepositRefundedAmount.Should().BeNull();
         result.DepositDeductedAmount.Should().BeNull();
-        _ledgerPostings.DidNotReceive().Add(Arg.Any<LedgerPosting>());
+        await _financialPosting.DidNotReceive().PostAsync(Arg.Any<FinancialPostingRequest>(), Arg.Any<CancellationToken>());
     }
 }

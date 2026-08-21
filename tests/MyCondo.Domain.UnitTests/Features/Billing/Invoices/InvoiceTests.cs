@@ -25,7 +25,7 @@ public class InvoiceTests
     private static (Invoice Invoice, IReadOnlyList<InvoiceLine> Lines) IssueInvoice(params InvoiceLineInput[] lines) =>
         Invoice.Issue(
             TenantId, BuildingId, FlatId, "INV-TEST-2026-000001", InvoiceSource.ServiceCharge, PeriodStart, PeriodEnd,
-            PeriodStart, PeriodEnd, lines, LedgerPostingId, Now);
+            PeriodStart, PeriodEnd, lines, LedgerPostingId, LedgerAccountType.AssociationRevenue, null, Now);
 
     [Fact]
     public void Issue_Computes_Subtotal_And_Total_From_Lines()
@@ -195,5 +195,88 @@ public class InvoiceTests
         Action act = () => invoice.ReverseAppliedPayment(0m);
 
         act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Waive_Partial_Sets_PartiallyWaived_Status_And_Reduces_Balance()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(500m));
+        Guid waivedBy = Guid.NewGuid();
+        LedgerPostingId waivePostingId = LedgerPostingId.New();
+
+        invoice.Waive(200m, "Goodwill", waivedBy, waivePostingId, Now.AddDays(1));
+
+        invoice.WaivedAmount.Should().Be(200m);
+        invoice.Balance.Should().Be(300m);
+        invoice.Status.Should().Be(InvoiceStatus.PartiallyWaived);
+        invoice.WaivedBy.Should().Be(waivedBy);
+        invoice.WaiveReason.Should().Be("Goodwill");
+        invoice.WaiveLedgerPostingId.Should().Be(waivePostingId);
+    }
+
+    [Fact]
+    public void Waive_Full_Sets_Waived_Status()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(500m));
+
+        invoice.Waive(500m, "Fully waived", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        invoice.Balance.Should().Be(0m);
+        invoice.Status.Should().Be(InvoiceStatus.Waived);
+    }
+
+    [Fact]
+    public void Waive_Then_ApplyPayment_For_Remainder_Sets_Paid_Status()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(500m));
+        invoice.Waive(200m, "Goodwill", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        invoice.ApplyPayment(300m);
+
+        invoice.Balance.Should().Be(0m);
+        invoice.Status.Should().Be(InvoiceStatus.Paid);
+    }
+
+    [Fact]
+    public void Waive_Throws_On_Second_Attempt()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(500m));
+        invoice.Waive(100m, "First", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        Action act = () => invoice.Waive(100m, "Second", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        act.Should().Throw<InvoiceAlreadyWaivedException>();
+    }
+
+    [Fact]
+    public void Waive_Throws_When_Amount_Exceeds_Balance()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(500m));
+
+        Action act = () => invoice.Waive(500.01m, "Too much", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Waive_Throws_When_Invoice_Already_Void()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(500m));
+        invoice.Void("Cancelled", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        Action act = () => invoice.Waive(100m, "Too late", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        act.Should().Throw<InvoiceAlreadyVoidException>();
+    }
+
+    [Fact]
+    public void Void_Throws_When_Invoice_Has_A_Waiver_Applied()
+    {
+        (Invoice invoice, _) = IssueInvoice(OneLine(500m));
+        invoice.Waive(100m, "Goodwill", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        Action act = () => invoice.Void("Trying anyway", Guid.NewGuid(), LedgerPostingId.New(), Now);
+
+        act.Should().Throw<InvoiceCannotBeVoidedException>();
     }
 }

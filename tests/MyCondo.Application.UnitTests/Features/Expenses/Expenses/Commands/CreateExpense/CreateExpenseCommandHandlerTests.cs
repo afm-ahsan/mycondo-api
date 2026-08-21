@@ -5,8 +5,10 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Expenses.Expenses.Commands.CreateExpense;
 using MyCondo.Application.Features.Expenses.Expenses.DTOs;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Property.Buildings;
 using NSubstitute;
 
@@ -20,16 +22,20 @@ public class CreateExpenseCommandHandlerTests
 
     private readonly IExpenseRepository _expenses = Substitute.For<IExpenseRepository>();
     private readonly IExpenseTypeRepository _expenseTypes = Substitute.For<IExpenseTypeRepository>();
+    private readonly IExpenseCategoryRepository _expenseCategories = Substitute.For<IExpenseCategoryRepository>();
     private readonly IBuildingRepository _buildings = Substitute.For<IBuildingRepository>();
+    private readonly IFundRepository _funds = Substitute.For<IFundRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
     private readonly Building _building = Building.Create(TenantId, "Tower A", "TA", null, NowUtc);
-    private readonly ExpenseType _expenseType = ExpenseType.Create(TenantId, "Cleaning", "CLN", null, 1, NowUtc);
+    private readonly ExpenseType _expenseType;
 
     public CreateExpenseCommandHandlerTests()
     {
+        _expenseType = ExpenseType.Create(TenantId, ExpenseCategoryId.New(), "Cleaning", "CLN", null, 1, NowUtc);
+
         _currentUser.TenantId.Returns(TenantId);
         _currentUser.HasPermissionForBuilding(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(true);
         _clock.UtcNow.Returns(NowUtc);
@@ -38,12 +44,12 @@ public class CreateExpenseCommandHandlerTests
     }
 
     private CreateExpenseCommandHandler CreateHandler() => new(
-        _expenses, _expenseTypes, _buildings, _unitOfWork, _currentUser, _clock,
+        _expenses, _expenseTypes, _expenseCategories, _buildings, _funds, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<CreateExpenseCommandHandler>>());
 
-    private static CreateExpenseCommand ValidCommand(Guid buildingId, Guid expenseTypeId) => new(
-        buildingId, expenseTypeId, new DateOnly(2026, 8, 1), "Monthly cleaning", "ABC Cleaners", "INV-001",
-        1500m, "Cash", null);
+    private static CreateExpenseCommand ValidCommand(Guid? buildingId, Guid expenseTypeId) => new(
+        buildingId, expenseTypeId, null, new DateOnly(2026, 8, 1), null, "Monthly cleaning", "ABC Cleaners",
+        "INV-001", 1500m, false, "Cash", null);
 
     [Fact]
     public async Task Records_An_Expense_For_A_Building_The_Caller_Can_Manage()
@@ -56,6 +62,16 @@ public class CreateExpenseCommandHandlerTests
         result.ExpenseTypeName.Should().Be("Cleaning");
         result.Status.Should().Be("Recorded");
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Records_An_Association_Wide_Expense_With_No_Building()
+    {
+        ExpenseDto result = await CreateHandler()
+            .Handle(ValidCommand(null, _expenseType.Id.Value), CancellationToken.None);
+
+        result.BuildingId.Should().BeNull();
+        result.BuildingName.Should().BeNull();
     }
 
     [Fact]

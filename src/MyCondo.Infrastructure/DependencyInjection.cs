@@ -13,8 +13,20 @@ using MyCondo.Domain.Features.Attachments;
 using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Billing.InvoiceSequences;
 using MyCondo.Domain.Features.Billing.ServiceChargeRules;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.Expenses;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.AccountingPeriods;
+using MyCondo.Domain.Features.Finance.AccountMappings;
+using MyCondo.Domain.Features.Finance.Audit;
+using MyCondo.Domain.Features.Finance.BankReconciliations;
+using MyCondo.Domain.Features.Finance.Integrity;
+using MyCondo.Domain.Features.Finance.ChartOfAccounts;
+using MyCondo.Domain.Features.Finance.FinancialAccounts;
+using MyCondo.Domain.Features.Finance.FinancialYears;
+using MyCondo.Domain.Features.Finance.FixedDeposits;
+using MyCondo.Domain.Features.Finance.Funds;
+using MyCondo.Domain.Features.Finance.Reports;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RefreshTokens;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
@@ -155,6 +167,11 @@ public static class DependencyInjection
         services.AddScoped<Seed.ArpDevelopmentBootstrapSeeder>();
         services.AddScoped<Seed.DevelopmentTenantSeeder>();
 
+        // Every-environment seeders (not Development-only — see each one's own doc comment for why).
+        services.AddScoped<Seed.FinanceChartOfAccountBackfillSeeder>();
+        services.AddScoped<Seed.TenantRoleCatalogueBackfillSeeder>();
+        services.AddScoped<Seed.ExpenseCategoryCatalogueBackfillSeeder>();
+
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
@@ -176,6 +193,7 @@ public static class DependencyInjection
         services.AddScoped<IGateRepository, GateRepository>();
         services.AddScoped<IResidentRepository, ResidentRepository>();
         services.AddScoped<IResidentHouseholdMemberRepository, ResidentHouseholdMemberRepository>();
+        services.AddScoped<IExpenseCategoryRepository, ExpenseCategoryRepository>();
         services.AddScoped<IExpenseTypeRepository, ExpenseTypeRepository>();
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();
@@ -193,6 +211,20 @@ public static class DependencyInjection
         services.AddScoped<IParcelCustodyEventRepository, ParcelCustodyEventRepository>();
         services.AddScoped<ILedgerPostingRepository, LedgerPostingRepository>();
         services.AddScoped<ILedgerEntryRepository, LedgerEntryRepository>();
+        services.AddScoped<IChartOfAccountRepository, ChartOfAccountRepository>();
+        services.AddScoped<IAccountMappingRepository, AccountMappingRepository>();
+        services.AddScoped<IFundRepository, FundRepository>();
+        services.AddScoped<IFinancialYearRepository, FinancialYearRepository>();
+        services.AddScoped<IAccountingPeriodRepository, AccountingPeriodRepository>();
+        services.AddScoped<IFinancialAccountRepository, FinancialAccountRepository>();
+        services.AddScoped<IFixedDepositRepository, FixedDepositRepository>();
+        services.AddScoped<IFixedDepositInterestAccrualRepository, FixedDepositInterestAccrualRepository>();
+        services.AddScoped<IFixedDepositInterestReceiptRepository, FixedDepositInterestReceiptRepository>();
+        services.AddScoped<IFinanceReportRepository, FinanceReportRepository>();
+        services.AddScoped<IFinanceAuditLogRepository, FinanceAuditLogRepository>();
+        services.AddScoped<IBankReconciliationRepository, BankReconciliationRepository>();
+        services.AddScoped<IBankStatementLineRepository, BankStatementLineRepository>();
+        services.AddScoped<IFinanceIntegrityRepository, FinanceIntegrityRepository>();
         services.AddScoped<IResidentAccountRepository, ResidentAccountRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepository>();

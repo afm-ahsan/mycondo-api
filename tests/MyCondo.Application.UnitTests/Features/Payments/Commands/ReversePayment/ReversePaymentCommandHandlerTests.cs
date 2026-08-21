@@ -2,10 +2,12 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.Commands.ReversePayment;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
@@ -33,8 +35,8 @@ public class ReversePaymentCommandHandlerTests
     private readonly IPaymentRepository _payments = Substitute.For<IPaymentRepository>();
     private readonly IPaymentAllocationRepository _paymentAllocations = Substitute.For<IPaymentAllocationRepository>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
-    private readonly ILedgerPostingRepository _ledgerPostings = Substitute.For<ILedgerPostingRepository>();
-    private readonly ILedgerEntryRepository _ledgerEntries = Substitute.For<ILedgerEntryRepository>();
+    private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -44,10 +46,27 @@ public class ReversePaymentCommandHandlerTests
         _currentUser.TenantId.Returns(TenantId);
         _clock.UtcNow.Returns(Now);
         _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>()).Returns(Substitute.For<IUnitOfWorkTransaction>());
+        StubFinancialPosting();
     }
 
+    /// <summary>Makes the mocked <see cref="IFinancialPostingService"/> behave like the real one — see
+    /// VoidInvoiceCommandHandlerTests for why.</summary>
+    private void StubFinancialPosting() =>
+        _financialPosting.PostAsync(Arg.Any<FinancialPostingRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                FinancialPostingRequest request = callInfo.Arg<FinancialPostingRequest>();
+                List<LedgerLine> lines = request.Lines
+                    .Select(l => new LedgerLine(l.Role, l.FlatId, l.Direction, l.Amount, l.LineDescription ?? request.Description))
+                    .ToList();
+                (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
+                    request.TenantId, request.BusinessDate, request.Description, request.PostingPurpose,
+                    request.SourceId, lines, Now);
+                return new FinancialPostingResult(posting, entries);
+            });
+
     private ReversePaymentCommandHandler CreateHandler() => new(
-        _payments, _paymentAllocations, _invoices, _ledgerPostings, _ledgerEntries, _unitOfWork, _currentUser, _clock,
+        _payments, _paymentAllocations, _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<ReversePaymentCommandHandler>>());
 
     private static Invoice IssuedInvoice(string invoiceNumber, decimal totalAmount)
@@ -55,7 +74,7 @@ public class ReversePaymentCommandHandlerTests
         InvoiceLineInput line = new(null, "Service Charge", "Maintenance", "FixedAmount", totalAmount, null, 1, totalAmount, "Test line");
         (Invoice invoice, _) = Invoice.Issue(
             TenantId, BuildingId, FlatId, invoiceNumber, InvoiceSource.ServiceCharge,
-            Today, Today, Today, Today, [line], LedgerPostingId.New(), Now);
+            Today, Today, Today, Today, [line], LedgerPostingId.New(), LedgerAccountType.AssociationRevenue, null, Now);
         return invoice;
     }
 
@@ -146,6 +165,35 @@ public class ReversePaymentCommandHandlerTests
         await act.Should().ThrowAsync<PaymentAlreadyReversedException>();
         await _paymentAllocations.DidNotReceive().GetForPaymentAsync(Arg.Any<PaymentId>(), Arg.Any<CancellationToken>());
         invoice.Status.Should().Be(InvoiceStatus.Paid); // untouched — the guard fires before any invoice lookup
+    }
+
+    [Fact]
+    public async Task Reversal_Of_A_Payment_With_An_Unallocated_Remainder_Debits_Both_Receivable_And_Advance()
+    {
+        // Simulates a payment that was originally split between ResidentReceivable (300, settling
+        // invoiceA) and ResidentAdvance (200, the unallocated remainder) — see
+        // RecordPaymentCommandHandlerFifoAllocationTests' equivalent posting test. Reversal must
+        // re-derive that same split from the PaymentAllocation rows (sum = 300) against
+        // payment.Amount (500), not assume the whole amount was ResidentReceivable.
+        Invoice invoiceA = IssuedInvoice("INV-0006", 300m);
+        invoiceA.ApplyPayment(300m);
+
+        Payment payment = PostedPayment(500m);
+        PaymentAllocation allocationA = PaymentAllocation.Allocate(TenantId, payment.Id, invoiceA.Id, FlatId, 300m, Now);
+
+        _payments.GetByIdAsync(payment.Id, Arg.Any<CancellationToken>()).Returns(payment);
+        _paymentAllocations.GetForPaymentAsync(payment.Id, Arg.Any<CancellationToken>()).Returns([allocationA]);
+        _invoices.GetByIdAsync(invoiceA.Id, Arg.Any<CancellationToken>()).Returns(invoiceA);
+
+        await CreateHandler().Handle(new ReversePaymentCommand(payment.Id.Value, "Bounced cheque"), CancellationToken.None);
+
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.Lines.Any(l =>
+                l.Role == LedgerAccountType.ResidentReceivable && l.Direction == LedgerDirection.Debit && l.Amount == 300m)
+                && r.Lines.Any(l =>
+                l.Role == LedgerAccountType.ResidentAdvance && l.Direction == LedgerDirection.Debit && l.Amount == 200m)
+                && r.Lines.Any(l => l.Role == LedgerAccountType.CashOrBank && l.Amount == 500m)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

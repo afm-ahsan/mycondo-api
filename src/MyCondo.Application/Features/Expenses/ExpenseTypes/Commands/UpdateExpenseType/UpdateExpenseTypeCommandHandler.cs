@@ -4,12 +4,14 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Expenses.ExpenseTypes.DTOs;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
 
 namespace MyCondo.Application.Features.Expenses.ExpenseTypes.Commands.UpdateExpenseType;
 
 public sealed class UpdateExpenseTypeCommandHandler(
     IExpenseTypeRepository expenseTypes,
+    IExpenseCategoryRepository expenseCategories,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -32,6 +34,15 @@ public sealed class UpdateExpenseTypeCommandHandler(
             throw new NotFoundException(nameof(ExpenseType), command.ExpenseTypeId);
         }
 
+        ExpenseCategoryId expenseCategoryId = new(command.ExpenseCategoryId);
+        ExpenseCategory expenseCategory = await expenseCategories.GetByIdAsync(expenseCategoryId, cancellationToken)
+            ?? throw new NotFoundException(nameof(ExpenseCategory), command.ExpenseCategoryId);
+
+        if (expenseCategory.TenantId != tenantId)
+        {
+            throw new NotFoundException(nameof(ExpenseCategory), command.ExpenseCategoryId);
+        }
+
         string normalizedCode = command.Code.Trim().ToUpperInvariant();
 
         if (await expenseTypes.ExistsByCodeAsync(tenantId, normalizedCode, expenseTypeId, cancellationToken))
@@ -44,13 +55,13 @@ public sealed class UpdateExpenseTypeCommandHandler(
             throw new ConflictException($"An expense type named '{command.Name}' already exists.");
         }
 
-        expenseType.Update(command.Name, normalizedCode, command.Description, command.DisplayOrder, clock.UtcNow);
+        expenseType.Update(expenseCategoryId, command.Name, normalizedCode, command.Description, command.DisplayOrder, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("ExpenseType {ExpenseTypeId} updated for tenant {TenantId}", expenseTypeId, tenantId);
 
         return new ExpenseTypeDto(
-            expenseType.Id.Value, expenseType.Name, expenseType.Code, expenseType.Description,
-            expenseType.IsActive, expenseType.DisplayOrder);
+            expenseType.Id.Value, expenseCategory.Id.Value, expenseCategory.Name, expenseType.Name, expenseType.Code,
+            expenseType.Description, expenseType.IsActive, expenseType.DisplayOrder);
     }
 }

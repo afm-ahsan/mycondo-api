@@ -1,10 +1,12 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Utilities.Commands.CorrectReading;
 using MyCondo.Application.Features.Utilities.DTOs;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
@@ -28,8 +30,8 @@ public class CorrectReadingCommandHandlerTests
 
     private readonly IReadingRepository _readings = Substitute.For<IReadingRepository>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
-    private readonly ILedgerPostingRepository _ledgerPostings = Substitute.For<ILedgerPostingRepository>();
-    private readonly ILedgerEntryRepository _ledgerEntries = Substitute.For<ILedgerEntryRepository>();
+    private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -38,10 +40,27 @@ public class CorrectReadingCommandHandlerTests
     {
         _currentUser.TenantId.Returns(TenantId);
         _clock.UtcNow.Returns(Now);
+        StubFinancialPosting();
     }
 
+    /// <summary>Makes the mocked <see cref="IFinancialPostingService"/> behave like the real one — see
+    /// VoidInvoiceCommandHandlerTests for why.</summary>
+    private void StubFinancialPosting() =>
+        _financialPosting.PostAsync(Arg.Any<FinancialPostingRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                FinancialPostingRequest request = callInfo.Arg<FinancialPostingRequest>();
+                List<LedgerLine> lines = request.Lines
+                    .Select(l => new LedgerLine(l.Role, l.FlatId, l.Direction, l.Amount, l.LineDescription ?? request.Description))
+                    .ToList();
+                (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
+                    request.TenantId, request.BusinessDate, request.Description, request.PostingPurpose,
+                    request.SourceId, lines, Now);
+                return new FinancialPostingResult(posting, entries);
+            });
+
     private CorrectReadingCommandHandler CreateHandler() => new(
-        _readings, _invoices, _ledgerPostings, _ledgerEntries, _unitOfWork, _currentUser, _clock,
+        _readings, _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<CorrectReadingCommandHandler>>());
 
     private static Reading FinalizedReading(decimal previous = 0m, decimal present = 50m)
@@ -81,7 +100,7 @@ public class CorrectReadingCommandHandlerTests
             TenantId, BuildingId, FlatId, "INV-AISHA-2026-000001", InvoiceSource.Utility, PeriodStart, PeriodEnd,
             PeriodEnd, PeriodEnd,
             [new InvoiceLineInput(null, "Standard Electricity", "Electricity", "Fixed", 800m, null, 1m, 800m, "Fixed charge")],
-            LedgerPostingId.New(), Now);
+            LedgerPostingId.New(), LedgerAccountType.AssociationRevenue, null, Now);
         _invoices.GetByIdAsync(invoiceId, Arg.Any<CancellationToken>()).Returns(invoice);
 
         CorrectReadingCommand command = new(original.Id.Value, 0m, 55m, PeriodEnd, null, "Meter misread");
@@ -89,7 +108,8 @@ public class CorrectReadingCommandHandlerTests
 
         invoice.Status.Should().Be(InvoiceStatus.Void);
         invoice.VoidReason.Should().Be("Meter misread");
-        _ledgerPostings.Received(1).Add(Arg.Any<LedgerPosting>());
+        await _financialPosting.Received(1).PostAsync(
+            Arg.Is<FinancialPostingRequest>(r => r.PostingPurpose == "InvoiceVoid"), Arg.Any<CancellationToken>());
     }
 
     [Fact]

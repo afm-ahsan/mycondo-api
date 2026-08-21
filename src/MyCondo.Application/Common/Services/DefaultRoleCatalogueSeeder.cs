@@ -32,7 +32,8 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "property.view", "property.update", "resident.view", "resident.create", "resident.update",
             "ownership.view", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
-            "payment.view", "payment.record", "expense.view", "expense.manage", "expensetype.view",
+            "payment.view", "payment.record", "expense.view", "expense.manage", "expense.approve",
+            "expensetype.view", "expensecategory.view",
             "complaint.view", "complaint.create", "complaint.assign", "complaint.manage",
             "workorder.view", "workorder.create", "workorder.assign", "workorder.complete",
             "document.view", "document.upload", "notification.view",
@@ -41,7 +42,22 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "billing.rule.view", "billing.rule.manage", "billing.generate", "invoice.view",
             "invoice.void", "payment.view", "payment.record", "payment.reverse", "expense.view",
-            "expense.manage", "expensetype.view", "expensetype.manage", "report.financial.view",
+            "expense.manage", "expense.approve", "expense.pay", "expensetype.view", "expensetype.manage",
+            "expensecategory.view", "expensecategory.manage", "report.financial.view",
+            // Billing↔Finance integration template: Fine assess/waive/reverse are correction-authority
+            // actions, same category as invoice.void/payment.reverse above — Treasurer gets the full set.
+            "billing.fine.view", "billing.fine.assess", "billing.fine.waive", "billing.fine.reverse",
+            // Template 4: Treasurer gets full Banking/Fixed Deposit authority — placement, renewal/
+            // withdrawal/void, and interest recording are all tenant-wide treasury decisions.
+            "finance.bankaccount.view", "finance.bankaccount.manage", "finance.fixeddeposit.view",
+            "finance.fixeddeposit.place", "finance.fixeddeposit.manage", "finance.fixeddeposit.interest.record",
+            // Template 6 (governance): Treasurer is the one performing the sensitive actions the Finance
+            // audit log records (period close/reopen, reversals, mapping changes, FD lifecycle) — needs
+            // audit.view to review their own trail, not just Auditor's external-oversight use of it.
+            "audit.view",
+            // Template 6: Bank Reconciliation full authority (start/manage lines/complete), same tenant-
+            // wide treasury scope as the Banking/FD grants above.
+            "finance.reconciliation.view", "finance.reconciliation.manage", "finance.reconciliation.reconcile",
         ]),
         ("Secretary", "default.secretary", "Administrative/communications support — the point of contact for residents.",
         [
@@ -67,9 +83,13 @@ public sealed class DefaultRoleCatalogueSeeder(
         [
             "tenant.view", "user.view", "property.view", "resident.view", "ownership.view",
             "lease.view", "billing.rule.view", "invoice.view", "payment.view", "expense.view",
-            "expensetype.view", "complaint.view", "workorder.view", "document.view",
+            "expensetype.view", "expensecategory.view", "complaint.view", "workorder.view", "document.view",
             "report.financial.view", "report.operational.view", "role.view", "permission.view",
             "audit.view",
+            // Template 4: read-only Banking/Fixed Deposit visibility for compliance/external audit.
+            "finance.bankaccount.view", "finance.fixeddeposit.view",
+            // Template 6: read-only Bank Reconciliation visibility, same compliance rationale.
+            "finance.reconciliation.view",
         ]),
     ];
 

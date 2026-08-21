@@ -25,8 +25,16 @@ public sealed class LedgerPostingConfiguration : IEntityTypeConfiguration<Ledger
         builder.HasIndex(x => new { x.TenantId, x.BusinessDate })
             .HasDatabaseName("ix_ledger_postings_tenant_id_business_date");
 
+        // Idempotency (ADR-027, template's OrganizationId+SourceType+SourceId+PostingPurpose invariant):
+        // ReferenceType already carries the business-event purpose and ReferenceId the source id, so
+        // this is a straight uniqueness upgrade of the pre-existing index, not a new concept. Partial
+        // (ReferenceId IS NOT NULL) because several existing call sites intentionally post with no
+        // natural source id and rely on an upstream domain-level dedup check instead (e.g. batch invoice
+        // generation's ExistsForFlatAndPeriodAsync) — unchanged behavior for those.
         builder.HasIndex(x => new { x.TenantId, x.ReferenceType, x.ReferenceId })
-            .HasDatabaseName("ix_ledger_postings_tenant_id_reference_type_reference_id");
+            .IsUnique()
+            .HasFilter("reference_id IS NOT NULL")
+            .HasDatabaseName("ux_ledger_postings_tenant_id_reference_type_reference_id");
 
         builder.Ignore(x => x.DomainEvents);
     }

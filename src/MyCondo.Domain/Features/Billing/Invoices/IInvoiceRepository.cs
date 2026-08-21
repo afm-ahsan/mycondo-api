@@ -4,6 +4,12 @@ using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Domain.Features.Billing.Invoices;
 
+/// <summary>One flat's total outstanding receivable across every open (Issued/PartiallyPaid/
+/// PartiallyWaived) invoice — the Outstanding Dues report's per-flat grouping. Unlike
+/// <see cref="AgeingReceivableLine"/> (which deliberately omits FlatId since Receivable Ageing only
+/// buckets by age), this line exists specifically to group/sum by flat.</summary>
+public sealed record FlatReceivableLine(FlatId FlatId, decimal Balance, int OpenInvoiceCount);
+
 public interface IInvoiceRepository
 {
     Task<Invoice?> GetByIdAsync(InvoiceId id, CancellationToken cancellationToken);
@@ -49,6 +55,12 @@ public interface IInvoiceRepository
     /// the caller, since the open-receivables population is inherently bounded (not the full invoice
     /// history) and DateOnly day-difference arithmetic is not reliably translatable across EF providers.</summary>
     Task<IReadOnlyList<AgeingReceivableLine>> GetOpenReceivablesAsync(
+        Guid tenantId, BuildingId? buildingId, CancellationToken cancellationToken);
+
+    /// <summary>Same open-invoice population as <see cref="GetOpenReceivablesAsync"/>, pre-aggregated
+    /// per Flat server-side — the Outstanding Dues report's data source (simple per-flat total, not
+    /// age-bucketed; see <see cref="FlatReceivableLine"/>).</summary>
+    Task<IReadOnlyList<FlatReceivableLine>> GetOpenReceivablesByFlatAsync(
         Guid tenantId, BuildingId? buildingId, CancellationToken cancellationToken);
 
     void Add(Invoice invoice);

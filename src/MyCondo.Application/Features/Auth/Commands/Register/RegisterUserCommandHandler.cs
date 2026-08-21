@@ -16,7 +16,9 @@ public sealed class RegisterUserCommandHandler(
     IDefaultRoleCatalogueSeeder defaultRoleCatalogueSeeder,
     ICondominiumRoleCatalogueSeeder condominiumRoleCatalogueSeeder,
     IResidentRoleCatalogueSeeder residentRoleCatalogueSeeder,
+    IExpenseCategoryCatalogueSeeder expenseCategoryCatalogueSeeder,
     IExpenseTypeCatalogueSeeder expenseTypeCatalogueSeeder,
+    IFinanceChartOfAccountSeeder financeChartOfAccountSeeder,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -80,9 +82,18 @@ public sealed class RegisterUserCommandHandler(
             await residentRoleCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
 
             // Same "new tenant needs a sensible starting point" rationale as the role catalogues above
-            // — a practical default expense category set (mycondo-docs expense-management task) instead
-            // of an empty picker on the new tenant's first visit to Finance › Expense Types.
+            // — a practical default Expense Category/Type catalogue (Template 3) instead of an empty
+            // picker on the new tenant's first visit to Finance › Expenses. Category must be saved
+            // before the type seeder runs since it resolves categories via a database query (repository
+            // reads are AsNoTracking — an unsaved in-memory Add wouldn't be visible to it).
+            await expenseCategoryCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             await expenseTypeCatalogueSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
+
+            // Seeds the Finance foundation's 6 system accounts + account mappings (ADR-027) — without
+            // this, every existing ledger-posting call site (Billing/Payments/Amenities/Utilities) would
+            // fail immediately with MissingAccountMappingException for a brand-new tenant.
+            await financeChartOfAccountSeeder.SeedAsync(command.TenantId, nowUtc, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

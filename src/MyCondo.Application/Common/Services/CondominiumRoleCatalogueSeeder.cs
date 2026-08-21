@@ -28,7 +28,8 @@ public sealed class CondominiumRoleCatalogueSeeder(
         [
             "property.view", "property.update", "resident.view", "resident.create", "resident.update",
             "ownership.view", "ownership.manage", "lease.view", "billing.rule.view", "billing.generate", "invoice.view",
-            "payment.view", "payment.record", "expense.view", "expense.manage", "expensetype.view",
+            "payment.view", "payment.record", "expense.view", "expense.manage", "expense.approve",
+            "expensetype.view", "expensecategory.view",
             "complaint.view", "complaint.create", "complaint.assign", "complaint.manage", "workorder.view",
             "workorder.create", "workorder.assign", "workorder.complete", "document.view",
             "document.upload", "notification.view", "visitor.override", "vehicle.override",
@@ -42,7 +43,19 @@ public sealed class CondominiumRoleCatalogueSeeder(
         ("Accountant", "condominium.accountant", "Financial administration for a single condominium/building.",
         [
             "billing.rule.view", "billing.generate", "invoice.view", "payment.view", "payment.record",
-            "expense.view", "expense.manage", "expensetype.view", "report.financial.view",
+            "expense.view", "expense.manage", "expense.pay", "expensetype.view", "expensetype.manage",
+            "expensecategory.view", "expensecategory.manage", "report.financial.view",
+            // Billing↔Finance integration template: Accountant gets Treasurer's operational subset
+            // (view + assess) — not waive/reverse, mirroring its existing exclusion of invoice.void/
+            // payment.reverse (correction authority stays with the tenant-wide Treasurer role).
+            "billing.fine.view", "billing.fine.assess",
+            // Template 4: Accountant records routine monthly interest but doesn't place/renew/withdraw/
+            // void an FD itself — that correction/commitment authority stays with Treasurer, same
+            // "operational subset" split as the fine permissions above.
+            "finance.bankaccount.view", "finance.fixeddeposit.view", "finance.fixeddeposit.interest.record",
+            // Template 6: same operational-subset split — view-only, completing a reconciliation is
+            // correction-adjacent authority that stays with the tenant-wide Treasurer role.
+            "finance.reconciliation.view",
         ]),
         ("SecurityOfficer", "condominium.security", "Security, visitor, vehicle, and parcel oversight for a single condominium/building.",
         [

@@ -4,12 +4,15 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
+using MyCondo.Application.Features.Billing.Services;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Utilities.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
 using MyCondo.Domain.Features.Billing.InvoiceSequences;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Property.Buildings;
+using MyCondo.Domain.Features.Utilities.Common;
 using MyCondo.Domain.Features.Utilities.RatePlans;
 using MyCondo.Domain.Features.Utilities.Readings;
 
@@ -26,8 +29,8 @@ public sealed class BillReadingCommandHandler(
     IBuildingRepository buildings,
     IInvoiceRepository invoices,
     IInvoiceSequenceRepository sequences,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
+    IResponsiblePartyResolver responsibleParties,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -72,21 +75,29 @@ public sealed class BillReadingCommandHandler(
 
         string description = $"Utility invoice {invoiceNumber} ({reading.UtilityType}) for flat, period {reading.PeriodStart}..{reading.PeriodEnd}";
 
-        LedgerLine[] postingLines =
+        // Gas is differentiated per the Billing↔Finance integration's explicit scope; other utility
+        // types (e.g. Electricity) keep posting to the generic AssociationRevenue account.
+        LedgerAccountType incomeAccountType = reading.UtilityType == UtilityType.Gas
+            ? LedgerAccountType.GasRecoveryIncome
+            : LedgerAccountType.AssociationRevenue;
+
+        FinancialPostingLine[] postingLines =
         [
-            new LedgerLine(LedgerAccountType.ResidentReceivable, reading.FlatId, LedgerDirection.Debit, lineInput.LineAmount, description),
-            new LedgerLine(LedgerAccountType.AssociationRevenue, null, LedgerDirection.Credit, lineInput.LineAmount, description),
+            new FinancialPostingLine(LedgerAccountType.ResidentReceivable, reading.FlatId, LedgerDirection.Debit, lineInput.LineAmount),
+            new FinancialPostingLine(incomeAccountType, null, LedgerDirection.Credit, lineInput.LineAmount),
         ];
 
-        (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
-            tenantId, invoiceDate, description, "UtilityBill", null, postingLines, nowUtc);
+        FinancialPostingResult posted = await financialPosting.PostAsync(
+            new FinancialPostingRequest(tenantId, invoiceDate, description, "UtilityBill", null, postingLines),
+            cancellationToken);
 
-        ledgerPostings.Add(posting);
-        ledgerEntries.AddRange(entries);
+        ResponsiblePartySnapshot? responsibleParty = await responsibleParties.ResolveAsync(
+            tenantId, reading.FlatId, invoiceDate, cancellationToken);
 
         (Invoice invoice, IReadOnlyList<InvoiceLine> lines) = Invoice.Issue(
             tenantId, reading.BuildingId, reading.FlatId, invoiceNumber, InvoiceSource.Utility, reading.PeriodStart,
-            reading.PeriodEnd, invoiceDate, dueDate, [lineInput], posting.Id, nowUtc);
+            reading.PeriodEnd, invoiceDate, dueDate, [lineInput], posted.Posting.Id, incomeAccountType,
+            responsibleParty, nowUtc);
 
         invoices.Add(invoice);
         invoices.AddLines(lines);

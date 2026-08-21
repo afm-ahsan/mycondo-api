@@ -69,7 +69,10 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
 
     /// <summary>Locks rows via <c>FOR UPDATE</c> per financial-engine.md invariant 5 — tracked (not
     /// AsNoTracking), since the caller mutates <see cref="Invoice.AmountPaid"/>/<see cref="Invoice.Status"/>
-    /// via <see cref="Invoice.ApplyPayment"/> in the same unit of work.</summary>
+    /// via <see cref="Invoice.ApplyPayment"/> in the same unit of work. Includes 'PartiallyWaived'
+    /// alongside 'Issued'/'PartiallyPaid' — a Fine that's had part of its balance waived (Billing↔Finance
+    /// integration template) still has <see cref="Invoice.Balance"/> &gt; 0 and must stay collectible;
+    /// 'Waived'/'Void'/'Paid' are correctly excluded since each always has Balance == 0.</summary>
     public async Task<IReadOnlyList<Invoice>> GetOutstandingForFlatForUpdateAsync(
         Guid tenantId, FlatId flatId, CancellationToken cancellationToken) =>
         await db.Set<Invoice>()
@@ -77,7 +80,7 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
                 SELECT * FROM billing.invoices
                 WHERE tenant_id = {tenantId}
                   AND flat_id = {flatId.Value}
-                  AND status IN ('Issued', 'PartiallyPaid')
+                  AND status IN ('Issued', 'PartiallyPaid', 'PartiallyWaived')
                 ORDER BY due_date ASC, invoice_date ASC, invoice_number ASC
                 FOR UPDATE
                 """)
@@ -90,8 +93,8 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
         await db.Set<Invoice>()
             .AsNoTracking()
             .Where(i => i.TenantId == tenantId && i.FlatId == flatId
-                && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid))
-            .SumAsync(i => i.TotalAmount - i.AmountPaid, cancellationToken);
+                && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid || i.Status == InvoiceStatus.PartiallyWaived))
+            .SumAsync(i => i.TotalAmount - i.AmountPaid - i.WaivedAmount, cancellationToken);
 
     public async Task<InvoiceFinancialAggregate> GetFinancialAggregateAsync(
         Guid tenantId, BuildingId? buildingId, DateOnly fromDate, DateOnly toDate, DateOnly asOfDate,
@@ -108,13 +111,20 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
             .Where(i => i.InvoiceDate >= fromDate && i.InvoiceDate <= toDate && i.Status != InvoiceStatus.Void)
             .SumAsync(i => i.TotalAmount, cancellationToken);
 
-        IQueryable<Invoice> open = scoped.Where(i => i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid);
+        // PartiallyWaived is "open" too — it always has Balance > 0 (TotalAmount - AmountPaid -
+        // WaivedAmount), same reasoning as GetOutstandingForFlatForUpdateAsync. Folded into
+        // partiallyPaidCount below rather than adding a new InvoiceFinancialAggregate field — a
+        // partially-waived-but-unpaid Fine (AmountPaid == 0) is still "partially settled" in the sense
+        // this aggregate cares about (not fully outstanding, not fully closed).
+        IQueryable<Invoice> open = scoped.Where(i =>
+            i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid || i.Status == InvoiceStatus.PartiallyWaived);
 
-        decimal totalOutstanding = await open.SumAsync(i => i.TotalAmount - i.AmountPaid, cancellationToken);
+        decimal totalOutstanding = await open.SumAsync(i => i.TotalAmount - i.AmountPaid - i.WaivedAmount, cancellationToken);
         int unpaidCount = await scoped.CountAsync(i => i.Status == InvoiceStatus.Issued, cancellationToken);
-        int partiallyPaidCount = await scoped.CountAsync(i => i.Status == InvoiceStatus.PartiallyPaid, cancellationToken);
+        int partiallyPaidCount = await scoped.CountAsync(
+            i => i.Status == InvoiceStatus.PartiallyPaid || i.Status == InvoiceStatus.PartiallyWaived, cancellationToken);
         int overdueCount = await open.CountAsync(
-            i => i.DueDate < asOfDate && i.TotalAmount - i.AmountPaid > 0m, cancellationToken);
+            i => i.DueDate < asOfDate && i.TotalAmount - i.AmountPaid - i.WaivedAmount > 0m, cancellationToken);
 
         return new InvoiceFinancialAggregate(totalBilled, totalOutstanding, unpaidCount, partiallyPaidCount, overdueCount);
     }
@@ -124,7 +134,8 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
     {
         IQueryable<Invoice> query = db.Set<Invoice>()
             .AsNoTracking()
-            .Where(i => i.TenantId == tenantId && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid));
+            .Where(i => i.TenantId == tenantId
+                && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid || i.Status == InvoiceStatus.PartiallyWaived));
 
         if (buildingId is not null)
         {
@@ -132,7 +143,29 @@ public sealed class InvoiceRepository(MyCondoDbContext db) : IInvoiceRepository
         }
 
         return await query
-            .Select(i => new AgeingReceivableLine(i.DueDate, i.TotalAmount - i.AmountPaid))
+            .Select(i => new AgeingReceivableLine(i.DueDate, i.TotalAmount - i.AmountPaid - i.WaivedAmount))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<FlatReceivableLine>> GetOpenReceivablesByFlatAsync(
+        Guid tenantId, BuildingId? buildingId, CancellationToken cancellationToken)
+    {
+        IQueryable<Invoice> query = db.Set<Invoice>()
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId
+                && (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid || i.Status == InvoiceStatus.PartiallyWaived));
+
+        if (buildingId is not null)
+        {
+            query = query.Where(i => i.BuildingId == buildingId);
+        }
+
+        return await query
+            .GroupBy(i => i.FlatId)
+            .Select(g => new FlatReceivableLine(
+                g.Key,
+                g.Sum(i => i.TotalAmount - i.AmountPaid - i.WaivedAmount),
+                g.Count()))
             .ToListAsync(cancellationToken);
     }
 

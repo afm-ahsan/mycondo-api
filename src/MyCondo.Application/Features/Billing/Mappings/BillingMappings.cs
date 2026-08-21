@@ -15,8 +15,9 @@ internal static class BillingMappings
     public static InvoiceDto ToDto(this Invoice invoice) => new(
         invoice.Id.Value, invoice.BuildingId.Value, invoice.FlatId.Value, invoice.InvoiceNumber,
         invoice.Source.ToString(), invoice.PeriodStart, invoice.PeriodEnd, invoice.InvoiceDate, invoice.DueDate,
-        invoice.SubtotalAmount, invoice.TotalAmount, invoice.AmountPaid, invoice.Balance, invoice.Status.ToString(),
-        invoice.IssuedAtUtc, invoice.VoidedAtUtc, invoice.VoidedBy, invoice.VoidReason);
+        invoice.SubtotalAmount, invoice.TotalAmount, invoice.AmountPaid, invoice.WaivedAmount, invoice.Balance,
+        invoice.Status.ToString(), invoice.IssuedAtUtc, invoice.VoidedAtUtc, invoice.VoidedBy, invoice.VoidReason,
+        invoice.WaivedAtUtc, invoice.WaivedBy, invoice.WaiveReason);
 
     public static InvoiceLineDto ToDto(this InvoiceLine line) => new(
         line.Id.Value, line.ServiceChargeRuleId?.Value, line.RuleNameSnapshot, line.RuleCategorySnapshot,

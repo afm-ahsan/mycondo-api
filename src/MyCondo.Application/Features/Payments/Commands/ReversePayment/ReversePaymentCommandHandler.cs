@@ -1,11 +1,14 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Billing.Invoices;
+using MyCondo.Domain.Features.Finance.Audit;
 using MyCondo.Domain.Features.Payments.Ledger;
 using MyCondo.Domain.Features.Payments.PaymentAllocations;
 using MyCondo.Domain.Features.Payments.Payments;
@@ -26,8 +29,8 @@ public sealed class ReversePaymentCommandHandler(
     IPaymentRepository payments,
     IPaymentAllocationRepository paymentAllocations,
     IInvoiceRepository invoices,
-    ILedgerPostingRepository ledgerPostings,
-    ILedgerEntryRepository ledgerEntries,
+    IFinancialPostingService financialPosting,
+    IFinanceAuditLogRepository auditLog,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -71,26 +74,41 @@ public sealed class ReversePaymentCommandHandler(
             allocationsWithInvoiceNumbers.Add((allocation, invoice.InvoiceNumber));
         }
 
+        // The original payment may have been split between ResidentReceivable (settled invoices) and
+        // ResidentAdvance (unallocated remainder) — see RecordPaymentCommandHandler. Re-derive that
+        // split from the same PaymentAllocation rows just walked above rather than persisting it
+        // separately: sum(allocations) is exactly what was credited to ResidentReceivable, and
+        // whatever's left of payment.Amount is exactly what was credited to ResidentAdvance.
+        decimal allocatedAmount = allocations.Sum(a => a.AllocatedAmount);
+        decimal advanceAmount = payment.Amount - allocatedAmount;
+
         string description = $"Reversal of payment {payment.Id}: {command.Reason}";
-        LedgerLine[] lines =
-        [
-            new LedgerLine(LedgerAccountType.ResidentReceivable, payment.FlatId, LedgerDirection.Debit, payment.Amount, description),
-            new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, payment.Amount, description),
-        ];
+        List<FinancialPostingLine> lines = [new FinancialPostingLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Credit, payment.Amount)];
+        if (allocatedAmount > 0)
+        {
+            lines.Add(new FinancialPostingLine(LedgerAccountType.ResidentReceivable, payment.FlatId, LedgerDirection.Debit, allocatedAmount));
+        }
 
-        (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
-            tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "PaymentReversal",
-            payment.LedgerPostingId.Value, lines, nowUtc);
+        if (advanceAmount > 0)
+        {
+            lines.Add(new FinancialPostingLine(LedgerAccountType.ResidentAdvance, payment.FlatId, LedgerDirection.Debit, advanceAmount));
+        }
 
-        ledgerPostings.Add(posting);
-        ledgerEntries.AddRange(entries);
+        FinancialPostingResult reversal = await financialPosting.PostAsync(
+            new FinancialPostingRequest(
+                tenantId, DateOnly.FromDateTime(nowUtc.UtcDateTime), description, "PaymentReversal",
+                payment.LedgerPostingId.Value, lines, IsPrivilegedAdjustment: true),
+            cancellationToken);
 
+        auditLog.Add(FinanceAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "Payment.Reverse", nameof(Payment), payment.Id.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { reason = command.Reason })));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
             "Payment {PaymentId} reversed for tenant {TenantId}, {InvoiceCount} invoice(s) restored to outstanding, reversal posting {PostingId}",
-            payment.Id, tenantId, allocations.Count, posting.Id);
+            payment.Id, tenantId, allocations.Count, reversal.Posting.Id);
 
         return payment.ToDto(allocationsWithInvoiceNumbers);
     }

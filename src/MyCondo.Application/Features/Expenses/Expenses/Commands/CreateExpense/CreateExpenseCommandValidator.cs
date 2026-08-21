@@ -7,7 +7,6 @@ public sealed class CreateExpenseCommandValidator : AbstractValidator<CreateExpe
 {
     public CreateExpenseCommandValidator()
     {
-        RuleFor(x => x.BuildingId).NotEmpty();
         RuleFor(x => x.ExpenseTypeId).NotEmpty();
         RuleFor(x => x.Description).NotEmpty().MaximumLength(500);
         RuleFor(x => x.Payee).MaximumLength(200);

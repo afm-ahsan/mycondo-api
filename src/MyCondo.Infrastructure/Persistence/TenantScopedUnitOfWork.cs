@@ -1,5 +1,8 @@
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Expenses.ExpenseCategories;
 using MyCondo.Domain.Features.Expenses.ExpenseTypes;
+using MyCondo.Domain.Features.Finance.AccountMappings;
+using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
@@ -19,7 +22,10 @@ public sealed class TenantScopedUnitOfWork(MyCondoDbContext db) : ITenantScopedU
     public IRolePermissionRepository RolePermissions { get; } = new RolePermissionRepository(db);
     public IRoleAssignmentRepository RoleAssignments { get; } = new RoleAssignmentRepository(db);
     public ITenantModuleRepository TenantModules { get; } = new TenantModuleRepository(db);
+    public IExpenseCategoryRepository ExpenseCategories { get; } = new ExpenseCategoryRepository(db);
     public IExpenseTypeRepository ExpenseTypes { get; } = new ExpenseTypeRepository(db);
+    public IChartOfAccountRepository ChartOfAccounts { get; } = new ChartOfAccountRepository(db);
+    public IAccountMappingRepository AccountMappings { get; } = new AccountMappingRepository(db);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 

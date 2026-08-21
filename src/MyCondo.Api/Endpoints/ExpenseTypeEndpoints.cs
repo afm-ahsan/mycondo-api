@@ -36,9 +36,10 @@ public static class ExpenseTypeEndpoints
             .RequirePermission("expensetype.view")
             .Produces<List<ExpenseTypeDto>>(StatusCodes.Status200OK);
 
-        expenseTypes.MapPost("/", async (CreateExpenseTypeCommand command, ISender sender, CancellationToken ct) =>
+        expenseTypes.MapPost("/", async (CreateExpenseTypeRequest body, ISender sender, CancellationToken ct) =>
             {
-                ExpenseTypeDto result = await sender.Send(command, ct);
+                ExpenseTypeDto result = await sender.Send(
+                    new CreateExpenseTypeCommand(body.ExpenseCategoryId, body.Name, body.Code, body.Description, body.DisplayOrder), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("expensetype.manage")
@@ -47,7 +48,7 @@ public static class ExpenseTypeEndpoints
         expenseTypes.MapPut("/{id:guid}", async (Guid id, UpdateExpenseTypeRequest body, ISender sender, CancellationToken ct) =>
             {
                 ExpenseTypeDto result = await sender.Send(
-                    new UpdateExpenseTypeCommand(id, body.Name, body.Code, body.Description, body.DisplayOrder), ct);
+                    new UpdateExpenseTypeCommand(id, body.ExpenseCategoryId, body.Name, body.Code, body.Description, body.DisplayOrder), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("expensetype.manage")
@@ -73,4 +74,6 @@ public static class ExpenseTypeEndpoints
     }
 }
 
-public sealed record UpdateExpenseTypeRequest(string Name, string Code, string? Description, int DisplayOrder);
+public sealed record CreateExpenseTypeRequest(Guid ExpenseCategoryId, string Name, string Code, string? Description, int DisplayOrder);
+
+public sealed record UpdateExpenseTypeRequest(Guid ExpenseCategoryId, string Name, string Code, string? Description, int DisplayOrder);

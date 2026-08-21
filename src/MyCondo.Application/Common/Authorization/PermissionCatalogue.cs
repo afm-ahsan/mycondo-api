@@ -49,8 +49,14 @@ public static class PermissionCatalogue
         ("payment.reverse", "Reverse payments", "payment", true),
         ("expense.view", "View expenses", "expense", true),
         ("expense.manage", "Create, update, and void expenses", "expense", true),
+        // Added by Template 3 (Expense Accounting Integration) — approval/posting and supplier-payment
+        // are distinct, higher-trust actions from plain record/edit (expense.manage).
+        ("expense.approve", "Approve and post expenses to the ledger", "expense", true),
+        ("expense.pay", "Record supplier payments for posted, unpaid expenses", "expense", true),
         ("expensetype.view", "View expense types", "expensetype", false),
         ("expensetype.manage", "Create, update, and deactivate expense types", "expensetype", false),
+        ("expensecategory.view", "View expense categories", "expensecategory", false),
+        ("expensecategory.manage", "Create, update, and deactivate expense categories", "expensecategory", false),
         ("complaint.view", "View complaints", "complaint", true),
         ("complaint.create", "Create complaints", "complaint", true),
         ("complaint.assign", "Assign complaints to staff", "complaint", true),
@@ -125,6 +131,12 @@ public static class PermissionCatalogue
         ("billing.invoice.generate", "Run invoice batch generation", "billing", true),
         ("billing.invoice.void", "Void an unpaid invoice", "billing", true),
 
+        // Seed_Fine_Permissions (Billing↔Finance integration template)
+        ("billing.fine.view", "View fines", "billing", true),
+        ("billing.fine.assess", "Assess a fine against a flat", "billing", true),
+        ("billing.fine.waive", "Waive part or all of an assessed fine", "billing", true),
+        ("billing.fine.reverse", "Reverse a fine assessed in error", "billing", true),
+
         // Seed_Utility_Permissions (Slice F)
         ("utility.meter.view", "View electricity/gas meters", "utility", true),
         ("utility.meter.manage", "Install, assign, and manage meters", "utility", true),
@@ -194,5 +206,46 @@ public static class PermissionCatalogue
 
         // Seed_Invoice_View_Own_Permission (Phase 3, ADR-021)
         ("invoice.view.own", "View own invoices via self-service (owned/occupied flats only)", "billing", true),
+
+        // Finance Foundation & Posting Engine (ADR-027) — Chart of Accounts, account mappings, funds,
+        // financial years/periods, and journal entries are tenant-wide configuration, not building-scoped.
+        ("finance.account.view", "View the chart of accounts", "finance", false),
+        ("finance.account.manage", "Create and deactivate accounts in the chart of accounts", "finance", false),
+        ("finance.mapping.manage", "Configure account mappings for posting roles", "finance", false),
+        ("finance.fund.view", "View funds", "finance", false),
+        ("finance.fund.manage", "Create and deactivate funds", "finance", false),
+        ("finance.journal.view", "View journal entries and lines", "finance", false),
+        ("finance.journal.create", "Post manual/adjustment journal entries", "finance", false),
+        ("finance.journal.reverse", "Reverse a posted journal entry", "finance", false),
+        ("finance.period.manage", "Create financial years and accounting periods", "finance", false),
+        ("finance.period.close", "Close an open accounting period or financial year", "finance", false),
+        ("finance.period.reopen", "Reopen a closed accounting period or financial year", "finance", false),
+
+        // Template 4 (Banking, Fixed Deposits & Interest) — Financial Accounts and Fixed Deposits are
+        // tenant-wide Association treasury data, not building-scoped, same as the finance.* set above.
+        ("finance.bankaccount.view", "View financial (cash/bank/MFS) accounts", "finance", false),
+        ("finance.bankaccount.manage", "Create, update, and deactivate financial (cash/bank/MFS) accounts", "finance", false),
+        ("finance.fixeddeposit.view", "View Fixed Deposit instruments and their interest history", "finance", false),
+        ("finance.fixeddeposit.place", "Place a new Fixed Deposit", "finance", false),
+        ("finance.fixeddeposit.manage", "Renew, withdraw, or void a Fixed Deposit", "finance", false),
+        ("finance.fixeddeposit.interest.record", "Record Fixed Deposit interest accrual and receipt", "finance", false),
+
+        // Template 5 (Core & Accounting Reporting) — core/management and accounting reports read
+        // tenant-wide ledger data, not building-scoped. finance.journal.view is reused (not
+        // redefined) for General Ledger / Account Ledger — it was reserved unconsumed since
+        // Template 1 for exactly this "Reporting-phase" cross-account journal browser. Resident/Flat
+        // Financial Statement self-service access is a separate, narrower key so a generic report
+        // grant never exposes every resident's statement (Template 5 "Resident Privacy" rule).
+        ("finance.report.view", "View core and accounting financial reports (all residents/flats/funds)", "finance", false),
+        ("finance.report.statement.own.view", "View own resident/flat financial statement via self-service", "finance", true),
+
+        // Template 6 (Governance, Reconciliation & Production Readiness) — Bank Reconciliation is
+        // tenant-wide treasury data, same scope as finance.bankaccount.*. "reconcile" (completing a
+        // reconciliation) is kept distinct from "manage" (starting one, adding/matching/excluding/
+        // adjusting lines) so a genuine separation-of-duties split is possible without inventing a
+        // new role — see DefaultRoleCatalogueSeeder's Treasurer/Accountant grants.
+        ("finance.reconciliation.view", "View bank reconciliations", "finance", false),
+        ("finance.reconciliation.manage", "Start a bank reconciliation and add/match/exclude/adjust its statement lines", "finance", false),
+        ("finance.reconciliation.reconcile", "Complete a bank reconciliation", "finance", false),
     ];
 }

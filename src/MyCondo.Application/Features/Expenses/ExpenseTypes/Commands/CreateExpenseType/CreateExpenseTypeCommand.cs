@@ -4,6 +4,7 @@ using MyCondo.Application.Features.Expenses.ExpenseTypes.DTOs;
 namespace MyCondo.Application.Features.Expenses.ExpenseTypes.Commands.CreateExpenseType;
 
 public sealed record CreateExpenseTypeCommand(
+    Guid ExpenseCategoryId,
     string Name,
     string Code,
     string? Description,

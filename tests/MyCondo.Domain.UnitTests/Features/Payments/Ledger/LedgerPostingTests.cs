@@ -84,6 +84,36 @@ public class LedgerPostingTests
     }
 
     [Fact]
+    public void Create_Allows_ResidentAdvance_Line_With_A_FlatId()
+    {
+        LedgerLine[] lines =
+        [
+            new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, 500m, "x"),
+            new LedgerLine(LedgerAccountType.ResidentAdvance, FlatId, LedgerDirection.Credit, 500m, "x"),
+        ];
+
+        (LedgerPosting posting, IReadOnlyList<LedgerEntry> entries) = LedgerPosting.Create(
+            TenantId, BusinessDate, "x", null, null, lines, Now);
+
+        posting.Should().NotBeNull();
+        entries.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Create_Throws_When_ResidentAdvance_Line_Has_No_FlatId()
+    {
+        LedgerLine[] lines =
+        [
+            new LedgerLine(LedgerAccountType.CashOrBank, null, LedgerDirection.Debit, 500m, "x"),
+            new LedgerLine(LedgerAccountType.ResidentAdvance, null, LedgerDirection.Credit, 500m, "x"),
+        ];
+
+        Action act = () => LedgerPosting.Create(TenantId, BusinessDate, "x", null, null, lines, Now);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
     public void Create_Throws_When_Line_Amount_Is_Not_Positive()
     {
         LedgerLine[] lines =

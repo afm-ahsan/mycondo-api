@@ -19,8 +19,58 @@ public enum LedgerAccountType
     OpeningBalanceEquity = 4,
     /// <summary>Added in Slice G — a facility-booking refundable security deposit, held as a liability
     /// from collection until settlement (full refund, partial refund with deduction, or forfeiture).
-    /// Tenant-wide like every non-<see cref="ResidentReceivable"/> account; deposit lines carry no
-    /// <see cref="LedgerEntry.FlatId"/> even though the deposit is conceptually flat-specific, per
-    /// <see cref="LedgerPosting.Create"/>'s existing, unmodified invariant.</summary>
+    /// Tenant-wide like every non-<see cref="ResidentReceivable"/>/<see cref="ResidentAdvance"/>
+    /// account; deposit lines carry no <see cref="LedgerEntry.FlatId"/> even though the deposit is
+    /// conceptually flat-specific, per <see cref="LedgerPosting.Create"/>'s existing invariant.</summary>
     RefundableDepositsHeld = 5,
+    /// <summary>Added by ADR-027's Billing↔Finance integration — Service Charge revenue, kept
+    /// separate from <see cref="AssociationRevenue"/> so Service Charge income is independently
+    /// reconcilable. The receivable side stays unified on <see cref="ResidentReceivable"/> (see that
+    /// member's doc comment); only the income/credit side is differentiated by charge type.</summary>
+    ServiceChargeIncome = 6,
+    /// <summary>Gas utility recovery income (Utility invoices where <c>UtilityType == Gas</c>).
+    /// Other utility types (e.g. Electricity) continue posting to <see cref="AssociationRevenue"/> —
+    /// only Gas is differentiated, per the Billing↔Finance integration's explicit scope.</summary>
+    GasRecoveryIncome = 7,
+    /// <summary>Fine/penalty income, distinct from <see cref="AssociationRevenue"/> so fines remain
+    /// independently traceable/reconcilable.</summary>
+    FineIncome = 8,
+    /// <summary>Per-flat "money the association owes back to a resident" — a payment overpayment that
+    /// exceeds every outstanding receivable becomes unallocated credit here instead of the flat's
+    /// <see cref="ResidentReceivable"/> balance going negative. Like <see cref="ResidentReceivable"/>,
+    /// this requires a <see cref="LedgerEntry.FlatId"/> — see <see cref="LedgerPosting.Create"/>.
+    /// </summary>
+    ResidentAdvance = 9,
+    /// <summary>Added by Template 3 (Expense Accounting Integration) — the debit side of every Expense
+    /// posting, whether unpaid ("Dr OperatingExpense / Cr AccountsPayable") or immediately paid
+    /// ("Dr OperatingExpense / Cr CashOrBank"). A single tenant-wide expense account rather than one per
+    /// <c>ExpenseCategory</c>/<c>ExpenseType</c> — category/type-level analysis is achieved by reporting
+    /// through the source <c>Expense</c> each posting references (<see cref="LedgerPosting.ReferenceId"/>),
+    /// not by growing this enum per tenant-configurable category (see ADR-027/ADR-028's account-mapping
+    /// extensibility design, which targets new *roles*, not per-tenant-entity accounts).</summary>
+    OperatingExpense = 10,
+    /// <summary>Added by Template 3 — liability for an unpaid Expense ("Dr OperatingExpense / Cr
+    /// AccountsPayable" at recording time; "Dr AccountsPayable / Cr CashOrBank" at supplier-payment
+    /// time). Tenant-wide, like every non-flat-scoped account type.</summary>
+    AccountsPayable = 11,
+    /// <summary>Added by Template 4 (Banking, Fixed Deposits &amp; Interest) — the asset side of a Fixed
+    /// Deposit's principal ("Dr FixedDeposit / Cr CashOrBank" at placement; reversed at maturity/
+    /// withdrawal). One tenant-wide system account, same "role, not per-instrument" pattern as
+    /// <see cref="OperatingExpense"/> — individual FD instruments are tracked by the
+    /// <c>FixedDeposits.FixedDeposit</c> aggregate itself, not by a sub-account per certificate.</summary>
+    FixedDeposit = 12,
+    /// <summary>Added by Template 4 — accrued-but-not-yet-received FD interest ("Dr InterestReceivable /
+    /// Cr FDInterestIncome" at accrual; "Dr CashOrBank [+ Dr InterestDeductionExpense] / Cr
+    /// InterestReceivable" at receipt). Distinguishes "Interest Earned" from "Interest Received" per the
+    /// Template 4 spec.</summary>
+    InterestReceivable = 13,
+    /// <summary>Added by Template 4 — FD interest income, recognized at accrual time (not at receipt),
+    /// kept separate from <see cref="AssociationRevenue"/> so it stays independently reconcilable.
+    /// </summary>
+    FDInterestIncome = 14,
+    /// <summary>Added by Template 4 — the deduction-at-source portion (e.g. bank-withheld tax) of an FD
+    /// interest receipt. A single configurable system account (via <c>AccountMapping</c>), never a
+    /// hard-coded statutory rate/account — see <c>FixedDeposits.FixedDeposit.ExpectedDeductionRatePercent</c>'s
+    /// doc comment.</summary>
+    InterestDeductionExpense = 15,
 }
