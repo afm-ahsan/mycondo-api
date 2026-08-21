@@ -13,6 +13,8 @@ public interface ILedgerEntryRepository
 {
     void AddRange(IEnumerable<LedgerEntry> entries);
 
+    Task<LedgerEntry?> GetByIdAsync(LedgerEntryId id, CancellationToken cancellationToken);
+
     /// <summary>Sum(debits) - sum(credits) for the flat's ResidentReceivable account — the balance is
     /// always derived from entries, never stored, per financial-engine.md's "closing balance is
     /// derived from ledger entries" rule.</summary>

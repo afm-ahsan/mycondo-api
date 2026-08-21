@@ -81,6 +81,7 @@ app.MapFinancialReportEndpoints();
 app.MapFinanceReportEndpoints();
 app.MapFinanceEndpoints();
 app.MapBankingEndpoints();
+app.MapBankReconciliationEndpoints();
 app.MapMeterEndpoints();
 app.MapRatePlanEndpoints();
 app.MapReadingEndpoints();

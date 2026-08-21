@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using MyCondo.Domain.Features.Finance.Audit;
+using MyCondo.Domain.Features.Finance.BankReconciliations;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Payments.Ledger;
@@ -125,6 +126,65 @@ public class FinanceRlsTests : IClassFixture<MultiTenancyPostgresFixture>
         }
     }
 
+    [Fact]
+    public async Task BankReconciliation_Cross_Tenant_Isolation()
+    {
+        Guid tenantA = Guid.NewGuid();
+        Guid tenantB = Guid.NewGuid();
+        Domain.Features.Finance.FinancialAccounts.FinancialAccountId financialAccountId =
+            Domain.Features.Finance.FinancialAccounts.FinancialAccountId.New();
+
+        await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
+        {
+            dbA.Set<BankReconciliation>().Add(
+                BankReconciliation.Start(tenantA, financialAccountId, new DateOnly(2026, 8, 31), 1000m, 900m));
+            await dbA.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext dbB = _fixture.CreateDbContext(tenantB))
+        {
+            dbB.Set<BankReconciliation>().Add(
+                BankReconciliation.Start(tenantB, financialAccountId, new DateOnly(2026, 8, 31), 2000m, 1900m));
+            await dbB.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext asTenantA = _fixture.CreateDbContext(tenantA))
+        {
+            List<BankReconciliation> visible = await asTenantA.Set<BankReconciliation>().ToListAsync();
+            visible.Should().ContainSingle(r => r.StatementBalance == 1000m);
+            visible.Should().NotContain(r => r.StatementBalance == 2000m);
+        }
+    }
+
+    [Fact]
+    public async Task BankStatementLine_Cross_Tenant_Isolation()
+    {
+        Guid tenantA = Guid.NewGuid();
+        Guid tenantB = Guid.NewGuid();
+        BankReconciliationId reconciliationId = BankReconciliationId.New();
+
+        await using (MyCondoDbContext dbA = _fixture.CreateDbContext(tenantA))
+        {
+            dbA.Set<BankStatementLine>().Add(
+                BankStatementLine.Add(tenantA, reconciliationId, new DateOnly(2026, 8, 15), "Tenant A deposit", 500m));
+            await dbA.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext dbB = _fixture.CreateDbContext(tenantB))
+        {
+            dbB.Set<BankStatementLine>().Add(
+                BankStatementLine.Add(tenantB, reconciliationId, new DateOnly(2026, 8, 15), "Tenant B deposit", 700m));
+            await dbB.SaveChangesAsync();
+        }
+
+        await using (MyCondoDbContext asTenantA = _fixture.CreateDbContext(tenantA))
+        {
+            List<BankStatementLine> visible = await asTenantA.Set<BankStatementLine>().ToListAsync();
+            visible.Should().ContainSingle(l => l.Description == "Tenant A deposit");
+            visible.Should().NotContain(l => l.Description == "Tenant B deposit");
+        }
+    }
+
     [Theory]
     [InlineData("finance.chart_of_accounts")]
     [InlineData("finance.account_mappings")]
@@ -132,6 +192,8 @@ public class FinanceRlsTests : IClassFixture<MultiTenancyPostgresFixture>
     [InlineData("finance.financial_years")]
     [InlineData("finance.accounting_periods")]
     [InlineData("finance.finance_audit_log")]
+    [InlineData("finance.bank_reconciliations")]
+    [InlineData("finance.bank_statement_lines")]
     public async Task Finance_Tables_Have_Rls_Enabled_And_Forced(string qualifiedTableName)
     {
         await using MyCondoDbContext db = _fixture.CreateDbContext(tenantId: null);

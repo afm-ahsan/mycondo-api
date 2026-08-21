@@ -53,6 +53,9 @@ public sealed class CondominiumRoleCatalogueSeeder(
             // void an FD itself — that correction/commitment authority stays with Treasurer, same
             // "operational subset" split as the fine permissions above.
             "finance.bankaccount.view", "finance.fixeddeposit.view", "finance.fixeddeposit.interest.record",
+            // Template 6: same operational-subset split — view-only, completing a reconciliation is
+            // correction-adjacent authority that stays with the tenant-wide Treasurer role.
+            "finance.reconciliation.view",
         ]),
         ("SecurityOfficer", "condominium.security", "Security, visitor, vehicle, and parcel oversight for a single condominium/building.",
         [

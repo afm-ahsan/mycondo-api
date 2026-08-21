@@ -9,6 +9,9 @@ public sealed class LedgerEntryRepository(MyCondoDbContext db) : ILedgerEntryRep
 {
     public void AddRange(IEnumerable<LedgerEntry> entries) => db.Set<LedgerEntry>().AddRange(entries);
 
+    public Task<LedgerEntry?> GetByIdAsync(LedgerEntryId id, CancellationToken cancellationToken) =>
+        db.Set<LedgerEntry>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
     public async Task<decimal> GetReceivableBalanceForFlatAsync(
         Guid tenantId, FlatId flatId, CancellationToken cancellationToken)
     {

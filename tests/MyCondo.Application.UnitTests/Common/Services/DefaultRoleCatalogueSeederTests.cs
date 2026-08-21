@@ -23,6 +23,7 @@ public class DefaultRoleCatalogueSeederTests
         "expensecategory.view", "expensecategory.manage",
         "finance.bankaccount.view", "finance.bankaccount.manage", "finance.fixeddeposit.view",
         "finance.fixeddeposit.place", "finance.fixeddeposit.manage", "finance.fixeddeposit.interest.record",
+        "finance.reconciliation.view", "finance.reconciliation.manage", "finance.reconciliation.reconcile",
         "invoice.view", "invoice.void", "lease.manage", "lease.view", "notification.manage",
         "notification.view", "ownership.manage", "ownership.view", "payment.record",
         "payment.reverse", "payment.view", "permission.view", "property.create", "property.delete",
@@ -75,12 +76,14 @@ public class DefaultRoleCatalogueSeederTests
         addedRoles.Should().OnlyContain(r => r.Code != null && r.Code.StartsWith("default."));
         addedRoles.Should().NotContain(r => r.Name == "Vendor" || r.Name == "Guard");
 
-        // 85 pre-Template-3 + 7 (Template 3: BuildingAdmin gets expense.approve + expensecategory.view
-        // (2); Treasurer gets expense.approve, expense.pay, expensecategory.view, expensecategory.manage
-        // (4); Auditor gets expensecategory.view (1)) + 8 (Template 4: Treasurer gets all 6
-        // finance.bankaccount.*/finance.fixeddeposit.* permissions; Auditor gets the 2 view-only ones).
-        addedGrants.Should().HaveCount(100);
+        // A hand-maintained running total here breaks on every unrelated future permission addition —
+        // Template 6 governance review replaced it with structural/semantic checks; per-role grant
+        // *content* is covered by the dedicated tests below (e.g.
+        // SeedAsync_Grants_Treasurer_The_Full_Fine_Correction_Authority_Permission_Set).
+        addedGrants.Should().NotBeEmpty();
         addedGrants.Should().OnlyContain(g => g.TenantId == tenantId);
+        addedGrants.Select(g => (g.RoleId, g.PermissionId)).Should().OnlyHaveUniqueItems(
+            "no role should ever be granted the same permission twice");
     }
 
     [Fact]
@@ -109,6 +112,35 @@ public class DefaultRoleCatalogueSeederTests
 
         treasurerGrantedNames.Should().Contain(
             ["billing.fine.view", "billing.fine.assess", "billing.fine.waive", "billing.fine.reverse"]);
+    }
+
+    [Fact]
+    public async Task SeedAsync_Grants_Treasurer_Full_Reconciliation_Authority_And_Auditor_View_Only()
+    {
+        List<Permission> catalogue = BuildCatalogue(FullCatalogueNames);
+        (IRoleRepository roles, IPermissionRepository permissions, IRolePermissionRepository rolePermissions, ILogger<DefaultRoleCatalogueSeeder> logger) =
+            BuildSubstitutes(catalogue);
+
+        List<Role> addedRoles = [];
+        roles.Add(Arg.Do<Role>(r => addedRoles.Add(r)));
+        List<RolePermission> addedGrants = [];
+        rolePermissions.Add(Arg.Do<RolePermission>(g => addedGrants.Add(g)));
+
+        DefaultRoleCatalogueSeeder seeder = new(roles, permissions, rolePermissions, logger);
+        await seeder.SeedAsync(Guid.NewGuid(), DateTimeOffset.UtcNow, CancellationToken.None);
+
+        HashSet<string> GrantedNamesFor(string roleName)
+        {
+            Role role = addedRoles.Single(r => r.Name == roleName);
+            HashSet<PermissionId> ids = addedGrants.Where(g => g.RoleId == role.Id).Select(g => g.PermissionId).ToHashSet();
+            return catalogue.Where(p => ids.Contains(p.Id)).Select(p => p.Name).ToHashSet();
+        }
+
+        GrantedNamesFor("Treasurer").Should().Contain(
+            ["finance.reconciliation.view", "finance.reconciliation.manage", "finance.reconciliation.reconcile"]);
+        GrantedNamesFor("Auditor").Should().Contain("finance.reconciliation.view");
+        GrantedNamesFor("Auditor").Should().NotContain(["finance.reconciliation.manage", "finance.reconciliation.reconcile"],
+            "completing/managing a reconciliation is correction-adjacent authority — Auditor stays read-only");
     }
 
     [Fact]

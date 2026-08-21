@@ -55,6 +55,9 @@ public sealed class DefaultRoleCatalogueSeeder(
             // audit log records (period close/reopen, reversals, mapping changes, FD lifecycle) — needs
             // audit.view to review their own trail, not just Auditor's external-oversight use of it.
             "audit.view",
+            // Template 6: Bank Reconciliation full authority (start/manage lines/complete), same tenant-
+            // wide treasury scope as the Banking/FD grants above.
+            "finance.reconciliation.view", "finance.reconciliation.manage", "finance.reconciliation.reconcile",
         ]),
         ("Secretary", "default.secretary", "Administrative/communications support — the point of contact for residents.",
         [
@@ -85,6 +88,8 @@ public sealed class DefaultRoleCatalogueSeeder(
             "audit.view",
             // Template 4: read-only Banking/Fixed Deposit visibility for compliance/external audit.
             "finance.bankaccount.view", "finance.fixeddeposit.view",
+            // Template 6: read-only Bank Reconciliation visibility, same compliance rationale.
+            "finance.reconciliation.view",
         ]),
     ];
 

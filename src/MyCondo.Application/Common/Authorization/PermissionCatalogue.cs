@@ -238,5 +238,14 @@ public static class PermissionCatalogue
         // grant never exposes every resident's statement (Template 5 "Resident Privacy" rule).
         ("finance.report.view", "View core and accounting financial reports (all residents/flats/funds)", "finance", false),
         ("finance.report.statement.own.view", "View own resident/flat financial statement via self-service", "finance", true),
+
+        // Template 6 (Governance, Reconciliation & Production Readiness) — Bank Reconciliation is
+        // tenant-wide treasury data, same scope as finance.bankaccount.*. "reconcile" (completing a
+        // reconciliation) is kept distinct from "manage" (starting one, adding/matching/excluding/
+        // adjusting lines) so a genuine separation-of-duties split is possible without inventing a
+        // new role — see DefaultRoleCatalogueSeeder's Treasurer/Accountant grants.
+        ("finance.reconciliation.view", "View bank reconciliations", "finance", false),
+        ("finance.reconciliation.manage", "Start a bank reconciliation and add/match/exclude/adjust its statement lines", "finance", false),
+        ("finance.reconciliation.reconcile", "Complete a bank reconciliation", "finance", false),
     ];
 }
