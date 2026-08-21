@@ -38,7 +38,13 @@ app.UseSerilogRequestLogging();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-if (!app.Environment.IsDevelopment())
+//For now
+//if (!app.Environment.IsDevelopment())
+//{
+//    app.UseHttpsRedirection();
+//}
+
+if (builder.Configuration.GetValue<bool>("HttpsRedirection:Enabled"))
 {
     app.UseHttpsRedirection();
 }
@@ -100,16 +106,16 @@ app.MapOccupancyRegistrationEndpoints();
 // on the endpoints themselves. Development-only; this does not affect the underlying OpenAPI
 // generation the frontend's codegen:api script depends on, which reads the file mycondo-web checks in
 // (openapi/mycondo-api.json), regenerated locally against a Development-mode instance.
+app.MapOpenApi();
+app.MapScalarApiReference(options =>
+{
+    options
+        .WithTitle("CondoBD API")
+        .WithTheme(ScalarTheme.BluePlanet);
+});
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference(options =>
-    {
-        options
-            .WithTitle("MyCondo API")
-            .WithTheme(ScalarTheme.BluePlanet);
-    });
-
     app.MapGet("/", () => Results.Redirect("/scalar"));
 }
 
