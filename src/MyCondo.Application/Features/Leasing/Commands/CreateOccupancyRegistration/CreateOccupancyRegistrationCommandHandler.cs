@@ -60,6 +60,7 @@ public sealed class CreateOccupancyRegistrationCommandHandler(
             tenantId, flatId, resident.Id, occupancyType, command.PrimaryFullName, command.PrimaryPhone,
             command.PrimaryEmail, command.PrimaryNationalIdNumber, command.PrimaryDateOfBirth, command.PrimaryGender,
             command.PrimaryBloodGroup, command.PrimaryReligion, command.PrimaryNationality,
+            command.PrimaryFatherName, command.PrimaryMotherName, command.PrimaryMaritalStatus,
             command.PrimaryProfession, command.PrimaryPermanentAddress, command.EmergencyContactName,
             command.EmergencyContactPhone, command.MoveInExpectedDate, clock.UtcNow);
 

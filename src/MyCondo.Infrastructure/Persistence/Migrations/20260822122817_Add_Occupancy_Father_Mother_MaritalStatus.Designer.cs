@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyCondo.Infrastructure.Persistence;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyCondo.Infrastructure.Persistence.Migrations
+namespace MyCondo.Infrastructure.Persistence.Migrations;
+
+[DbContext(typeof(MyCondoDbContext))]
+[Migration("20260822122817_Add_Occupancy_Father_Mother_MaritalStatus")]
+partial class Add_Occupancy_Father_Mother_MaritalStatus
 {
-    [DbContext(typeof(MyCondoDbContext))]
-    partial class MyCondoDbContextModelSnapshot : ModelSnapshot
-    {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -6561,4 +6564,3 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
 #pragma warning restore 612, 618
         }
     }
-}

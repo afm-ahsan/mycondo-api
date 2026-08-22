@@ -21,6 +21,9 @@ public sealed class CreateOccupancyRegistrationCommandValidator : AbstractValida
         RuleFor(x => x.PrimaryBloodGroup).MaximumLength(10);
         RuleFor(x => x.PrimaryReligion).MaximumLength(50);
         RuleFor(x => x.PrimaryNationality).MaximumLength(50);
+        RuleFor(x => x.PrimaryFatherName).MaximumLength(200);
+        RuleFor(x => x.PrimaryMotherName).MaximumLength(200);
+        RuleFor(x => x.PrimaryMaritalStatus).MaximumLength(20);
         RuleFor(x => x.PrimaryProfession).MaximumLength(200);
         RuleFor(x => x.PrimaryPermanentAddress).MaximumLength(500);
         RuleFor(x => x.EmergencyContactPhone).MustBeValidBangladeshMobileNumber();

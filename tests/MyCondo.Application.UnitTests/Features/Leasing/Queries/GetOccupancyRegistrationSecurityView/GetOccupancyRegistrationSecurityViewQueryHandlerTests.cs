@@ -51,7 +51,8 @@ public class GetOccupancyRegistrationSecurityViewQueryHandlerTests
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
             TenantId, FlatId, ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, "1234567890",
-            new DateOnly(1990, 1, 1), "Female", null, null, null, null, "123 Secret Road", null, null, null, Now);
+            new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, "123 Secret Road", null,
+            null, null, Now);
         registration.Submit(Guid.NewGuid(), Now);
         registration.ApproveByOwner(Guid.NewGuid(), Now);
         registration.VerifyByManagement(Guid.NewGuid(), Now);
@@ -110,7 +111,7 @@ public class GetOccupancyRegistrationSecurityViewQueryHandlerTests
     {
         OccupancyRegistration otherTenantRegistration = OccupancyRegistration.Register(
             Guid.NewGuid(), FlatId, ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null, null,
-            null, null, null, null, null, null, null, null, null, Now);
+            null, null, null, null, null, null, null, null, null, null, null, null, Now);
         _registrations.GetByIdAsync(otherTenantRegistration.Id, Arg.Any<CancellationToken>()).Returns(otherTenantRegistration);
 
         Func<Task> act = () => CreateHandler()

@@ -56,7 +56,8 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
             TenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, "1234567890",
-            new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, null, Now);
+            new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, null, null, null, null,
+            Now);
         registration.Submit(Guid.NewGuid(), Now);
         registration.ApproveByOwner(Guid.NewGuid(), Now);
         registration.VerifyByManagement(Guid.NewGuid(), Now);
@@ -119,7 +120,7 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
     {
         OccupancyRegistration draft = OccupancyRegistration.Register(
             TenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null, null,
-            null, null, null, null, null, null, null, null, null, Now);
+            null, null, null, null, null, null, null, null, null, null, null, null, Now);
         _registrations.GetByIdAsync(draft.Id, Arg.Any<CancellationToken>()).Returns(draft);
 
         Func<Task> act = () => CreateHandler()
@@ -133,7 +134,7 @@ public class MoveOutOccupancyRegistrationCommandHandlerTests
     {
         OccupancyRegistration otherTenantRegistration = OccupancyRegistration.Register(
             Guid.NewGuid(), FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Jane Doe", null, null, null,
-            null, null, null, null, null, null, null, null, null, null, Now);
+            null, null, null, null, null, null, null, null, null, null, null, null, null, Now);
         _registrations.GetByIdAsync(otherTenantRegistration.Id, Arg.Any<CancellationToken>()).Returns(otherTenantRegistration);
 
         Func<Task> act = () => CreateHandler()

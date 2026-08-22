@@ -44,8 +44,8 @@ public class CreateOccupancyRegistrationCommandHandlerTests
 
     private static CreateOccupancyRegistrationCommand ValidCommand() => new(
         FlatId.Value, "Occupant", "Jane Doe", "01700000000", "jane@example.com", "1234567890",
-        new DateOnly(1990, 1, 1), "Female", null, null, null, null, "123 Example Road, Dhaka", "John Doe",
-        "01711111111", null);
+        new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, "123 Example Road, Dhaka",
+        "John Doe", "01711111111", null);
 
     [Fact]
     public async Task Reuses_Existing_Resident_When_Name_Matches_On_The_Flat()
@@ -80,7 +80,7 @@ public class CreateOccupancyRegistrationCommandHandlerTests
         _flats.GetByIdAsync(FlatId, Arg.Any<CancellationToken>()).Returns(ActiveFlat());
         OccupancyRegistration existingActive = OccupancyRegistration.Register(
             TenantId, FlatId, ResidentId.New(), ResidentType.Owner, "Existing Occupant", null, null, null, null,
-            null, null, null, null, null, null, null, null, null, Now);
+            null, null, null, null, null, null, null, null, null, null, null, null, Now);
         _registrations.GetActiveForFlatAsync(TenantId, FlatId, Arg.Any<CancellationToken>()).Returns(existingActive);
 
         Func<Task> act = () => CreateHandler().Handle(ValidCommand(), CancellationToken.None).AsTask();
