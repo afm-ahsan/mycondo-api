@@ -37,7 +37,7 @@ public class AddHouseholdMemberCommandHandlerTests
         Guid tenantId = Guid.NewGuid();
         OccupancyRegistration registration = OccupancyRegistration.Register(
             tenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "John Doe", null, null, null, null,
-            null, null, null, null, null, null, null, null, null, NowUtc);
+            null, null, null, null, null, null, null, null, null, null, null, null, NowUtc);
 
         _currentUser.TenantId.Returns(tenantId);
         _registrations.GetByIdAsync(registration.Id, Arg.Any<CancellationToken>()).Returns(registration);
@@ -108,7 +108,8 @@ public class AddHouseholdMemberCommandHandlerTests
         Guid tenantId = Guid.NewGuid();
         OccupancyRegistration registration = OccupancyRegistration.Register(
             tenantId, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "John Doe", null, null, "1234567890",
-            new DateOnly(1990, 1, 1), "Male", null, null, null, null, null, null, null, null, NowUtc);
+            new DateOnly(1990, 1, 1), "Male", null, null, null, null, null, null, null, null, null, null, null,
+            NowUtc);
         registration.Submit(null, NowUtc);
         registration.Reject("not eligible", NowUtc);
         _currentUser.TenantId.Returns(tenantId);

@@ -75,7 +75,8 @@ public static class OccupancyRegistrationEndpoints
                     new UpdateOccupancyRegistrationDraftCommand(
                         id, body.PrimaryFullName, body.PrimaryPhone, body.PrimaryEmail, body.PrimaryNationalIdNumber,
                         body.PrimaryDateOfBirth, body.PrimaryGender, body.PrimaryBloodGroup, body.PrimaryReligion,
-                        body.PrimaryNationality, body.PrimaryProfession, body.PrimaryPermanentAddress,
+                        body.PrimaryNationality, body.PrimaryFatherName, body.PrimaryMotherName,
+                        body.PrimaryMaritalStatus, body.PrimaryProfession, body.PrimaryPermanentAddress,
                         body.EmergencyContactName, body.EmergencyContactPhone, body.MoveInExpectedDate), ct);
                 return Results.Ok(result);
             })
@@ -314,6 +315,9 @@ public sealed record UpdateOccupancyRegistrationDraftRequest(
     string? PrimaryBloodGroup,
     string? PrimaryReligion,
     string? PrimaryNationality,
+    string? PrimaryFatherName,
+    string? PrimaryMotherName,
+    string? PrimaryMaritalStatus,
     string? PrimaryProfession,
     string? PrimaryPermanentAddress,
     string? EmergencyContactName,

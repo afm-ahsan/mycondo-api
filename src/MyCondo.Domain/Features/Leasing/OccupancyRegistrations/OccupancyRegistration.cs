@@ -34,6 +34,9 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
     public string? PrimaryBloodGroup { get; private set; }
     public string? PrimaryReligion { get; private set; }
     public string? PrimaryNationality { get; private set; }
+    public string? PrimaryFatherName { get; private set; }
+    public string? PrimaryMotherName { get; private set; }
+    public string? PrimaryMaritalStatus { get; private set; }
     public string? PrimaryProfession { get; private set; }
     public string? PrimaryPermanentAddress { get; private set; }
     public string? EmergencyContactName { get; private set; }
@@ -68,7 +71,8 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         OccupancyRegistrationId id, Guid tenantId, FlatId flatId, ResidentId primaryResidentId,
         ResidentType occupancyType, string primaryFullName, string? primaryPhone, string? primaryEmail,
         string? primaryNationalIdNumber, DateOnly? primaryDateOfBirth, string? primaryGender,
-        string? primaryBloodGroup, string? primaryReligion, string? primaryNationality, string? primaryProfession,
+        string? primaryBloodGroup, string? primaryReligion, string? primaryNationality, string? primaryFatherName,
+        string? primaryMotherName, string? primaryMaritalStatus, string? primaryProfession,
         string? primaryPermanentAddress, string? emergencyContactName, string? emergencyContactPhone,
         DateOnly? moveInExpectedDate, DateTimeOffset nowUtc) : base(id)
     {
@@ -85,6 +89,9 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         PrimaryBloodGroup = primaryBloodGroup;
         PrimaryReligion = primaryReligion;
         PrimaryNationality = primaryNationality;
+        PrimaryFatherName = primaryFatherName;
+        PrimaryMotherName = primaryMotherName;
+        PrimaryMaritalStatus = primaryMaritalStatus;
         PrimaryProfession = primaryProfession;
         PrimaryPermanentAddress = primaryPermanentAddress;
         EmergencyContactName = emergencyContactName;
@@ -99,7 +106,8 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         Guid tenantId, FlatId flatId, ResidentId primaryResidentId, ResidentType occupancyType,
         string primaryFullName, string? primaryPhone, string? primaryEmail, string? primaryNationalIdNumber,
         DateOnly? primaryDateOfBirth, string? primaryGender, string? primaryBloodGroup, string? primaryReligion,
-        string? primaryNationality, string? primaryProfession, string? primaryPermanentAddress,
+        string? primaryNationality, string? primaryFatherName, string? primaryMotherName,
+        string? primaryMaritalStatus, string? primaryProfession, string? primaryPermanentAddress,
         string? emergencyContactName, string? emergencyContactPhone, DateOnly? moveInExpectedDate,
         DateTimeOffset nowUtc)
     {
@@ -113,9 +121,10 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
             OccupancyRegistrationId.New(), tenantId, flatId, primaryResidentId, occupancyType,
             primaryFullName.Trim(), BangladeshMobileNumber.Normalize(primaryPhone), primaryEmail?.Trim(),
             primaryNationalIdNumber?.Trim(), primaryDateOfBirth, primaryGender?.Trim(), primaryBloodGroup?.Trim(),
-            primaryReligion?.Trim(), primaryNationality?.Trim(), primaryProfession?.Trim(),
-            primaryPermanentAddress?.Trim(), emergencyContactName?.Trim(),
-            BangladeshMobileNumber.Normalize(emergencyContactPhone), moveInExpectedDate, nowUtc);
+            primaryReligion?.Trim(), primaryNationality?.Trim(), primaryFatherName?.Trim(), primaryMotherName?.Trim(),
+            primaryMaritalStatus?.Trim(), primaryProfession?.Trim(), primaryPermanentAddress?.Trim(),
+            emergencyContactName?.Trim(), BangladeshMobileNumber.Normalize(emergencyContactPhone),
+            moveInExpectedDate, nowUtc);
     }
 
     private void EnsureEditable(string attemptedAction)
@@ -129,7 +138,8 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
     public void UpdateDraft(
         string primaryFullName, string? primaryPhone, string? primaryEmail, string? primaryNationalIdNumber,
         DateOnly? primaryDateOfBirth, string? primaryGender, string? primaryBloodGroup, string? primaryReligion,
-        string? primaryNationality, string? primaryProfession, string? primaryPermanentAddress,
+        string? primaryNationality, string? primaryFatherName, string? primaryMotherName,
+        string? primaryMaritalStatus, string? primaryProfession, string? primaryPermanentAddress,
         string? emergencyContactName, string? emergencyContactPhone, DateOnly? moveInExpectedDate)
     {
         EnsureEditable("be edited");
@@ -150,6 +160,9 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         PrimaryBloodGroup = primaryBloodGroup?.Trim();
         PrimaryReligion = primaryReligion?.Trim();
         PrimaryNationality = primaryNationality?.Trim();
+        PrimaryFatherName = primaryFatherName?.Trim();
+        PrimaryMotherName = primaryMotherName?.Trim();
+        PrimaryMaritalStatus = primaryMaritalStatus?.Trim();
         PrimaryProfession = primaryProfession?.Trim();
         PrimaryPermanentAddress = primaryPermanentAddress?.Trim();
         EmergencyContactName = emergencyContactName?.Trim();

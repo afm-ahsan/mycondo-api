@@ -29,7 +29,7 @@ public class OccupancyRegistrationSearchFilterTests : IClassFixture<MultiTenancy
         OccupancyRegistrationStatus status = OccupancyRegistrationStatus.Draft) =>
         OccupancyRegistration.Register(
             tenantId, flatId, ResidentId.New(), ResidentType.Occupant, fullName, phone, email, null, null, null,
-            null, null, null, null, null, null, null, null, DateTimeOffset.UtcNow);
+            null, null, null, null, null, null, null, null, null, null, null, DateTimeOffset.UtcNow);
 
     private static async Task<FlatId> SeedFlatAsync(MyCondoDbContext db, Guid tenantId, string flatNumber)
     {
@@ -123,7 +123,7 @@ public class OccupancyRegistrationSearchFilterTests : IClassFixture<MultiTenancy
 
         OccupancyRegistration draft = MakeRegistration(tenantId, flatId, "Karim Ahmed", null, null);
         OccupancyRegistration submitted = MakeRegistration(tenantId, flatId, "Karim Ahmed", null, null);
-        submitted.UpdateDraft("Karim Ahmed", null, null, "1234567890123", DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-30)), "Male", null, null, null, null, null, null, null, null);
+        submitted.UpdateDraft("Karim Ahmed", null, null, "1234567890123", DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-30)), "Male", null, null, null, null, null, null, null, null, null, null, null);
         submitted.Submit(null, DateTimeOffset.UtcNow);
         db.Set<OccupancyRegistration>().AddRange(draft, submitted);
         await db.SaveChangesAsync();
