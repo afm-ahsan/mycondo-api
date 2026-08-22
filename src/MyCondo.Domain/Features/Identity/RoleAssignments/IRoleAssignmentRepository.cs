@@ -27,6 +27,11 @@ public interface IRoleAssignmentRepository
 
     Task<List<RoleAssignment>> GetForUserAsync(Guid tenantId, UserId userId, CancellationToken cancellationToken);
 
+    /// <summary>Batched lookup for the User Administration list's Roles column — avoids one query per
+    /// row when rendering a page of users.</summary>
+    Task<List<RoleAssignment>> GetForUsersAsync(
+        Guid tenantId, IReadOnlyCollection<UserId> userIds, CancellationToken cancellationToken);
+
     void Add(RoleAssignment roleAssignment);
     void Remove(RoleAssignment roleAssignment);
 }

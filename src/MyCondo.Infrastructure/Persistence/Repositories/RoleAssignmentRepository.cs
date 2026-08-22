@@ -53,6 +53,14 @@ public sealed class RoleAssignmentRepository(MyCondoDbContext db) : IRoleAssignm
           .Where(a => a.TenantId == tenantId && a.UserId == userId)
           .ToListAsync(cancellationToken);
 
+    public Task<List<RoleAssignment>> GetForUsersAsync(
+        Guid tenantId, IReadOnlyCollection<UserId> userIds, CancellationToken cancellationToken) =>
+        userIds.Count == 0
+            ? Task.FromResult(new List<RoleAssignment>())
+            : db.Set<RoleAssignment>()
+                .Where(a => a.TenantId == tenantId && userIds.Contains(a.UserId))
+                .ToListAsync(cancellationToken);
+
     public void Add(RoleAssignment roleAssignment) => db.Set<RoleAssignment>().Add(roleAssignment);
 
     public void Remove(RoleAssignment roleAssignment) => db.Set<RoleAssignment>().Remove(roleAssignment);

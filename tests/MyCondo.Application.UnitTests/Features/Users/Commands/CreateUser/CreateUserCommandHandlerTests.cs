@@ -36,27 +36,26 @@ public class CreateUserCommandHandlerTests
     {
         _users.EmailExistsAsync(TenantId, "new.user@example.com", Arg.Any<CancellationToken>()).Returns(false);
 
-        CreateUserCommand command = new("New User", "New.User@example.com", "+8801700000000", "Str0ngPassw0rd!");
+        CreateUserCommand command = new("New User", "New.User@example.com", "+8801700000000", "Str0ngPassw0rd!", true);
 
         CreateUserResult result = await CreateHandler().Handle(command, CancellationToken.None);
 
-        result.TemporaryPassword.Should().BeNull("an explicit initial password was supplied");
-        _users.Received(1).Add(Arg.Is<User>(u => u.TenantId == TenantId && u.Email == "new.user@example.com"));
+        result.UserId.Should().NotBeEmpty();
+        _users.Received(1).Add(Arg.Is<User>(u =>
+            u.TenantId == TenantId && u.Email == "new.user@example.com" && u.Status == UserStatus.Active));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Generates_A_Temporary_Password_When_None_Supplied()
+    public async Task Creates_An_Inactive_User_When_IsActive_Is_False()
     {
-        _users.EmailExistsAsync(TenantId, "temp.user@example.com", Arg.Any<CancellationToken>()).Returns(false);
+        _users.EmailExistsAsync(TenantId, "inactive.user@example.com", Arg.Any<CancellationToken>()).Returns(false);
 
-        CreateUserCommand command = new("Temp User", "temp.user@example.com", null, null);
+        CreateUserCommand command = new("Inactive User", "inactive.user@example.com", "+8801700000000", "Str0ngPassw0rd!", false);
 
-        CreateUserResult result = await CreateHandler().Handle(command, CancellationToken.None);
+        await CreateHandler().Handle(command, CancellationToken.None);
 
-        result.TemporaryPassword.Should().NotBeNullOrEmpty();
-        result.TemporaryPassword!.Length.Should().BeGreaterThanOrEqualTo(12);
-        result.TemporaryPassword.Should().MatchRegex("[A-Z]").And.MatchRegex("[a-z]").And.MatchRegex(@"\d");
+        _users.Received(1).Add(Arg.Is<User>(u => u.Status == UserStatus.Inactive));
     }
 
     [Fact]
@@ -64,7 +63,7 @@ public class CreateUserCommandHandlerTests
     {
         _users.EmailExistsAsync(TenantId, "taken@example.com", Arg.Any<CancellationToken>()).Returns(true);
 
-        CreateUserCommand command = new("Someone", "taken@example.com", null, null);
+        CreateUserCommand command = new("Someone", "taken@example.com", "+8801700000000", "Str0ngPassw0rd!", true);
 
         Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
 
@@ -78,7 +77,7 @@ public class CreateUserCommandHandlerTests
     {
         _currentUser.TenantId.Returns((Guid?)null);
 
-        CreateUserCommand command = new("Someone", "someone@example.com", null, null);
+        CreateUserCommand command = new("Someone", "someone@example.com", "+8801700000000", "Str0ngPassw0rd!", true);
 
         Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
 
