@@ -7,5 +7,6 @@ public sealed record UserSummaryDto(
     string? PhoneNumber,
     bool IsActive,
     DateTimeOffset? LastLoginAtUtc,
-    DateTimeOffset CreatedAtUtc
+    DateTimeOffset CreatedAtUtc,
+    IReadOnlyList<string> RoleNames
 );
