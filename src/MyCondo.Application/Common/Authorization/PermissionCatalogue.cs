@@ -184,8 +184,17 @@ public static class PermissionCatalogue
         ("occupancy-registration.verify", "Verify, request corrections on, reject, or activate an owner-approved tenant registration (management stage)", "occupancy-registration", true),
         ("occupancy-registration.move-out", "Record the move-out of an active tenant registration", "occupancy-registration", true),
 
-        // Seed_Leasing_SecurityViewPermission
-        ("occupancy-registration.security-view", "View the restricted security-facing tenant registration directory (operational info only, no sensitive personal data)", "occupancy-registration", true),
+        // Security Directory (supersedes the retired Seed_Leasing_SecurityViewPermission entry,
+        // occupancy-registration.security-view — that permission row is orphaned, not deleted, per
+        // PermissionSeeder's insert-only reconciliation). security.directory.view is the base
+        // permission for the merged Owner+Tenant security-facing directory (operational info only,
+        // no sensitive personal data); the remaining four keys only ever expand what a caller who
+        // already holds the base permission can see — they never independently grant directory access.
+        ("security.directory.view", "View the restricted security-facing resident directory (operational info only, no sensitive personal data)", "security-directory", true),
+        ("security.directory.household.view", "View household members in the security directory", "security-directory", true),
+        ("security.directory.worker.view", "View workers/drivers in the security directory", "security-directory", true),
+        ("security.directory.vehicle.view", "View vehicles in the security directory", "security-directory", true),
+        ("security.directory.detail.view", "View extended occupancy/ownership timeline details in the security directory", "security-directory", true),
 
         // Seed_UtilityReport_Permission (UX-5)
         ("utility.report", "View utility consumption, reading-status, and meter-status reports", "report", false),

@@ -106,6 +106,7 @@ app.MapCylinderPurchaseEndpoints();
 app.MapCylinderStockEndpoints();
 app.MapGasCylinderReportEndpoints();
 app.MapOccupancyRegistrationEndpoints();
+app.MapSecurityDirectoryEndpoints();
 
 // Scalar UI + the raw OpenAPI JSON document expose the full internal API surface (every endpoint,
 // DTO shape, route pattern) — reconnaissance value for an attacker even though it doesn't bypass auth
