@@ -68,6 +68,9 @@ public sealed class DefaultRoleCatalogueSeeder(
         ("SecurityHead", "default.security-head", "Security oversight for a building.",
         [
             "complaint.view",
+            // Security Directory (base tier) — gatekeeping-level access to the restricted
+            // security-facing resident directory; no household/worker/vehicle expansion.
+            "security.directory.view",
         ]),
         ("Owner", "default.owner", "A flat owner viewing their own ownership/billing/complaint records.",
         [

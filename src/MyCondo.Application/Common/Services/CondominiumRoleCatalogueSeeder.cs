@@ -63,6 +63,11 @@ public sealed class CondominiumRoleCatalogueSeeder(
             "vehicle.view", "vehicle.create", "vehicle.checkin", "vehicle.checkout", "vehicle.block.manage",
             "parcel.view", "parcel.receive", "parcel.handover", "parcel.notify", "parcel.escalate",
             "parcel.return", "parcel.update", "report.security.view", "complaint.view",
+            // Security Directory (expanded tier) — base view plus household/worker/vehicle sections;
+            // deliberately excludes security.directory.detail.view (extended timeline history stays
+            // with Organization Admin's blanket grant, not a Security Supervisor default).
+            "security.directory.view", "security.directory.household.view", "security.directory.worker.view",
+            "security.directory.vehicle.view",
         ]),
         ("FacilityManager", "condominium.facility-manager", "Amenities, pool, generator, and gas cylinder operations for a single condominium/building.",
         [

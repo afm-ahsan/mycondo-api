@@ -16,7 +16,7 @@ namespace MyCondo.Application.Features.Leasing.Commands.MoveOutOccupancyRegistra
 /// <summary>
 /// Ends an active occupancy and, in the same transaction, deactivates every household member and ends
 /// every active worker/vehicle assignment on the registration — this is the cascade the security-facing
-/// view (<c>GetOccupancyRegistrationSecurityViewQueryHandler</c>) relies on to stop treating this flat's
+/// view (<c>GetSecurityDirectoryDetailQueryHandler</c>) relies on to stop treating this flat's
 /// former occupants, workers, and vehicles as currently authorized (mirrors
 /// <c>DomesticWorkerAssignment.Deactivate</c>'s role in removing access eligibility once a worker is no
 /// longer engaged). The underlying <c>DomesticWorkerProfile</c>/<c>Vehicle</c> records themselves are

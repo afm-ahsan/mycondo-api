@@ -316,13 +316,13 @@ public class RoleEndpointsDbTests : IClassFixture<PostgresApiFactory>
             return await db.Set<RolePermission>().CountAsync(rp => rp.RoleId == roleId);
         }
 
-        (await GrantCountAsync("SecurityHead")).Should().Be(1);
+        (await GrantCountAsync("SecurityHead")).Should().Be(2);
         (await GrantCountAsync("Treasurer")).Should().Be(11);
         (await GrantCountAsync("Auditor")).Should().Be(18);
         (await GrantCountAsync("CondoAdmin")).Should().Be(28);
         (await GrantCountAsync("Manager")).Should().Be(9);
         (await GrantCountAsync("Accountant")).Should().Be(8);
-        (await GrantCountAsync("SecurityOfficer")).Should().Be(19);
+        (await GrantCountAsync("SecurityOfficer")).Should().Be(23);
         (await GrantCountAsync("FacilityManager")).Should().Be(19);
         (await GrantCountAsync("FlatOwner")).Should().Be(2);
         (await GrantCountAsync("Tenant")).Should().Be(2);

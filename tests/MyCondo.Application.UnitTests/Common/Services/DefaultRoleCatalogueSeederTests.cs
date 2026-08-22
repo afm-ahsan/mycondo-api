@@ -10,7 +10,7 @@ namespace MyCondo.Application.UnitTests.Common.Services;
 
 public class DefaultRoleCatalogueSeederTests
 {
-    // Mirrors the 59 names actually referenced by the default role catalogue below — using the same set
+    // Mirrors the 60 names actually referenced by the default role catalogue below — using the same set
     // here means a typo in DefaultRoleCatalogueSeeder's permission lists fails this test the same way
     // it would fail against the real catalogue.
     private static readonly string[] FullCatalogueNames =
@@ -31,6 +31,7 @@ public class DefaultRoleCatalogueSeederTests
         "resident.create", "resident.disable", "resident.update", "resident.view", "role.manage",
         "role.view", "tenant.manage", "tenant.view", "user.create", "user.disable", "user.update",
         "user.view", "workorder.assign", "workorder.complete", "workorder.create", "workorder.view",
+        "security.directory.view",
     ];
 
     private static List<Permission> BuildCatalogue(IEnumerable<string> names) =>
@@ -195,12 +196,16 @@ public class DefaultRoleCatalogueSeederTests
 
         permissions.GetAllAsync(Arg.Any<CancellationToken>()).Returns(catalogue);
         roles.GetAllForTenantAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns([existingSecurityHead]);
-        // Every newly-created role starts with no grants; SecurityHead specifically already has its
-        // one expected grant ("complaint.view") persisted from a prior run.
+        // Every newly-created role starts with no grants; SecurityHead specifically already has both of
+        // its expected grants ("complaint.view", "security.directory.view") persisted from a prior run.
         rolePermissions.GetForRoleAsync(Arg.Any<RoleId>(), Arg.Any<CancellationToken>()).Returns([]);
         Permission complaintView = catalogue.Single(p => p.Name == "complaint.view");
+        Permission securityDirectoryView = catalogue.Single(p => p.Name == "security.directory.view");
         rolePermissions.GetForRoleAsync(existingSecurityHead.Id, Arg.Any<CancellationToken>())
-            .Returns([new RolePermission(tenantId, existingSecurityHead.Id, complaintView.Id, DateTimeOffset.UtcNow, null)]);
+            .Returns([
+                new RolePermission(tenantId, existingSecurityHead.Id, complaintView.Id, DateTimeOffset.UtcNow, null),
+                new RolePermission(tenantId, existingSecurityHead.Id, securityDirectoryView.Id, DateTimeOffset.UtcNow, null),
+            ]);
 
         List<RolePermission> addedGrants = [];
         rolePermissions.Add(Arg.Do<RolePermission>(g => addedGrants.Add(g)));
@@ -210,7 +215,7 @@ public class DefaultRoleCatalogueSeederTests
 
         // The other six default roles are newly created here (no existing rows for them), so they get
         // their full grant sets added — the point of this test is specifically that SecurityHead,
-        // which already had its one expected grant, gets nothing extra.
+        // which already had both of its expected grants, gets nothing extra.
         addedGrants.Should().NotContain(g => g.RoleId == existingSecurityHead.Id);
     }
 

@@ -41,6 +41,8 @@ public class CondominiumRoleCatalogueSeederTests
         "pool.checkin", "pool.checkout", "pool.incident.manage", "generator.view", "generator.manage",
         "generator.operation.manage", "generator.fuel.manage", "generator.maintenance.manage",
         "gascylinder.view", "gascylinder.stock.manage", "report.facility",
+        "security.directory.view", "security.directory.household.view", "security.directory.worker.view",
+        "security.directory.vehicle.view",
     ];
 
     private static List<Permission> BuildCatalogue(IEnumerable<string> names) =>

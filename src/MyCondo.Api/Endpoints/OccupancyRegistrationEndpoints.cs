@@ -24,9 +24,7 @@ using MyCondo.Application.Features.Leasing.DTOs;
 using MyCondo.Application.Features.Leasing.Queries.GetHouseholdMembers;
 using MyCondo.Application.Features.Leasing.Queries.GetOccupancyRegistrationById;
 using MyCondo.Application.Features.Leasing.Queries.GetOccupancyRegistrations;
-using MyCondo.Application.Features.Leasing.Queries.GetOccupancyRegistrationSecurityView;
 using MyCondo.Application.Features.Leasing.Queries.GetOccupancyRegistrationStatusHistory;
-using MyCondo.Application.Features.Leasing.Queries.GetOccupancySecurityViews;
 using MyCondo.Application.Features.Leasing.Queries.GetVehicleAssignmentsForRegistration;
 using MyCondo.Application.Features.Leasing.Queries.GetWorkerAssignmentsForRegistration;
 using MyCondo.Domain.Common;
@@ -281,25 +279,9 @@ public static class OccupancyRegistrationEndpoints
             .RequirePermission("occupancy-registration.create")
             .Produces<OccupancyRegistrationVehicleAssignmentDto>(StatusCodes.Status200OK);
 
-        RouteGroupBuilder security = app.MapGroup("/api/v1/occupancy-registrations/security").WithTags("Tenant Registrations");
-
-        security.MapGet("/", async (Guid? flatId, int page, int pageSize, ISender sender, CancellationToken ct) =>
-            {
-                PagedResult<OccupancyRegistrationSecuritySummaryDto> result = await sender.Send(
-                    new GetOccupancySecurityViewsQuery(flatId, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
-                return Results.Ok(result);
-            })
-            .RequirePermission("occupancy-registration.security-view")
-            .Produces<PagedResult<OccupancyRegistrationSecuritySummaryDto>>(StatusCodes.Status200OK);
-
-        security.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
-            {
-                OccupancyRegistrationSecurityViewDto result =
-                    await sender.Send(new GetOccupancyRegistrationSecurityViewQuery(id), ct);
-                return Results.Ok(result);
-            })
-            .RequirePermission("occupancy-registration.security-view")
-            .Produces<OccupancyRegistrationSecurityViewDto>(StatusCodes.Status200OK);
+        // The former /api/v1/occupancy-registrations/security routes (Tenant-only) were retired in
+        // favor of the merged Owner+Tenant /api/v1/security/directory routes — see
+        // MyCondo.Api.Endpoints.SecurityDirectoryEndpoints.
 
         return app;
     }
