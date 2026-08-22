@@ -11,7 +11,7 @@ public sealed class OccupancyRegistrationRepository(MyCondoDbContext db) : IOccu
         db.Set<OccupancyRegistration>().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
     public async Task<PagedResult<OccupancyRegistration>> SearchAsync(
-        Guid tenantId, FlatId? flatId, OccupancyRegistrationStatus? status, int page, int pageSize,
+        Guid tenantId, FlatId? flatId, OccupancyRegistrationStatus? status, string? search, int page, int pageSize,
         CancellationToken cancellationToken)
     {
         IQueryable<OccupancyRegistration> query = db.Set<OccupancyRegistration>()
@@ -26,6 +26,15 @@ public sealed class OccupancyRegistrationRepository(MyCondoDbContext db) : IOccu
         if (status is not null)
         {
             query = query.Where(x => x.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(x =>
+                EF.Functions.ILike(x.PrimaryFullName, $"%{search}%")
+                || (x.PrimaryEmail != null && EF.Functions.ILike(x.PrimaryEmail, $"%{search}%"))
+                || (x.PrimaryPhone != null && EF.Functions.ILike(x.PrimaryPhone, $"%{search}%"))
+                || db.Set<Flat>().Any(f => f.Id == x.FlatId && EF.Functions.ILike(f.FlatNumber, $"%{search}%")));
         }
 
         long total = await query.LongCountAsync(cancellationToken);

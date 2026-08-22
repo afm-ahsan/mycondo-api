@@ -7,8 +7,10 @@ public interface IOccupancyRegistrationRepository
 {
     Task<OccupancyRegistration?> GetByIdAsync(OccupancyRegistrationId id, CancellationToken cancellationToken);
 
+    /// <summary><paramref name="search"/> matches the registration's primary occupant name/phone/email
+    /// or the flat number, mirroring IFlatOwnershipRepository.SearchAsync's search semantics.</summary>
     Task<PagedResult<OccupancyRegistration>> SearchAsync(
-        Guid tenantId, FlatId? flatId, OccupancyRegistrationStatus? status, int page, int pageSize,
+        Guid tenantId, FlatId? flatId, OccupancyRegistrationStatus? status, string? search, int page, int pageSize,
         CancellationToken cancellationToken);
 
     /// <summary>The single Active registration for a flat, if any — used to block a second concurrent

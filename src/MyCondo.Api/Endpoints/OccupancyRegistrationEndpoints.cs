@@ -52,14 +52,14 @@ public static class OccupancyRegistrationEndpoints
             .RequirePermission("occupancy-registration.create")
             .Produces<OccupancyRegistrationDto>(StatusCodes.Status200OK);
 
-        registrations.MapGet("/", async (Guid? flatId, string? status, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        registrations.MapGet("/", async (Guid? flatId, string? status, string? search, int page, int pageSize, ISender sender, CancellationToken ct) =>
             {
-                PagedResult<OccupancyRegistrationDto> result = await sender.Send(
-                    new GetOccupancyRegistrationsQuery(flatId, status, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
+                PagedResult<OccupancyRegistrationListItemDto> result = await sender.Send(
+                    new GetOccupancyRegistrationsQuery(flatId, status, search, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("occupancy-registration.view")
-            .Produces<PagedResult<OccupancyRegistrationDto>>(StatusCodes.Status200OK);
+            .Produces<PagedResult<OccupancyRegistrationListItemDto>>(StatusCodes.Status200OK);
 
         registrations.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
             {

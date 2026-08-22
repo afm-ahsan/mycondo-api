@@ -1,5 +1,4 @@
 using Mediator;
-using MyCondo.Application.Features.Leasing.DTOs;
 using MyCondo.Domain.Common;
 
 namespace MyCondo.Application.Features.Leasing.Queries.GetOccupancyRegistrations;
@@ -7,6 +6,7 @@ namespace MyCondo.Application.Features.Leasing.Queries.GetOccupancyRegistrations
 public sealed record GetOccupancyRegistrationsQuery(
     Guid? FlatId,
     string? Status,
+    string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<OccupancyRegistrationDto>>;
+) : IRequest<PagedResult<OccupancyRegistrationListItemDto>>;

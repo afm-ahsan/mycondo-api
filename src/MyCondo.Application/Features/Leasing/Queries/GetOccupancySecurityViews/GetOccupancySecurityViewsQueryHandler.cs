@@ -27,7 +27,7 @@ public sealed class GetOccupancySecurityViewsQueryHandler(
         FlatId? flatId = query.FlatId is Guid rawFlatId ? new FlatId(rawFlatId) : null;
 
         PagedResult<OccupancyRegistration> result = await registrations.SearchAsync(
-            tenantId, flatId, OccupancyRegistrationStatus.Active, query.Page, query.PageSize, cancellationToken);
+            tenantId, flatId, OccupancyRegistrationStatus.Active, null, query.Page, query.PageSize, cancellationToken);
 
         List<OccupancyRegistrationSecuritySummaryDto> items = [];
         foreach (OccupancyRegistration registration in result.Items)
