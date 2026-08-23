@@ -19,14 +19,13 @@ public class GetRatePlansQueryValidatorTests
     }
 
     [Fact]
-    public void Empty_BuildingId_Fails()
+    public void Null_BuildingId_Passes()
     {
-        GetRatePlansQuery query = new(Guid.Empty, null, 1, 20);
+        GetRatePlansQuery query = new(null, null, 1, 20);
 
         ValidationResult result = _validator.Validate(query);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(GetRatePlansQuery.BuildingId));
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]

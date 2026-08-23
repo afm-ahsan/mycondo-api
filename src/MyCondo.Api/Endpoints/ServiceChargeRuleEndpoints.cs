@@ -24,7 +24,7 @@ public static class ServiceChargeRuleEndpoints
             .RequirePermission("billing.rule.manage")
             .Produces<ServiceChargeRuleDto>(StatusCodes.Status200OK);
 
-        rules.MapGet("/", async (Guid buildingId, string? category, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        rules.MapGet("/", async (Guid? buildingId, string? category, int page, int pageSize, ISender sender, CancellationToken ct) =>
             {
                 PagedResult<ServiceChargeRuleDto> result = await sender.Send(
                     new GetServiceChargeRulesQuery(buildingId, category, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);

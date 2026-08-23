@@ -6,7 +6,6 @@ public sealed class GetServiceChargeRulesQueryValidator : AbstractValidator<GetS
 {
     public GetServiceChargeRulesQueryValidator()
     {
-        RuleFor(x => x.BuildingId).NotEmpty();
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
         RuleFor(x => x.PageSize).InclusiveBetween(1, 100);
     }

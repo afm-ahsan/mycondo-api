@@ -1,4 +1,5 @@
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 
 namespace MyCondo.Domain.Features.Security.Parcels;
@@ -11,6 +12,7 @@ public interface IParcelRepository
         Guid tenantId,
         ParcelStatus? status,
         FlatId? recipientFlatId,
+        BuildingId? buildingId,
         int page,
         int pageSize,
         CancellationToken cancellationToken);

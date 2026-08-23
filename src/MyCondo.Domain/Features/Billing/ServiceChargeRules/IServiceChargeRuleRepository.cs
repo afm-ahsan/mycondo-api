@@ -9,7 +9,7 @@ public interface IServiceChargeRuleRepository
     Task<ServiceChargeRule?> GetByIdAsync(ServiceChargeRuleId id, CancellationToken cancellationToken);
 
     Task<PagedResult<ServiceChargeRule>> SearchAsync(
-        Guid tenantId, BuildingId buildingId, string? category, int page, int pageSize, CancellationToken cancellationToken);
+        Guid tenantId, BuildingId? buildingId, string? category, int page, int pageSize, CancellationToken cancellationToken);
 
     /// <summary>Rules that cover the given period in full — selection is by effective date, not just
     /// <see cref="ServiceChargeRule.IsActive"/>. See <see cref="ServiceChargeRule.AppliesToPeriod"/>.</summary>

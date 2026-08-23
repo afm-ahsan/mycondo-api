@@ -5,7 +5,7 @@ using MyCondo.Domain.Common;
 namespace MyCondo.Application.Features.Utilities.Queries.GetMeters;
 
 public sealed record GetMetersQuery(
-    Guid BuildingId,
+    Guid? BuildingId,
     string? UtilityType,
     int Page,
     int PageSize

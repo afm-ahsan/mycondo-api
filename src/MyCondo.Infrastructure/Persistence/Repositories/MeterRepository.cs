@@ -18,11 +18,16 @@ public sealed class MeterRepository(MyCondoDbContext db) : IMeterRepository
             cancellationToken);
 
     public async Task<PagedResult<Meter>> SearchAsync(
-        Guid tenantId, BuildingId buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken)
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken)
     {
         IQueryable<Meter> query = db.Set<Meter>()
             .AsNoTracking()
-            .Where(m => m.TenantId == tenantId && m.BuildingId == buildingId);
+            .Where(m => m.TenantId == tenantId);
+
+        if (buildingId is not null)
+        {
+            query = query.Where(m => m.BuildingId == buildingId);
+        }
 
         if (utilityType is not null)
         {

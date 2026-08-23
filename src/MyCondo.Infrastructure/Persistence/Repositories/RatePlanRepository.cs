@@ -12,11 +12,16 @@ public sealed class RatePlanRepository(MyCondoDbContext db) : IRatePlanRepositor
         db.Set<RatePlan>().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
     public async Task<PagedResult<RatePlan>> SearchAsync(
-        Guid tenantId, BuildingId buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken)
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken)
     {
         IQueryable<RatePlan> query = db.Set<RatePlan>()
             .AsNoTracking()
-            .Where(p => p.TenantId == tenantId && p.BuildingId == buildingId);
+            .Where(p => p.TenantId == tenantId);
+
+        if (buildingId is not null)
+        {
+            query = query.Where(p => p.BuildingId == buildingId);
+        }
 
         if (utilityType is not null)
         {

@@ -5,6 +5,7 @@ using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Security.Parcels.DTOs;
 using MyCondo.Application.Features.Security.Parcels.Mappings;
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Security.Parcels;
 
@@ -25,9 +26,10 @@ public sealed class GetParcelsForTenantQueryHandler(
 
         ParcelStatus? status = query.Status is null ? null : Enum.Parse<ParcelStatus>(query.Status);
         FlatId? flatId = query.RecipientFlatId is Guid rawFlatId ? new FlatId(rawFlatId) : null;
+        BuildingId? buildingId = query.BuildingId is Guid rawBuildingId ? new BuildingId(rawBuildingId) : null;
 
         PagedResult<Parcel> result = await parcels.SearchAsync(
-            tenantId, status, flatId, query.Page, query.PageSize, cancellationToken);
+            tenantId, status, flatId, buildingId, query.Page, query.PageSize, cancellationToken);
 
         IReadOnlyDictionary<FlatId, string> flatDisplayNamesById = await flatDisplayNames.ResolveManyAsync(
             result.Items.Select(p => p.RecipientFlatId).Distinct().ToList(), cancellationToken);

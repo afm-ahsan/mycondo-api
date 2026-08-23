@@ -12,11 +12,16 @@ public sealed class ServiceChargeRuleRepository(MyCondoDbContext db) : IServiceC
         db.Set<ServiceChargeRule>().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
 
     public async Task<PagedResult<ServiceChargeRule>> SearchAsync(
-        Guid tenantId, BuildingId buildingId, string? category, int page, int pageSize, CancellationToken cancellationToken)
+        Guid tenantId, BuildingId? buildingId, string? category, int page, int pageSize, CancellationToken cancellationToken)
     {
         IQueryable<ServiceChargeRule> query = db.Set<ServiceChargeRule>()
             .AsNoTracking()
-            .Where(r => r.TenantId == tenantId && r.BuildingId == buildingId);
+            .Where(r => r.TenantId == tenantId);
+
+        if (buildingId is not null)
+        {
+            query = query.Where(r => r.BuildingId == buildingId);
+        }
 
         if (!string.IsNullOrWhiteSpace(category))
         {

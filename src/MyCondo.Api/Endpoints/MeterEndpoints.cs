@@ -27,7 +27,7 @@ public static class MeterEndpoints
             .RequirePermission("utility.meter.manage")
             .Produces<MeterDto>(StatusCodes.Status200OK);
 
-        meters.MapGet("/", async (Guid buildingId, string? utilityType, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        meters.MapGet("/", async (Guid? buildingId, string? utilityType, int page, int pageSize, ISender sender, CancellationToken ct) =>
             {
                 PagedResult<MeterDto> result = await sender.Send(
                     new GetMetersQuery(buildingId, utilityType, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
