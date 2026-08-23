@@ -34,7 +34,7 @@ jobs:
         run: dotnet build MyCondo.slnx --no-restore --configuration Release
 
       - name: Install Playwright Chromium (server-side PDF export)
-        run: pwsh src/MyCondo.Infrastructure/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+        run: pwsh tests/MyCondo.Api.IntegrationTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
       - name: Test
         run: dotnet test MyCondo.slnx --no-build --configuration Release --logger "trx" --results-directory TestResults
