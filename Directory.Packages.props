@@ -77,6 +77,9 @@
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
   </ItemGroup>
+  <ItemGroup Label="Reports — server-side export (Playwright headless Chromium for PDF)">
+    <PackageVersion Include="Microsoft.Playwright" Version="1.62.0" />
+  </ItemGroup>
   <ItemGroup Label="Anticipated — added when modules need them">
     <!-- Background jobs (Notifications, Maintenance modules): -->
     <!-- <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.x" /> -->

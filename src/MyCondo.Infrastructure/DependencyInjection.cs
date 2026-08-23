@@ -86,6 +86,7 @@ using MyCondo.Infrastructure.Identity;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
 using MyCondo.Infrastructure.Persistence.Repositories;
+using MyCondo.Infrastructure.Reports;
 using MyCondo.Infrastructure.Storage;
 using MyCondo.Infrastructure.Time;
 using StackExchange.Redis;
@@ -120,6 +121,10 @@ public static class DependencyInjection
 
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddSingleton<IFileStorageService, LocalDiskFileStorageService>();
+        services.AddSingleton<CsvReportRenderer>();
+        services.AddSingleton<ReportHtmlTemplate>();
+        services.AddSingleton<PlaywrightPdfRenderer>();
+        services.AddSingleton<IReportExportService, ReportExportService>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IUserContextResolver, UserContextResolver>();
         services.AddScoped<IPlatformTokenService, PlatformJwtTokenService>();

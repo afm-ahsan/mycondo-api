@@ -1,5 +1,7 @@
 using Mediator;
 using MyCondo.Api.Authorization;
+using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportTrialBalance;
 using MyCondo.Application.Features.Finance.Reports.Queries.GetAccountLedger;
 using MyCondo.Application.Features.Finance.Reports.Queries.GetCashBankPositionReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.GetCashFlow;
@@ -50,6 +52,21 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<TrialBalanceReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/trial-balance/export", async (
+                DateOnly? asOfDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportTrialBalanceQuery(asOfDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/general-ledger", async (
                 DateOnly? fromDate, DateOnly? toDate, Guid? chartOfAccountId, Guid? fundId, string? referenceType,
