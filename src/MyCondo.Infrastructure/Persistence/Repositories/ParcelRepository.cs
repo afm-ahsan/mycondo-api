@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.Flats;
 using MyCondo.Domain.Features.Security.Parcels;
 
@@ -14,6 +15,7 @@ public sealed class ParcelRepository(MyCondoDbContext db) : IParcelRepository
         Guid tenantId,
         ParcelStatus? status,
         FlatId? recipientFlatId,
+        BuildingId? buildingId,
         int page,
         int pageSize,
         CancellationToken cancellationToken)
@@ -30,6 +32,15 @@ public sealed class ParcelRepository(MyCondoDbContext db) : IParcelRepository
         if (recipientFlatId is not null)
         {
             query = query.Where(p => p.RecipientFlatId == recipientFlatId);
+        }
+
+        if (buildingId is not null)
+        {
+            query =
+                from p in query
+                join f in db.Set<Flat>().AsNoTracking() on p.RecipientFlatId equals f.Id
+                where f.BuildingId == buildingId
+                select p;
         }
 
         long total = await query.LongCountAsync(cancellationToken);

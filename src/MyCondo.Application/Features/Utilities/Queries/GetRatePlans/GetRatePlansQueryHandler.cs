@@ -22,7 +22,7 @@ public sealed class GetRatePlansQueryHandler(
             throw new ForbiddenException("Authentication required.");
         }
 
-        BuildingId buildingId = new(query.BuildingId);
+        BuildingId? buildingId = query.BuildingId is Guid rawBuildingId ? new BuildingId(rawBuildingId) : null;
         UtilityType? utilityType = query.UtilityType is null ? null : Enum.Parse<UtilityType>(query.UtilityType);
 
         PagedResult<RatePlan> result = await ratePlans.SearchAsync(

@@ -23,7 +23,7 @@ public static class RatePlanEndpoints
             .RequirePermission("utility.rateplan.manage")
             .Produces<RatePlanDto>(StatusCodes.Status200OK);
 
-        ratePlans.MapGet("/", async (Guid buildingId, string? utilityType, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        ratePlans.MapGet("/", async (Guid? buildingId, string? utilityType, int page, int pageSize, ISender sender, CancellationToken ct) =>
             {
                 PagedResult<RatePlanDto> result = await sender.Send(
                     new GetRatePlansQuery(buildingId, utilityType, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);

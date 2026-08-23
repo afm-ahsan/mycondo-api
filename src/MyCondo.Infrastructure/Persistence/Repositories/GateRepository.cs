@@ -37,5 +37,23 @@ public sealed class GateRepository(MyCondoDbContext db) : IGateRepository
         return query.OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name).ToListAsync(cancellationToken);
     }
 
+    public Task<List<Gate>> GetAllForTenantAsync(
+        Guid tenantId, BuildingId? buildingId, bool activeOnly, CancellationToken cancellationToken)
+    {
+        IQueryable<Gate> query = db.Set<Gate>().Where(g => g.TenantId == tenantId);
+
+        if (buildingId is not null)
+        {
+            query = query.Where(g => g.BuildingId == buildingId);
+        }
+
+        if (activeOnly)
+        {
+            query = query.Where(g => g.IsActive);
+        }
+
+        return query.OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name).ToListAsync(cancellationToken);
+    }
+
     public void Add(Gate gate) => db.Set<Gate>().Add(gate);
 }

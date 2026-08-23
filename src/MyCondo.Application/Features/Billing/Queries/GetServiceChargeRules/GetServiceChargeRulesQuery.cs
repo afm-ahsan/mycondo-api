@@ -5,7 +5,7 @@ using MyCondo.Domain.Common;
 namespace MyCondo.Application.Features.Billing.Queries.GetServiceChargeRules;
 
 public sealed record GetServiceChargeRulesQuery(
-    Guid BuildingId,
+    Guid? BuildingId,
     string? Category,
     int Page,
     int PageSize

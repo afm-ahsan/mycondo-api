@@ -28,10 +28,10 @@ public static class ParcelEndpoints
             .RequirePermission("parcel.receive")
             .Produces<ParcelDto>(StatusCodes.Status200OK);
 
-        parcels.MapGet("/", async (string? status, Guid? recipientFlatId, int page, int pageSize, ISender sender, CancellationToken ct) =>
+        parcels.MapGet("/", async (string? status, Guid? recipientFlatId, Guid? buildingId, int page, int pageSize, ISender sender, CancellationToken ct) =>
             {
                 PagedResult<ParcelDto> result = await sender.Send(
-                    new GetParcelsForTenantQuery(status, recipientFlatId, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize), ct);
+                    new GetParcelsForTenantQuery(status, recipientFlatId, page < 1 ? 1 : page, pageSize < 1 ? 20 : pageSize, buildingId), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("parcel.view")

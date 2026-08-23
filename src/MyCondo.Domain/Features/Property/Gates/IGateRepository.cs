@@ -15,5 +15,9 @@ public interface IGateRepository
     Task<List<Gate>> GetAllForBuildingAsync(
         Guid tenantId, BuildingId buildingId, bool activeOnly, CancellationToken cancellationToken);
 
+    /// <summary>Tenant-wide gate directory — unlike <see cref="GetAllForBuildingAsync"/>, buildingId is optional.</summary>
+    Task<List<Gate>> GetAllForTenantAsync(
+        Guid tenantId, BuildingId? buildingId, bool activeOnly, CancellationToken cancellationToken);
+
     void Add(Gate gate);
 }

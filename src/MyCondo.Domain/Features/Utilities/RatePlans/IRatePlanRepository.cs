@@ -9,7 +9,7 @@ public interface IRatePlanRepository
     Task<RatePlan?> GetByIdAsync(RatePlanId id, CancellationToken cancellationToken);
 
     Task<PagedResult<RatePlan>> SearchAsync(
-        Guid tenantId, BuildingId buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken);
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken);
 
     /// <summary>The single rate plan (Metered or Fixed) covering the given period in full — see
     /// <see cref="RatePlan.AppliesToPeriod"/>.</summary>

@@ -8,5 +8,6 @@ public sealed record GetParcelsForTenantQuery(
     string? Status,
     Guid? RecipientFlatId,
     int Page,
-    int PageSize
+    int PageSize,
+    Guid? BuildingId = null
 ) : IRequest<PagedResult<ParcelDto>>;

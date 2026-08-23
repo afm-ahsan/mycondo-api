@@ -22,7 +22,7 @@ public sealed class GetServiceChargeRulesQueryHandler(
             throw new ForbiddenException("Authentication required.");
         }
 
-        BuildingId buildingId = new(query.BuildingId);
+        BuildingId? buildingId = query.BuildingId is Guid rawBuildingId ? new BuildingId(rawBuildingId) : null;
         PagedResult<ServiceChargeRule> result = await rules.SearchAsync(
             tenantId, buildingId, query.Category, query.Page, query.PageSize, cancellationToken);
 

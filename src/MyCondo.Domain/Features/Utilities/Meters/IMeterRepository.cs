@@ -12,7 +12,7 @@ public interface IMeterRepository
         Guid tenantId, UtilityType utilityType, string meterNumber, CancellationToken cancellationToken);
 
     Task<PagedResult<Meter>> SearchAsync(
-        Guid tenantId, BuildingId buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken);
+        Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken);
 
     /// <summary>Current-snapshot COUNT grouped by (UtilityType, Status), tenant-wide (optionally
     /// building-scoped) — unlike <see cref="SearchAsync"/>, buildingId is optional here.</summary>

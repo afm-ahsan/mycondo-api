@@ -22,6 +22,7 @@ using MyCondo.Application.Features.Property.Gates.Commands.DeactivateGate;
 using MyCondo.Application.Features.Property.Gates.Commands.UpdateGate;
 using MyCondo.Application.Features.Property.Gates.DTOs;
 using MyCondo.Application.Features.Property.Gates.Queries.GetGatesForBuilding;
+using MyCondo.Application.Features.Property.Gates.Queries.GetGatesForTenant;
 using MyCondo.Domain.Common;
 
 namespace MyCondo.Api.Endpoints;
@@ -91,6 +92,16 @@ public static class PropertyEndpoints
             })
             .RequirePermission("property.view")
             .Produces<PagedResult<FlatDto>>(StatusCodes.Status200OK);
+
+        RouteGroupBuilder gates = app.MapGroup("/api/v1/properties/gates").WithTags("Property");
+
+        gates.MapGet("/", async (Guid? buildingId, bool activeOnly, ISender sender, CancellationToken ct) =>
+            {
+                List<GateDto> result = await sender.Send(new GetGatesForTenantQuery(buildingId, activeOnly), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("gate.view")
+            .Produces<List<GateDto>>(StatusCodes.Status200OK);
 
         buildings.MapPost("/{buildingId:guid}/flats", async (Guid buildingId, CreateFlatRequest body, ISender sender, CancellationToken ct) =>
             {
