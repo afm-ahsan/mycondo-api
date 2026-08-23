@@ -3,15 +3,19 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Finance.Audit.DTOs;
 using MyCondo.Domain.Features.Finance.Audit;
+using MyCondo.Domain.Features.Identity.Users;
 
 namespace MyCondo.Application.Features.Finance.Audit.Queries.GetFinanceAuditLog;
 
 public sealed class GetFinanceAuditLogQueryHandler(
     IFinanceAuditLogRepository auditLog,
+    IUserRepository users,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetFinanceAuditLogQuery, List<FinanceAuditLogEntryDto>>
 {
     private const int MaxTake = 500;
+    private const string SystemActor = "System";
+    private const string UnknownActor = "Unknown user";
 
     public async ValueTask<List<FinanceAuditLogEntryDto>> Handle(GetFinanceAuditLogQuery query, CancellationToken cancellationToken)
     {
@@ -23,9 +27,21 @@ public sealed class GetFinanceAuditLogQueryHandler(
         int take = Math.Clamp(query.Take, 1, MaxTake);
         IReadOnlyList<FinanceAuditLogEntry> entries = await auditLog.GetRecentAsync(tenantId, take, cancellationToken);
 
+        List<UserId> actorIds = entries
+            .Where(e => e.ActorUserId is not null)
+            .Select(e => new UserId(e.ActorUserId!.Value))
+            .Distinct()
+            .ToList();
+        Dictionary<UserId, string> actorNamesById = (await users.GetByIdsAsync(tenantId, actorIds, cancellationToken))
+            .ToDictionary(u => u.Id, u => u.FullName);
+
         return entries
             .Select(e => new FinanceAuditLogEntryDto(
-                e.Id.Value, e.OccurredAtUtc, e.ActorUserId, e.Action, e.TargetType, e.TargetId, e.Metadata, e.CorrelationId))
+                e.Id.Value, e.OccurredAtUtc, e.ActorUserId,
+                e.ActorUserId is null
+                    ? SystemActor
+                    : actorNamesById.GetValueOrDefault(new UserId(e.ActorUserId.Value), UnknownActor),
+                e.Action, e.TargetType, e.TargetId, e.Metadata, e.CorrelationId))
             .ToList();
     }
 }

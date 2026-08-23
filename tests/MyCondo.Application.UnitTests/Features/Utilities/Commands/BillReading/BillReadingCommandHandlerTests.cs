@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Services;
 using MyCondo.Application.Features.Finance.Services;
@@ -43,6 +44,7 @@ public class BillReadingCommandHandlerTests
     private readonly IInvoiceSequenceRepository _sequences = Substitute.For<IInvoiceSequenceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
     private readonly IResponsiblePartyResolver _responsibleParties = Substitute.For<IResponsiblePartyResolver>();
+    private readonly IFlatDisplayNameResolver _flatDisplayNames = Substitute.For<IFlatDisplayNameResolver>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -55,6 +57,7 @@ public class BillReadingCommandHandlerTests
         _sequences.GetNextValueAsync(TenantId, BuildingId, Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(1);
         _buildings.GetByIdAsync(BuildingId, Arg.Any<CancellationToken>())
             .Returns(Building.Create(TenantId, "Aisha Tower", "AISHA", null, Now));
+        _flatDisplayNames.ResolveAsync(Arg.Any<FlatId>(), Arg.Any<CancellationToken>()).Returns("Test flat");
         StubFinancialPosting();
     }
 
@@ -76,7 +79,7 @@ public class BillReadingCommandHandlerTests
 
     private BillReadingCommandHandler CreateHandler() => new(
         _readings, _ratePlans, _buildings, _invoices, _sequences, _financialPosting, _responsibleParties,
-        _unitOfWork, _currentUser, _clock, Substitute.For<ILogger<BillReadingCommandHandler>>());
+        _flatDisplayNames, _unitOfWork, _currentUser, _clock, Substitute.For<ILogger<BillReadingCommandHandler>>());
 
     private static Reading FinalizedReading(decimal previous = 0m, decimal present = 50m)
     {

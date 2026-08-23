@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Domain.Features.Billing.Invoices;
@@ -9,6 +10,7 @@ namespace MyCondo.Application.Features.Billing.Queries.GetInvoiceById;
 
 public sealed class GetInvoiceByIdQueryHandler(
     IInvoiceRepository invoices,
+    IFlatDisplayNameResolver flatDisplayNames,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetInvoiceByIdQuery, InvoiceDetailDto>
 {
@@ -28,7 +30,8 @@ public sealed class GetInvoiceByIdQueryHandler(
         }
 
         IReadOnlyList<InvoiceLine> lines = await invoices.GetLinesForInvoiceAsync(id, cancellationToken);
+        string flatDisplayName = await flatDisplayNames.ResolveAsync(invoice.FlatId, cancellationToken);
 
-        return new InvoiceDetailDto(invoice.ToDto(), lines.Select(l => l.ToDto()).ToList());
+        return new InvoiceDetailDto(invoice.ToDto(flatDisplayName), lines.Select(l => l.ToDto()).ToList());
     }
 }

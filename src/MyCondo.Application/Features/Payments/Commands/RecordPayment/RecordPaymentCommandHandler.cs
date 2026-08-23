@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
@@ -32,6 +33,7 @@ public sealed class RecordPaymentCommandHandler(
     IInvoiceRepository invoices,
     IPaymentAllocationRepository paymentAllocations,
     IFinancialPostingService financialPosting,
+    IFlatDisplayNameResolver flatDisplayNames,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -101,7 +103,8 @@ public sealed class RecordPaymentCommandHandler(
             "Payment {PaymentId} of {Amount} recorded for flat {FlatId}, tenant {TenantId}, allocated across {InvoiceCount} invoice(s), {Advance} posted as resident advance",
             payment.Id, command.Amount, flatId, tenantId, allocations.Count, remaining);
 
-        return payment.ToDto(allocations.Select(a => (a.Item1, a.InvoiceNumber)).ToList());
+        string flatDisplayName = await flatDisplayNames.ResolveAsync(flatId, cancellationToken);
+        return payment.ToDto(flatDisplayName, allocations.Select(a => (a.Item1, a.InvoiceNumber)).ToList());
     }
 
     /// <summary>Applies the FIFO split against the flat's outstanding invoices (oldest due date

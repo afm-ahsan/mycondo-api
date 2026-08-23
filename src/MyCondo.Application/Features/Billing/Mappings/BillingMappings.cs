@@ -12,8 +12,8 @@ internal static class BillingMappings
         rule.Rate, rule.UnitTypeFilter?.ToString(), rule.Frequency.ToString(), rule.EffectiveFrom, rule.EffectiveTo,
         rule.IsActive);
 
-    public static InvoiceDto ToDto(this Invoice invoice) => new(
-        invoice.Id.Value, invoice.BuildingId.Value, invoice.FlatId.Value, invoice.InvoiceNumber,
+    public static InvoiceDto ToDto(this Invoice invoice, string flatDisplayName) => new(
+        invoice.Id.Value, invoice.BuildingId.Value, invoice.FlatId.Value, flatDisplayName, invoice.InvoiceNumber,
         invoice.Source.ToString(), invoice.PeriodStart, invoice.PeriodEnd, invoice.InvoiceDate, invoice.DueDate,
         invoice.SubtotalAmount, invoice.TotalAmount, invoice.AmountPaid, invoice.WaivedAmount, invoice.Balance,
         invoice.Status.ToString(), invoice.IssuedAtUtc, invoice.VoidedAtUtc, invoice.VoidedBy, invoice.VoidReason,

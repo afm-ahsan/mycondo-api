@@ -89,7 +89,8 @@ public sealed class GenerateInvoiceBatchCommandHandler(
             if (flatRules.Count == 0)
             {
                 skippedCount++;
-                skippedItems.Add(new BatchItemOutcomeDto(flat.Id.Value, "No applicable service charge rule for this flat's unit type"));
+                skippedItems.Add(new BatchItemOutcomeDto(
+                    flat.Id.Value, $"{building.Code} {flat.FlatNumber}", "No applicable service charge rule for this flat's unit type"));
                 continue;
             }
 
@@ -111,7 +112,8 @@ public sealed class GenerateInvoiceBatchCommandHandler(
             if (lineInputs.Count == 0)
             {
                 skippedCount++;
-                skippedItems.Add(new BatchItemOutcomeDto(flat.Id.Value, string.Join("; ", lineSkipReasons)));
+                skippedItems.Add(new BatchItemOutcomeDto(
+                    flat.Id.Value, $"{building.Code} {flat.FlatNumber}", string.Join("; ", lineSkipReasons)));
                 continue;
             }
 
@@ -172,7 +174,7 @@ public sealed class GenerateInvoiceBatchCommandHandler(
                 }
 
                 failedCount++;
-                failedItems.Add(new BatchItemOutcomeDto(flat.Id.Value, ex.Message));
+                failedItems.Add(new BatchItemOutcomeDto(flat.Id.Value, $"{building.Code} {flat.FlatNumber}", ex.Message));
 
                 logger.LogError(
                     ex, "Failed to generate invoice for flat {FlatId} in building {BuildingId}, tenant {TenantId}",

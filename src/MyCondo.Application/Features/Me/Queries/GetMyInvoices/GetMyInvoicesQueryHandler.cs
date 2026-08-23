@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Domain.Common;
@@ -20,6 +21,7 @@ namespace MyCondo.Application.Features.Me.Queries.GetMyInvoices;
 public sealed class GetMyInvoicesQueryHandler(
     IFlatAccessAuthorizer flatAccessAuthorizer,
     IInvoiceRepository invoices,
+    IFlatDisplayNameResolver flatDisplayNames,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetMyInvoicesQuery, List<InvoiceDto>>
 {
@@ -42,6 +44,9 @@ public sealed class GetMyInvoicesQueryHandler(
             .Distinct()
             .ToList();
 
+        IReadOnlyDictionary<FlatId, string> flatDisplayNamesById = await flatDisplayNames.ResolveManyAsync(
+            accessibleFlatIds.Select(id => new FlatId(id)).ToList(), cancellationToken);
+
         List<InvoiceDto> result = [];
         foreach (Guid flatId in accessibleFlatIds)
         {
@@ -49,7 +54,8 @@ public sealed class GetMyInvoicesQueryHandler(
                 tenantId, buildingId: null, new FlatId(flatId), status: null, source: null,
                 page: 1, pageSize: MaxInvoicesPerFlat, cancellationToken);
 
-            result.AddRange(page.Items.Select(i => i.ToDto()));
+            string flatDisplayName = flatDisplayNamesById.GetValueOrDefault(new FlatId(flatId), "Unknown flat");
+            result.AddRange(page.Items.Select(i => i.ToDto(flatDisplayName)));
         }
 
         return result;

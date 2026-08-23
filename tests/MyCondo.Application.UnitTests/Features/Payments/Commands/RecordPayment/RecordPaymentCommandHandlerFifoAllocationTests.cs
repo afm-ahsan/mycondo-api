@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.Commands.RecordPayment;
 using MyCondo.Application.Features.Payments.DTOs;
@@ -38,6 +39,7 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IPaymentAllocationRepository _allocations = Substitute.For<IPaymentAllocationRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
+    private readonly IFlatDisplayNameResolver _flatDisplayNames = Substitute.For<IFlatDisplayNameResolver>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -50,6 +52,7 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
             .Returns(ResidentAccount.Open(TenantId, FlatId, Now));
         _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
             .Returns(Substitute.For<IUnitOfWorkTransaction>());
+        _flatDisplayNames.ResolveAsync(Arg.Any<FlatId>(), Arg.Any<CancellationToken>()).Returns("Test flat");
         StubFinancialPosting();
     }
 
@@ -70,7 +73,7 @@ public class RecordPaymentCommandHandlerFifoAllocationTests
             });
 
     private RecordPaymentCommandHandler CreateHandler() => new(
-        _accounts, _payments, _invoices, _allocations, _financialPosting, _unitOfWork,
+        _accounts, _payments, _invoices, _allocations, _financialPosting, _flatDisplayNames, _unitOfWork,
         _currentUser, _clock, Substitute.For<ILogger<RecordPaymentCommandHandler>>());
 
     private static Invoice IssueInvoiceWithBalance(string invoiceNumber, decimal amount)
