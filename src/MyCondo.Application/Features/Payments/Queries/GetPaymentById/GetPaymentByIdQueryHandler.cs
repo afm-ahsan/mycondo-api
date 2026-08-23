@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Features.Billing.Invoices;
@@ -13,6 +14,7 @@ public sealed class GetPaymentByIdQueryHandler(
     IPaymentRepository payments,
     IPaymentAllocationRepository paymentAllocations,
     IInvoiceRepository invoices,
+    IFlatDisplayNameResolver flatDisplayNames,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetPaymentByIdQuery, PaymentDto>
 {
@@ -49,6 +51,7 @@ public sealed class GetPaymentByIdQueryHandler(
             allocationsWithInvoiceNumbers.Add((allocation, invoiceNumber));
         }
 
-        return payment.ToDto(allocationsWithInvoiceNumbers);
+        string flatDisplayName = await flatDisplayNames.ResolveAsync(payment.FlatId, cancellationToken);
+        return payment.ToDto(flatDisplayName, allocationsWithInvoiceNumbers);
     }
 }

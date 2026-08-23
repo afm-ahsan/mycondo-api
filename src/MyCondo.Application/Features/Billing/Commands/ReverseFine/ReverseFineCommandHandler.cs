@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Application.Features.Finance.Services;
@@ -26,6 +27,7 @@ public sealed class ReverseFineCommandHandler(
     IInvoiceRepository invoices,
     IFinancialPostingService financialPosting,
     IFinanceAuditLogRepository auditLog,
+    IFlatDisplayNameResolver flatDisplayNames,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -73,6 +75,7 @@ public sealed class ReverseFineCommandHandler(
             "Fine {InvoiceId} reversed for tenant {TenantId}, reversal posting {PostingId}",
             id, tenantId, reversal.Posting.Id);
 
-        return invoice.ToDto();
+        string flatDisplayName = await flatDisplayNames.ResolveAsync(invoice.FlatId, cancellationToken);
+        return invoice.ToDto(flatDisplayName);
     }
 }

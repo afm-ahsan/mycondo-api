@@ -1,6 +1,6 @@
 namespace MyCondo.Application.Features.Billing.DTOs;
 
-public sealed record BatchItemOutcomeDto(Guid FlatId, string Reason);
+public sealed record BatchItemOutcomeDto(Guid FlatId, string FlatDisplayName, string Reason);
 
 public sealed record GenerateInvoiceBatchResultDto(
     int RequestedCount,

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Application.Features.Billing.Services;
@@ -31,6 +32,7 @@ public sealed class BillReadingCommandHandler(
     IInvoiceSequenceRepository sequences,
     IFinancialPostingService financialPosting,
     IResponsiblePartyResolver responsibleParties,
+    IFlatDisplayNameResolver flatDisplayNames,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -111,6 +113,7 @@ public sealed class BillReadingCommandHandler(
             "Reading {ReadingId} billed as invoice {InvoiceId} ('{InvoiceNumber}'), tenant {TenantId}",
             readingId, invoice.Id, invoiceNumber, tenantId);
 
-        return invoice.ToDto();
+        string flatDisplayName = await flatDisplayNames.ResolveAsync(reading.FlatId, cancellationToken);
+        return invoice.ToDto(flatDisplayName);
     }
 }

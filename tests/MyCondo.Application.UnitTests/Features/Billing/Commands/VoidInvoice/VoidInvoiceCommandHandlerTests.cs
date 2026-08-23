@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.Commands.VoidInvoice;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Finance.Services;
@@ -37,6 +38,7 @@ public class VoidInvoiceCommandHandlerTests
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
     private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
+    private readonly IFlatDisplayNameResolver _flatDisplayNames = Substitute.For<IFlatDisplayNameResolver>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -46,6 +48,7 @@ public class VoidInvoiceCommandHandlerTests
         _currentUser.TenantId.Returns(TenantId);
         _currentUser.UserId.Returns(Guid.NewGuid());
         _clock.UtcNow.Returns(Now);
+        _flatDisplayNames.ResolveAsync(Arg.Any<FlatId>(), Arg.Any<CancellationToken>()).Returns("Test flat");
         StubFinancialPosting();
     }
 
@@ -67,7 +70,7 @@ public class VoidInvoiceCommandHandlerTests
             });
 
     private VoidInvoiceCommandHandler CreateHandler() => new(
-        _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
+        _invoices, _financialPosting, _auditLog, _flatDisplayNames, _unitOfWork, _currentUser, _clock,
         Substitute.For<ILogger<VoidInvoiceCommandHandler>>());
 
     private static Invoice UnpaidInvoice(decimal amount = 1800m)

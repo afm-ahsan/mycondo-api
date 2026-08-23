@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Application.Features.Finance.Services;
@@ -28,6 +29,7 @@ public sealed class WaiveFineCommandHandler(
     IInvoiceRepository invoices,
     IFinancialPostingService financialPosting,
     IFinanceAuditLogRepository auditLog,
+    IFlatDisplayNameResolver flatDisplayNames,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IClock clock,
@@ -77,6 +79,7 @@ public sealed class WaiveFineCommandHandler(
             "Fine {InvoiceId} waived {Amount} for tenant {TenantId}, waiver posting {PostingId}",
             id, command.Amount, tenantId, waived.Posting.Id);
 
-        return invoice.ToDto();
+        string flatDisplayName = await flatDisplayNames.ResolveAsync(invoice.FlatId, cancellationToken);
+        return invoice.ToDto(flatDisplayName);
     }
 }

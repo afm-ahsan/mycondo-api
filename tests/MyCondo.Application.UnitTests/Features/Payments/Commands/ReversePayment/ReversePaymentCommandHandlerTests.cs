@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Finance.Services;
 using MyCondo.Application.Features.Payments.Commands.ReversePayment;
 using MyCondo.Application.Features.Payments.DTOs;
@@ -37,6 +38,7 @@ public class ReversePaymentCommandHandlerTests
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IFinancialPostingService _financialPosting = Substitute.For<IFinancialPostingService>();
     private readonly IFinanceAuditLogRepository _auditLog = Substitute.For<IFinanceAuditLogRepository>();
+    private readonly IFlatDisplayNameResolver _flatDisplayNames = Substitute.For<IFlatDisplayNameResolver>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
@@ -46,6 +48,7 @@ public class ReversePaymentCommandHandlerTests
         _currentUser.TenantId.Returns(TenantId);
         _clock.UtcNow.Returns(Now);
         _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>()).Returns(Substitute.For<IUnitOfWorkTransaction>());
+        _flatDisplayNames.ResolveAsync(Arg.Any<FlatId>(), Arg.Any<CancellationToken>()).Returns("Test flat");
         StubFinancialPosting();
     }
 
@@ -66,8 +69,8 @@ public class ReversePaymentCommandHandlerTests
             });
 
     private ReversePaymentCommandHandler CreateHandler() => new(
-        _payments, _paymentAllocations, _invoices, _financialPosting, _auditLog, _unitOfWork, _currentUser, _clock,
-        Substitute.For<ILogger<ReversePaymentCommandHandler>>());
+        _payments, _paymentAllocations, _invoices, _financialPosting, _auditLog, _flatDisplayNames, _unitOfWork,
+        _currentUser, _clock, Substitute.For<ILogger<ReversePaymentCommandHandler>>());
 
     private static Invoice IssuedInvoice(string invoiceNumber, decimal totalAmount)
     {

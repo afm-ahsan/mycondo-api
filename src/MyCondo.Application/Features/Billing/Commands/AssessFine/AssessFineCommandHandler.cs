@@ -93,6 +93,6 @@ public sealed class AssessFineCommandHandler(
             "Fine {InvoiceId} ('{InvoiceNumber}') assessed for flat {FlatId}, amount {Amount}, tenant {TenantId}",
             invoice.Id, invoiceNumber, flatId, command.Amount, tenantId);
 
-        return invoice.ToDto();
+        return invoice.ToDto($"{building.Code} {flat.FlatNumber}");
     }
 }

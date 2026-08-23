@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Application.Features.Billing.Mappings;
 using MyCondo.Domain.Common;
@@ -12,6 +13,7 @@ namespace MyCondo.Application.Features.Billing.Queries.GetInvoices;
 
 public sealed class GetInvoicesQueryHandler(
     IInvoiceRepository invoices,
+    IFlatDisplayNameResolver flatDisplayNames,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetInvoicesQuery, PagedResult<InvoiceDto>>
 {
@@ -30,7 +32,12 @@ public sealed class GetInvoicesQueryHandler(
         PagedResult<Invoice> result = await invoices.SearchAsync(
             tenantId, buildingId, flatId, status, source, query.Page, query.PageSize, cancellationToken);
 
-        List<InvoiceDto> items = result.Items.Select(i => i.ToDto()).ToList();
+        IReadOnlyDictionary<FlatId, string> flatDisplayNamesById = await flatDisplayNames.ResolveManyAsync(
+            result.Items.Select(i => i.FlatId).Distinct().ToList(), cancellationToken);
+
+        List<InvoiceDto> items = result.Items
+            .Select(i => i.ToDto(flatDisplayNamesById.GetValueOrDefault(i.FlatId, "Unknown flat")))
+            .ToList();
 
         return new PagedResult<InvoiceDto>(items, result.Page, result.PageSize, result.Total);
     }

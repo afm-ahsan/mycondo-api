@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
+using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Application.Features.Payments.Mappings;
 using MyCondo.Domain.Common;
@@ -14,6 +15,7 @@ namespace MyCondo.Application.Features.Payments.Queries.GetPayments;
 /// breakdown of one payment.</summary>
 public sealed class GetPaymentsQueryHandler(
     IPaymentRepository payments,
+    IFlatDisplayNameResolver flatDisplayNames,
     ICurrentUserProvider currentUser
 ) : IRequestHandler<GetPaymentsQuery, PagedResult<PaymentDto>>
 {
@@ -31,7 +33,12 @@ public sealed class GetPaymentsQueryHandler(
         PagedResult<Payment> result = await payments.SearchAsync(
             tenantId, flatId, status, paymentMethod, query.FromDate, query.ToDate, query.Page, query.PageSize, cancellationToken);
 
-        List<PaymentDto> items = result.Items.Select(p => p.ToDto()).ToList();
+        IReadOnlyDictionary<FlatId, string> flatDisplayNamesById = await flatDisplayNames.ResolveManyAsync(
+            result.Items.Select(p => p.FlatId).Distinct().ToList(), cancellationToken);
+
+        List<PaymentDto> items = result.Items
+            .Select(p => p.ToDto(flatDisplayNamesById.GetValueOrDefault(p.FlatId, "Unknown flat")))
+            .ToList();
 
         return new PagedResult<PaymentDto>(items, result.Page, result.PageSize, result.Total);
     }

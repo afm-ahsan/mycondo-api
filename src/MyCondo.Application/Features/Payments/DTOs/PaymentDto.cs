@@ -3,6 +3,7 @@ namespace MyCondo.Application.Features.Payments.DTOs;
 public sealed record PaymentDto(
     Guid PaymentId,
     Guid FlatId,
+    string FlatDisplayName,
     decimal Amount,
     string PaymentMethod,
     string? ReferenceNumber,

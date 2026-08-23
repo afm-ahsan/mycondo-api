@@ -27,8 +27,9 @@ internal static class PaymentsMappings
     /// reversal), so no extra query is needed here.</summary>
     public static PaymentDto ToDto(
         this Payment payment,
+        string flatDisplayName,
         IReadOnlyList<(PaymentAllocation Allocation, string InvoiceNumber)>? allocations = null) => new(
-        payment.Id.Value, payment.FlatId.Value, payment.Amount, payment.PaymentMethod.ToString(),
+        payment.Id.Value, payment.FlatId.Value, flatDisplayName, payment.Amount, payment.PaymentMethod.ToString(),
         payment.ReferenceNumber, payment.BusinessDate, payment.ReceivedBy, payment.Status.ToString(),
         payment.LedgerPostingId.Value, payment.ReversedAtUtc, payment.ReversedBy, payment.ReversalReason,
         (allocations ?? []).Select(a => a.Allocation.ToDto(a.InvoiceNumber)).ToList());

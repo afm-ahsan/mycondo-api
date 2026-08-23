@@ -4,6 +4,7 @@ public sealed record FinanceAuditLogEntryDto(
     Guid FinanceAuditLogEntryId,
     DateTimeOffset OccurredAtUtc,
     Guid? ActorUserId,
+    string ActorDisplayName,
     string Action,
     string? TargetType,
     string? TargetId,
