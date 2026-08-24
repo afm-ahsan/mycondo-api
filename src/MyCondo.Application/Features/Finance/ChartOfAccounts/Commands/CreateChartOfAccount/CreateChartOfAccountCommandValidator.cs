@@ -14,5 +14,8 @@ public sealed class CreateChartOfAccountCommandValidator : AbstractValidator<Cre
             .WithMessage($"Category must be one of: {string.Join(", ", Enum.GetNames<AccountCategory>())}.");
         RuleFor(x => x.NormalBalance).NotEmpty().Must(d => Enum.TryParse<LedgerDirection>(d, out _))
             .WithMessage($"NormalBalance must be one of: {string.Join(", ", Enum.GetNames<LedgerDirection>())}.");
+        RuleFor(x => x.StatementGroup)
+            .Must(g => g is null || Enum.TryParse<FinancialStatementGroup>(g, out _))
+            .WithMessage($"StatementGroup must be one of: {string.Join(", ", Enum.GetNames<FinancialStatementGroup>())}.");
     }
 }

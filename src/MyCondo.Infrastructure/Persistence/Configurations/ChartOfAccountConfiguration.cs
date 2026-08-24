@@ -22,6 +22,7 @@ public sealed class ChartOfAccountConfiguration : IEntityTypeConfiguration<Chart
         builder.Property(x => x.NormalBalance).HasConversion<string>().HasMaxLength(10).IsRequired();
         builder.Property(x => x.IsSystemAccount).IsRequired();
         builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.StatementGroup).HasConversion<string>().HasMaxLength(40);
 
         builder.Property(x => x.ParentAccountId)
             .HasConversion(
@@ -38,5 +39,6 @@ public sealed class ChartOfAccountConfiguration : IEntityTypeConfiguration<Chart
             .HasDatabaseName("ux_chart_of_accounts_tenant_id_code");
 
         builder.Ignore(x => x.DomainEvents);
+        builder.Ignore(x => x.EffectiveStatementGroup);
     }
 }

@@ -8,5 +8,6 @@ public sealed record CreateChartOfAccountCommand(
     string Name,
     string Category,
     string NormalBalance,
-    Guid? ParentAccountId
+    Guid? ParentAccountId,
+    string? StatementGroup = null
 ) : IRequest<ChartOfAccountDto>;

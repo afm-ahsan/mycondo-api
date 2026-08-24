@@ -23,6 +23,17 @@ public sealed class ChartOfAccount : AggregateRoot<ChartOfAccountId>, ITenantSco
     public bool IsSystemAccount { get; private set; }
     public bool IsActive { get; private set; }
 
+    /// <summary>Explicit Financial Statements (Phase 2A) reporting classification, when assigned —
+    /// null for a custom tenant account that hasn't been classified. Use
+    /// <see cref="EffectiveStatementGroup"/> for reporting; it never returns null.</summary>
+    public FinancialStatementGroup? StatementGroup { get; private set; }
+
+    /// <summary><see cref="StatementGroup"/> if explicitly assigned, otherwise the category's default
+    /// "Other ..." bucket — guarantees this account is always included in a Financial Statement (Phase
+    /// 2A plan §8/§15: unmapped accounts must never silently disappear).</summary>
+    public FinancialStatementGroup EffectiveStatementGroup =>
+        StatementGroup ?? FinancialStatementGroupCategories.DefaultFor(Category);
+
     public DateTimeOffset CreatedAtUtc { get; set; }
     public Guid? CreatedBy { get; set; }
     public DateTimeOffset? UpdatedAtUtc { get; set; }
@@ -36,7 +47,8 @@ public sealed class ChartOfAccount : AggregateRoot<ChartOfAccountId>, ITenantSco
 
     private ChartOfAccount(
         ChartOfAccountId id, Guid tenantId, string code, string name, AccountCategory category,
-        LedgerDirection normalBalance, ChartOfAccountId? parentAccountId, bool isSystemAccount) : base(id)
+        LedgerDirection normalBalance, ChartOfAccountId? parentAccountId, bool isSystemAccount,
+        FinancialStatementGroup? statementGroup) : base(id)
     {
         TenantId = tenantId;
         Code = code;
@@ -46,11 +58,13 @@ public sealed class ChartOfAccount : AggregateRoot<ChartOfAccountId>, ITenantSco
         ParentAccountId = parentAccountId;
         IsSystemAccount = isSystemAccount;
         IsActive = true;
+        StatementGroup = statementGroup;
     }
 
     public static ChartOfAccount Create(
         Guid tenantId, string code, string name, AccountCategory category, LedgerDirection normalBalance,
-        ChartOfAccountId? parentAccountId = null, bool isSystemAccount = false)
+        ChartOfAccountId? parentAccountId = null, bool isSystemAccount = false,
+        FinancialStatementGroup? statementGroup = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -59,9 +73,27 @@ public sealed class ChartOfAccount : AggregateRoot<ChartOfAccountId>, ITenantSco
             throw new ArgumentException("TenantId is required.", nameof(tenantId));
         }
 
+        if (statementGroup is FinancialStatementGroup group && !FinancialStatementGroupCategories.IsValidFor(group, category))
+        {
+            throw new StatementGroupCategoryMismatchException(category, group);
+        }
+
         return new ChartOfAccount(
             ChartOfAccountId.New(), tenantId, code.Trim(), name.Trim(), category, normalBalance,
-            parentAccountId, isSystemAccount);
+            parentAccountId, isSystemAccount, statementGroup);
+    }
+
+    /// <summary>Assigns or clears this account's explicit Financial Statements classification. Allowed
+    /// on system accounts too — reclassification is a reporting concern, not a posting-integrity one, so
+    /// it is not gated by <see cref="SystemAccountCannotBeModifiedException"/>.</summary>
+    public void Reclassify(FinancialStatementGroup? statementGroup)
+    {
+        if (statementGroup is FinancialStatementGroup group && !FinancialStatementGroupCategories.IsValidFor(group, Category))
+        {
+            throw new StatementGroupCategoryMismatchException(Category, group);
+        }
+
+        StatementGroup = statementGroup;
     }
 
     public void Deactivate()

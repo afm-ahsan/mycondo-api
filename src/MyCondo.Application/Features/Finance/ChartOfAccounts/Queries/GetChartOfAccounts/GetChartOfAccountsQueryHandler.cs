@@ -23,7 +23,8 @@ public sealed class GetChartOfAccountsQueryHandler(
         return accounts
             .Select(a => new ChartOfAccountDto(
                 a.Id.Value, a.Code, a.Name, a.Category.ToString(), a.NormalBalance.ToString(),
-                a.ParentAccountId?.Value, a.IsSystemAccount, a.IsActive))
+                a.ParentAccountId?.Value, a.IsSystemAccount, a.IsActive,
+                a.StatementGroup?.ToString(), a.EffectiveStatementGroup.ToString()))
             .ToList();
     }
 }

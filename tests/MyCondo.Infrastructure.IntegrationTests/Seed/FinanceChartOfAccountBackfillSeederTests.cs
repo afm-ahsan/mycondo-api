@@ -111,13 +111,18 @@ public class FinanceChartOfAccountBackfillSeederTests
         (IServiceScopeFactory scopeFactory, _) = BuildScopeFactory([tenant]);
 
         (ITenantScopedUnitOfWork uow, IChartOfAccountRepository chartOfAccounts, IAccountMappingRepository accountMappings) = BuildTenantUow();
-        // Simulate "already fully seeded": every system account code already exists, so
-        // FinanceChartOfAccountSeeder's ExistsForCodeAsync/GetByRoleAsync checks find everything present.
-        chartOfAccounts.ExistsForCodeAsync(tenant.Id.Value, Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        string[] codes = ["1000", "1100", "2100", "2200", "3900", "4000", "4010", "4020", "4030", "4900"];
+        // Simulate "already fully seeded": every one of FinanceChartOfAccountSeeder's 16 system account
+        // codes already exists (and is already correctly classified), so GetAllForTenantAsync/
+        // GetByRoleAsync find everything present and neither Add path is exercised.
+        string[] codes =
+        [
+            "1000", "1100", "2100", "2200", "3900", "4000", "4010", "4020", "4030", "4900",
+            "2300", "5000", "1200", "1300", "4040", "5100",
+        ];
         List<ChartOfAccount> allAccounts = codes
             .Select(code => ChartOfAccount.Create(
-                tenant.Id.Value, code, code, AccountCategory.Asset, LedgerDirectionForCode(code), null, isSystemAccount: true))
+                tenant.Id.Value, code, code, CategoryForCode(code), LedgerDirectionForCode(code), null,
+                isSystemAccount: true, statementGroup: StatementGroupForCode(code)))
             .ToList();
         chartOfAccounts.GetAllForTenantAsync(tenant.Id.Value, Arg.Any<CancellationToken>()).Returns(allAccounts);
         foreach (ChartOfAccount account in allAccounts)
@@ -136,7 +141,79 @@ public class FinanceChartOfAccountBackfillSeederTests
         accountMappings.DidNotReceive().Add(Arg.Any<AccountMapping>());
     }
 
+    [Fact]
+    public async Task Reclassifies_A_Pre_Existing_System_Account_With_No_Explicit_StatementGroup()
+    {
+        // A tenant seeded before the Financial Statements classification (Phase 2A Task 1) existed has
+        // every system account present but StatementGroup left null — the backfill must classify it
+        // in place rather than leaving it to fall back on Category's generic default forever.
+        Tenant tenant = Tenant.Provision("Tenant A", "tenant-a", Now);
+        (IServiceScopeFactory scopeFactory, _) = BuildScopeFactory([tenant]);
+
+        (ITenantScopedUnitOfWork uow, IChartOfAccountRepository chartOfAccounts, IAccountMappingRepository accountMappings) = BuildTenantUow();
+        string[] codes =
+        [
+            "1000", "1100", "2100", "2200", "3900", "4000", "4010", "4020", "4030", "4900",
+            "2300", "5000", "1200", "1300", "4040", "5100",
+        ];
+        List<ChartOfAccount> allAccounts = codes
+            .Select(code => ChartOfAccount.Create(
+                tenant.Id.Value, code, code, CategoryForCode(code), LedgerDirectionForCode(code), null,
+                isSystemAccount: true, statementGroup: null))
+            .ToList();
+        chartOfAccounts.GetAllForTenantAsync(tenant.Id.Value, Arg.Any<CancellationToken>()).Returns(allAccounts);
+        foreach (ChartOfAccount account in allAccounts)
+        {
+            accountMappings.GetByRoleAsync(tenant.Id.Value, Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(AccountMapping.Create(tenant.Id.Value, "AnyRole", account.Id));
+        }
+
+        ITenantScopedUnitOfWorkFactory tenantUowFactory = Substitute.For<ITenantScopedUnitOfWorkFactory>();
+        tenantUowFactory.Create(tenant.Id.Value).Returns(uow);
+
+        FinanceChartOfAccountBackfillSeeder seeder = new(scopeFactory, tenantUowFactory, NullLoggerFactory.Instance);
+        await seeder.SeedAsync(CancellationToken.None);
+
+        chartOfAccounts.DidNotReceive().Add(Arg.Any<ChartOfAccount>());
+        accountMappings.DidNotReceive().Add(Arg.Any<AccountMapping>());
+        allAccounts.Should().OnlyContain(a => a.StatementGroup == StatementGroupForCode(a.Code));
+        await uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    // The following three helpers mirror FinanceChartOfAccountSeeder.SystemAccounts exactly, so the
+    // fixture's Category/StatementGroup pairing is always valid per FinancialStatementGroupCategories —
+    // real seeded data never has a mismatched pairing, only an inaccurate test fixture could fake one.
     private static MyCondo.Domain.Features.Payments.Ledger.LedgerDirection LedgerDirectionForCode(string code) =>
-        code is "1000" or "1100" ? MyCondo.Domain.Features.Payments.Ledger.LedgerDirection.Debit
-        : MyCondo.Domain.Features.Payments.Ledger.LedgerDirection.Credit;
+        code is "1000" or "1100" or "3900" or "5000" or "1200" or "1300" or "4900" or "5100"
+            ? MyCondo.Domain.Features.Payments.Ledger.LedgerDirection.Debit
+            : MyCondo.Domain.Features.Payments.Ledger.LedgerDirection.Credit;
+
+    private static AccountCategory CategoryForCode(string code) => code switch
+    {
+        "1000" or "1100" or "1200" or "1300" => AccountCategory.Asset,
+        "2100" or "2200" or "2300" => AccountCategory.Liability,
+        "3900" => AccountCategory.Equity,
+        "5000" or "5100" => AccountCategory.Expense,
+        _ => AccountCategory.Income,
+    };
+
+    private static FinancialStatementGroup StatementGroupForCode(string code) => code switch
+    {
+        "1000" => FinancialStatementGroup.CashAndBank,
+        "1100" => FinancialStatementGroup.Receivables,
+        "1200" => FinancialStatementGroup.InvestmentsAndFixedDeposits,
+        "1300" => FinancialStatementGroup.AccruedInterestReceivable,
+        "2100" => FinancialStatementGroup.OtherLiabilities,
+        "2200" => FinancialStatementGroup.ResidentAdvances,
+        "2300" => FinancialStatementGroup.AccountsPayable,
+        "3900" => FinancialStatementGroup.AccumulatedSurplus,
+        "4000" or "4900" => FinancialStatementGroup.OtherIncome,
+        "4010" => FinancialStatementGroup.ServiceChargeIncome,
+        "4020" => FinancialStatementGroup.UtilityGasIncome,
+        "4030" => FinancialStatementGroup.FineIncome,
+        "4040" => FinancialStatementGroup.InterestIncome,
+        "5000" => FinancialStatementGroup.OperatingExpenses,
+        "5100" => FinancialStatementGroup.InterestExpense,
+        _ => throw new ArgumentOutOfRangeException(nameof(code)),
+    };
 }

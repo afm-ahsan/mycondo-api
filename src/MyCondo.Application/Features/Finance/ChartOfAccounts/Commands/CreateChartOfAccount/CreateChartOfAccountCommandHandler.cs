@@ -32,9 +32,13 @@ public sealed class CreateChartOfAccountCommandHandler(
         AccountCategory category = Enum.Parse<AccountCategory>(command.Category);
         LedgerDirection normalBalance = Enum.Parse<LedgerDirection>(command.NormalBalance);
         ChartOfAccountId? parentAccountId = command.ParentAccountId is Guid parentId ? new ChartOfAccountId(parentId) : null;
+        FinancialStatementGroup? statementGroup = command.StatementGroup is string sg
+            ? Enum.Parse<FinancialStatementGroup>(sg)
+            : null;
 
         ChartOfAccount account = ChartOfAccount.Create(
-            tenantId, code, command.Name, category, normalBalance, parentAccountId, isSystemAccount: false);
+            tenantId, code, command.Name, category, normalBalance, parentAccountId, isSystemAccount: false,
+            statementGroup: statementGroup);
 
         chartOfAccounts.Add(account);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -43,6 +47,7 @@ public sealed class CreateChartOfAccountCommandHandler(
 
         return new ChartOfAccountDto(
             account.Id.Value, account.Code, account.Name, account.Category.ToString(), account.NormalBalance.ToString(),
-            account.ParentAccountId?.Value, account.IsSystemAccount, account.IsActive);
+            account.ParentAccountId?.Value, account.IsSystemAccount, account.IsActive,
+            account.StatementGroup?.ToString(), account.EffectiveStatementGroup.ToString());
     }
 }
