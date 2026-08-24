@@ -86,6 +86,24 @@ public sealed record MonthlyAccountActivityLine(
     decimal TotalDebit,
     decimal TotalCredit);
 
+/// <summary>One account's raw debit/credit activity for the Financial Statements (Phase 2A) reporting
+/// foundation — same derive-don't-store aggregation as <see cref="TrialBalanceAccountLine"/>, plus the
+/// account's Task 1 statement-group classification so callers can roll accounts up into
+/// <see cref="FinancialStatementGroup"/> buckets without a second round-trip.
+/// <see cref="StatementGroup"/> is the account's explicit assignment (null = not yet classified —
+/// callers must treat this as an unmapped-classification warning even though
+/// <see cref="EffectiveStatementGroup"/> already provides a safe fallback, per Task 1).</summary>
+public sealed record StatementAccountActivityLine(
+    ChartOfAccountId ChartOfAccountId,
+    string Code,
+    string Name,
+    AccountCategory Category,
+    LedgerDirection NormalBalance,
+    FinancialStatementGroup? StatementGroup,
+    FinancialStatementGroup EffectiveStatementGroup,
+    decimal TotalDebit,
+    decimal TotalCredit);
+
 public interface IFinanceReportRepository
 {
     /// <summary>Every account with at least one posted entry on or before <paramref name="asOfDate"/>,
@@ -149,4 +167,20 @@ public interface IFinanceReportRepository
     /// <see cref="MonthlyAccountActivityLine"/>.</summary>
     Task<IReadOnlyList<MonthlyAccountActivityLine>> GetAccountMonthlyActivityAsync(
         Guid tenantId, Guid chartOfAccountId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken);
+
+    /// <summary>Every account with at least one posted entry on or before <paramref name="asOfDate"/>,
+    /// optionally restricted to entries tagged with <paramref name="fundId"/> — the Financial
+    /// Statements (Phase 2A) as-of-date foundation query (Statement of Financial Position). Same
+    /// cumulative aggregation as <see cref="GetTrialBalanceAsync"/>, across every category, plus fund
+    /// scoping and Task 1 statement-group classification on each line.</summary>
+    Task<IReadOnlyList<StatementAccountActivityLine>> GetStatementBalancesAsOfAsync(
+        Guid tenantId, DateOnly asOfDate, Guid? fundId, CancellationToken cancellationToken);
+
+    /// <summary>Every account with posted activity within [<paramref name="fromDate"/>,
+    /// <paramref name="toDate"/>] inclusive, optionally restricted to entries tagged with
+    /// <paramref name="fundId"/> — the Financial Statements (Phase 2A) period foundation query (Income
+    /// &amp; Expenditure). Same period aggregation as <see cref="GetCategoryActivityAsync"/> but not
+    /// restricted to a single category, plus fund scoping and statement-group classification.</summary>
+    Task<IReadOnlyList<StatementAccountActivityLine>> GetStatementActivityForPeriodAsync(
+        Guid tenantId, DateOnly fromDate, DateOnly toDate, Guid? fundId, CancellationToken cancellationToken);
 }

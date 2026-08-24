@@ -349,4 +349,71 @@ public sealed class FinanceReportRepository(MyCondoDbContext db) : IFinanceRepor
             .OrderBy(l => l.Year).ThenBy(l => l.Month)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<StatementAccountActivityLine>> GetStatementBalancesAsOfAsync(
+        Guid tenantId, DateOnly asOfDate, Guid? fundId, CancellationToken cancellationToken)
+    {
+        IQueryable<LedgerEntry> query = db.Set<LedgerEntry>()
+            .Where(e => e.TenantId == tenantId && e.BusinessDate <= asOfDate && e.ChartOfAccountId != null);
+
+        if (fundId is Guid fund)
+        {
+            FundId typedFundId = new(fund);
+            query = query.Where(e => e.FundId == typedFundId);
+        }
+
+        return await ProjectStatementActivityAsync(query, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<StatementAccountActivityLine>> GetStatementActivityForPeriodAsync(
+        Guid tenantId, DateOnly fromDate, DateOnly toDate, Guid? fundId, CancellationToken cancellationToken)
+    {
+        IQueryable<LedgerEntry> query = db.Set<LedgerEntry>()
+            .Where(e => e.TenantId == tenantId && e.ChartOfAccountId != null
+                && e.BusinessDate >= fromDate && e.BusinessDate <= toDate);
+
+        if (fundId is Guid fund)
+        {
+            FundId typedFundId = new(fund);
+            query = query.Where(e => e.FundId == typedFundId);
+        }
+
+        return await ProjectStatementActivityAsync(query, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<StatementAccountActivityLine>> ProjectStatementActivityAsync(
+        IQueryable<LedgerEntry> query, CancellationToken cancellationToken)
+    {
+        var grouped = await query
+            .GroupBy(e => e.ChartOfAccountId!.Value)
+            .Select(g => new
+            {
+                ChartOfAccountId = g.Key,
+                TotalDebit = g.Where(e => e.Direction == LedgerDirection.Debit).Sum(e => e.Amount),
+                TotalCredit = g.Where(e => e.Direction == LedgerDirection.Credit).Sum(e => e.Amount),
+            })
+            .ToListAsync(cancellationToken);
+
+        if (grouped.Count == 0)
+        {
+            return [];
+        }
+
+        List<ChartOfAccountId> accountIds = grouped.Select(g => g.ChartOfAccountId).ToList();
+        Dictionary<ChartOfAccountId, ChartOfAccount> accounts = await db.Set<ChartOfAccount>()
+            .Where(a => accountIds.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id, cancellationToken);
+
+        return grouped
+            .Where(g => accounts.ContainsKey(g.ChartOfAccountId))
+            .Select(g =>
+            {
+                ChartOfAccount account = accounts[g.ChartOfAccountId];
+                return new StatementAccountActivityLine(
+                    account.Id, account.Code, account.Name, account.Category, account.NormalBalance,
+                    account.StatementGroup, account.EffectiveStatementGroup, g.TotalDebit, g.TotalCredit);
+            })
+            .OrderBy(l => l.Code)
+            .ToList();
+    }
 }
