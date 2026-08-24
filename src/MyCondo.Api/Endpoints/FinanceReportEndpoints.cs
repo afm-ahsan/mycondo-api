@@ -1,6 +1,26 @@
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportAccountLedger;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportCashBankPositionReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportCashFlow;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseByCategoryReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseByTypeReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseSummaryReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseTrendReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportFineReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportFinancialOverview;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportFinancialPosition;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportFixedDepositInterestReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportFixedDepositPortfolioReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportFlatFinancialStatement;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportFundPosition;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportGasCollectionReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportGeneralLedger;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportIncomeExpenseReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportOutstandingDuesReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportResidentFinancialStatementReport;
+using MyCondo.Application.Features.Finance.Reports.Queries.ExportServiceChargeCollectionReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportTrialBalance;
 using MyCondo.Application.Features.Finance.Reports.Queries.GetAccountLedger;
 using MyCondo.Application.Features.Finance.Reports.Queries.GetCashBankPositionReport;
@@ -80,6 +100,23 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.journal.view")
             .Produces<GeneralLedgerReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/general-ledger/export", async (
+                DateOnly? fromDate, DateOnly? toDate, Guid? chartOfAccountId, Guid? fundId, string? referenceType,
+                string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportGeneralLedgerQuery(fromDate, toDate, chartOfAccountId, fundId, referenceType, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.journal.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/account-ledger/{chartOfAccountId:guid}", async (
                 Guid chartOfAccountId, DateOnly? fromDate, DateOnly? toDate, int page, int pageSize,
                 ISender sender, CancellationToken ct) =>
@@ -91,6 +128,23 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.journal.view")
             .Produces<AccountLedgerReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/account-ledger/{chartOfAccountId:guid}/export", async (
+                Guid chartOfAccountId, DateOnly? fromDate, DateOnly? toDate, string format,
+                ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportAccountLedgerQuery(chartOfAccountId, fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.journal.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/fund-position", async (DateOnly? asOfDate, ISender sender, CancellationToken ct) =>
             {
                 FundPositionReportDto result = await sender.Send(new GetFundPositionQuery(asOfDate), ct);
@@ -98,6 +152,21 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<FundPositionReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/fund-position/export", async (
+                DateOnly? asOfDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportFundPositionQuery(asOfDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/financial-position", async (DateOnly? asOfDate, ISender sender, CancellationToken ct) =>
             {
@@ -107,6 +176,21 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<FinancialPositionReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/financial-position/export", async (
+                DateOnly? asOfDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportFinancialPositionQuery(asOfDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/cash-flow", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
                 CashFlowReportDto result = await sender.Send(new GetCashFlowQuery(fromDate, toDate), ct);
@@ -114,6 +198,21 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<CashFlowReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/cash-flow/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportCashFlowQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/overview", async (
                 DateOnly? asOfDate, DateOnly? fromDate, DateOnly? toDate, ISender sender, CancellationToken ct) =>
@@ -124,6 +223,22 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<FinancialOverviewReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/overview/export", async (
+                DateOnly? asOfDate, DateOnly? fromDate, DateOnly? toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportFinancialOverviewQuery(asOfDate, fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/income-expense", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
                 IncomeExpenseReportDto result = await sender.Send(new GetIncomeExpenseReportQuery(fromDate, toDate), ct);
@@ -131,6 +246,21 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<IncomeExpenseReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/income-expense/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportIncomeExpenseReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/cash-bank-position", async (DateOnly? asOfDate, ISender sender, CancellationToken ct) =>
             {
@@ -140,6 +270,21 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<CashBankPositionReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/cash-bank-position/export", async (
+                DateOnly? asOfDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportCashBankPositionReportQuery(asOfDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/service-charge-collection", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
                 ServiceChargeCollectionReportDto result = await sender.Send(new GetServiceChargeCollectionReportQuery(fromDate, toDate), ct);
@@ -147,6 +292,22 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<ServiceChargeCollectionReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/service-charge-collection/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportServiceChargeCollectionReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/gas-collection", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
@@ -156,6 +317,21 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<GasCollectionReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/gas-collection/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportGasCollectionReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/fines", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
                 FineReportDto result = await sender.Send(new GetFineReportQuery(fromDate, toDate), ct);
@@ -164,6 +340,21 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<FineReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/fines/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportFineReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/outstanding-dues", async (Guid? buildingId, ISender sender, CancellationToken ct) =>
             {
                 OutstandingDuesReportDto result = await sender.Send(new GetOutstandingDuesReportQuery(buildingId), ct);
@@ -171,6 +362,21 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<OutstandingDuesReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/outstanding-dues/export", async (
+                Guid? buildingId, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportOutstandingDuesReportQuery(buildingId, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/resident-statement/{flatId:guid}", async (
                 Guid flatId, DateOnly? fromDate, DateOnly? toDate, int page, int pageSize,
@@ -183,6 +389,23 @@ public static class FinanceReportEndpoints
             .RequireAuthorization()
             .Produces<ResidentFinancialStatementReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/resident-statement/{flatId:guid}/export", async (
+                Guid flatId, DateOnly? fromDate, DateOnly? toDate, string format,
+                ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportResidentFinancialStatementReportQuery(flatId, fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/flat-statement/{flatId:guid}", async (
                 Guid flatId, DateOnly? fromDate, DateOnly? toDate, int page, int pageSize,
                 ISender sender, CancellationToken ct) =>
@@ -194,6 +417,23 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<FlatFinancialStatementReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/flat-statement/{flatId:guid}/export", async (
+                Guid flatId, DateOnly? fromDate, DateOnly? toDate, string format,
+                ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportFlatFinancialStatementQuery(flatId, fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/expense-summary", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
                 ExpenseSummaryReportDto result = await sender.Send(new GetExpenseSummaryReportQuery(fromDate, toDate), ct);
@@ -201,6 +441,21 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<ExpenseSummaryReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/expense-summary/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportExpenseSummaryReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/expense-by-category", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
@@ -210,6 +465,22 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<ExpenseByCategoryReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/expense-by-category/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportExpenseByCategoryReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/expense-by-type", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
                 ExpenseByTypeReportDto result = await sender.Send(new GetExpenseByTypeReportQuery(fromDate, toDate), ct);
@@ -217,6 +488,22 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<ExpenseByTypeReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/expense-by-type/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportExpenseByTypeReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/expense-trend", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
@@ -226,6 +513,22 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<ExpenseTrendReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/expense-trend/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportExpenseTrendReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/fixed-deposit-portfolio", async (DateOnly? asOfDate, ISender sender, CancellationToken ct) =>
             {
                 FixedDepositPortfolioReportDto result = await sender.Send(new GetFixedDepositPortfolioReportQuery(asOfDate), ct);
@@ -234,6 +537,22 @@ public static class FinanceReportEndpoints
             .RequirePermission("finance.report.view")
             .Produces<FixedDepositPortfolioReportDto>(StatusCodes.Status200OK);
 
+        reports.MapGet("/fixed-deposit-portfolio/export", async (
+                DateOnly? asOfDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportFixedDepositPortfolioReportQuery(asOfDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         reports.MapGet("/fixed-deposit-interest", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
                 FixedDepositInterestReportDto result = await sender.Send(new GetFixedDepositInterestReportQuery(fromDate, toDate), ct);
@@ -241,6 +560,22 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<FixedDepositInterestReportDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/fixed-deposit-interest/export", async (
+                DateOnly fromDate, DateOnly toDate, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportFixedDepositInterestReportQuery(fromDate, toDate, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         return app;
     }

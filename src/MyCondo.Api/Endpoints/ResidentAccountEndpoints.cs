@@ -1,8 +1,10 @@
 using Mediator;
 using MyCondo.Api.Authorization;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Payments.Commands.OpenResidentAccount;
 using MyCondo.Application.Features.Payments.Commands.RecordOpeningBalance;
 using MyCondo.Application.Features.Payments.DTOs;
+using MyCondo.Application.Features.Payments.Queries.ExportResidentLedger;
 using MyCondo.Application.Features.Payments.Queries.GetAccountBalance;
 using MyCondo.Application.Features.Payments.Queries.GetLedgerEntriesForAccount;
 using MyCondo.Domain.Common;
@@ -51,6 +53,23 @@ public static class ResidentAccountEndpoints
             })
             .RequirePermission("payment.view")
             .Produces<PagedResult<LedgerEntryDto>>(StatusCodes.Status200OK);
+
+        accounts.MapGet("/{flatId:guid}/ledger-entries/export", async (
+                Guid flatId, DateOnly? fromDate, DateOnly? toDate, string? referenceType, string format,
+                ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportResidentLedgerQuery(flatId, fromDate, toDate, referenceType, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("payment.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         return app;
     }
