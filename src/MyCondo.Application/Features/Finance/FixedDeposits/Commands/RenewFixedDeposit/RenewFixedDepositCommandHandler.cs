@@ -27,6 +27,25 @@ namespace MyCondo.Application.Features.Finance.FixedDeposits.Commands.RenewFixed
 /// <item>decreased principal → "Dr CashOrBank / Cr FixedDeposit" (a partial withdrawal taken at renewal).
 /// </item>
 /// </list>
+///
+/// Each renewal posting carries, as its <c>SourceId</c>, the Fixed Deposit whose own principal it moves —
+/// the same convention <c>FixedDepositPlacement</c>/<c>FixedDepositMaturity</c>/<c>FixedDepositVoid</c>
+/// already use, and the reason the tenant-wide <c>LedgerAccountType.FixedDeposit</c> account can be
+/// decomposed per instrument at all (Phase 2A Task 5's Fixed Deposits supporting schedule attributes
+/// ledger activity through <c>LedgerPosting.ReferenceId</c>; these two postings previously supplied none
+/// and surfaced as unexplained reconciliation differences).
+/// <list type="bullet">
+/// <item>Capitalization establishes the <em>successor's</em> higher principal — it is the successor's own
+/// placement-equivalent posting, which is exactly why <see cref="FixedDeposit.PlaceAsRenewal"/> already
+/// records it as the successor's <c>PlacementPostingId</c> — so its source is the successor.</item>
+/// <item>A partial withdrawal returns part of the <em>predecessor's</em> principal, the same movement
+/// <c>FixedDepositMaturity</c> records against the deposit being withdrawn from, so its source is the
+/// predecessor. Attributing it to the successor instead would give the live instrument a negative
+/// carrying balance on the supporting schedule.</item>
+/// </list>
+/// Both are existing <see cref="FixedDepositId"/> values and both keys are unique for the posting
+/// service's (tenant, purpose, source) idempotency guard, since an Active deposit can only be renewed
+/// once and a successor id is freshly generated per renewal.
 /// </summary>
 public sealed class RenewFixedDepositCommandHandler(
     IFixedDepositRepository fixedDeposits,
@@ -83,6 +102,11 @@ public sealed class RenewFixedDepositCommandHandler(
         decimal principalDifference = command.NewPrincipal - predecessor.Principal;
         LedgerPostingId? renewalAdjustmentPostingId = null;
 
+        // Generated before the postings so each one can carry the Fixed Deposit it moves principal for as
+        // its SourceId — the same "post first, then construct the source record" ordering
+        // PlaceFixedDepositCommandHandler already uses.
+        FixedDepositId successorId = FixedDepositId.New();
+
         if (principalDifference > 0)
         {
             decimal totalAccrued = await accruals.GetTotalAccruedAsync(predecessorId, cancellationToken);
@@ -104,7 +128,7 @@ public sealed class RenewFixedDepositCommandHandler(
             FinancialPostingResult capitalization = await financialPosting.PostAsync(
                 new FinancialPostingRequest(
                     tenantId, command.NewStartDate, $"FD renewal interest capitalization: {predecessor.CertificateNumber} -> {newCertificateNumber}",
-                    "FixedDepositRenewalCapitalization", null, capitalizationLines, predecessor.FundId),
+                    "FixedDepositRenewalCapitalization", successorId.Value, capitalizationLines, predecessor.FundId),
                 cancellationToken);
             renewalAdjustmentPostingId = capitalization.Posting.Id;
         }
@@ -122,12 +146,11 @@ public sealed class RenewFixedDepositCommandHandler(
             FinancialPostingResult partialWithdrawal = await financialPosting.PostAsync(
                 new FinancialPostingRequest(
                     tenantId, command.NewStartDate, $"FD renewal partial withdrawal: {predecessor.CertificateNumber} -> {newCertificateNumber}",
-                    "FixedDepositRenewalPartialWithdrawal", null, withdrawalLines, predecessor.FundId),
+                    "FixedDepositRenewalPartialWithdrawal", predecessorId.Value, withdrawalLines, predecessor.FundId),
                 cancellationToken);
             renewalAdjustmentPostingId = partialWithdrawal.Posting.Id;
         }
 
-        FixedDepositId successorId = FixedDepositId.New();
         FixedDeposit successor = FixedDeposit.PlaceAsRenewal(
             successorId, predecessor, newCertificateNumber, command.NewBranchName, fundingAccountId,
             command.NewPrincipal, command.NewInterestRatePercent,

@@ -7,6 +7,7 @@ using MyCondo.Application.Common.Behaviors;
 using MyCondo.Application.Common.Events;
 using MyCondo.Application.Common.Services;
 using MyCondo.Application.Features.Billing.Services;
+using MyCondo.Application.Features.Finance.FinancialStatements.Notes;
 using MyCondo.Application.Features.Finance.FinancialStatements.Services;
 using MyCondo.Application.Features.Finance.Services;
 
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddSingleton<IImageValidationService, ImageValidationService>();
         services.AddScoped<IFinancialPostingService, FinancialPostingService>();
         services.AddScoped<IFinancialStatementReportingService, FinancialStatementReportingService>();
+        services.AddScoped<IFinancialStatementNoteService, FinancialStatementNoteService>();
         services.AddScoped<IResponsiblePartyResolver, ResponsiblePartyResolver>();
 
         // Domain-event dispatch bypasses Mediator (see IDomainEventHandler comment for why).

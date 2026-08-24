@@ -8,6 +8,9 @@ using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseByCatego
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseByTypeReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseSummaryReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseTrendReport;
+using MyCondo.Application.Features.Finance.FinancialStatements.Notes;
+using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetFinancialPositionNotes;
+using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetIncomeExpenditureNotes;
 using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetIncomeExpenditureStatement;
 using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetStatementOfFinancialPosition;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportFineReport;
@@ -212,6 +215,33 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<IncomeExpenditureStatementDto>(StatusCodes.Status200OK);
+
+        // Supporting schedules ("Notes to Accounts"), Phase 2A Task 5. One endpoint per statement rather
+        // than one per schedule: a statement is rendered with all of its notes over a single date/fund
+        // window, and `notes` lets a caller fetch just one without a separate route. Reuses
+        // finance.report.view — a note exposes strictly less than the statement it explains.
+        reports.MapGet("/financial-statements/financial-position/notes", async (
+                DateOnly? asOfDate, Guid? fundId, FinancialStatementNoteKey[]? notes,
+                ISender sender, CancellationToken ct) =>
+            {
+                FinancialStatementNotesDto result =
+                    await sender.Send(new GetFinancialPositionNotesQuery(asOfDate, fundId, notes), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces<FinancialStatementNotesDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/financial-statements/income-expenditure/notes", async (
+                DateOnly startDate, DateOnly endDate, Guid? fundId, FinancialStatementNoteKey[]? notes,
+                ISender sender, CancellationToken ct) =>
+            {
+                FinancialStatementNotesDto result = await sender.Send(
+                    new GetIncomeExpenditureNotesQuery(startDate, endDate, fundId, notes), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces<FinancialStatementNotesDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/cash-flow", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {

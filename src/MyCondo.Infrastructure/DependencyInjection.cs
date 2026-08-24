@@ -226,6 +226,7 @@ public static class DependencyInjection
         services.AddScoped<IFixedDepositInterestAccrualRepository, FixedDepositInterestAccrualRepository>();
         services.AddScoped<IFixedDepositInterestReceiptRepository, FixedDepositInterestReceiptRepository>();
         services.AddScoped<IFinanceReportRepository, FinanceReportRepository>();
+        services.AddScoped<IFinancialStatementNoteRepository, FinancialStatementNoteRepository>();
         services.AddScoped<IFinanceAuditLogRepository, FinanceAuditLogRepository>();
         services.AddScoped<IBankReconciliationRepository, BankReconciliationRepository>();
         services.AddScoped<IBankStatementLineRepository, BankStatementLineRepository>();
