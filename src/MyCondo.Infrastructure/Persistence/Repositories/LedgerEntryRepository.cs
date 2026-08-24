@@ -111,32 +111,36 @@ public sealed class LedgerEntryRepository(MyCondoDbContext db) : ILedgerEntryRep
         Guid tenantId, FlatId flatId, DateOnly? fromDate, DateOnly? toDate, string? referenceType,
         int page, int pageSize, CancellationToken cancellationToken)
     {
-        IQueryable<LedgerEntryWithReference> query =
-            from e in db.Set<LedgerEntry>().AsNoTracking()
-            join p in db.Set<LedgerPosting>().AsNoTracking() on e.PostingId equals p.Id
-            where e.TenantId == tenantId && e.FlatId == flatId
-            select new LedgerEntryWithReference(e, p.ReferenceType, p.ReferenceId);
+        IQueryable<LedgerEntry> entries = db.Set<LedgerEntry>().AsNoTracking()
+            .Where(e => e.TenantId == tenantId && e.FlatId == flatId);
 
         if (fromDate is not null)
         {
-            query = query.Where(x => x.Entry.BusinessDate >= fromDate);
+            entries = entries.Where(e => e.BusinessDate >= fromDate);
         }
 
         if (toDate is not null)
         {
-            query = query.Where(x => x.Entry.BusinessDate <= toDate);
+            entries = entries.Where(e => e.BusinessDate <= toDate);
         }
 
-        if (referenceType is not null)
-        {
-            query = query.Where(x => x.ReferenceType == referenceType);
-        }
+        IQueryable<LedgerEntryWithReference> joined =
+            from e in entries
+            join p in db.Set<LedgerPosting>().AsNoTracking() on e.PostingId equals p.Id
+            where referenceType == null || p.ReferenceType == referenceType
+            orderby e.BusinessDate descending, e.CreatedAtUtc descending
+            select new LedgerEntryWithReference(e, p.ReferenceType, p.ReferenceId);
 
-        long total = await query.LongCountAsync(cancellationToken);
+        // Counted post-join (rather than on `entries` alone) so the referenceType filter — which lives
+        // on LedgerPosting, not LedgerEntry — is reflected in Total. The ORDER BY is placed before this
+        // record-constructing SELECT (not composed afterward via `query.OrderBy(x => x.Entry...)`) —
+        // EF Core cannot translate an OrderBy/Where referencing a property path through a client
+        // record freshly constructed by the immediately preceding SELECT (confirmed via
+        // ExportContentVerificationTests: composing it the other way throws "could not be translated"
+        // at query-compile time, a 500 on every call regardless of row count).
+        long total = await joined.LongCountAsync(cancellationToken);
 
-        List<LedgerEntryWithReference> items = await query
-            .OrderByDescending(x => x.Entry.BusinessDate)
-            .ThenByDescending(x => x.Entry.CreatedAtUtc)
+        List<LedgerEntryWithReference> items = await joined
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -148,27 +152,28 @@ public sealed class LedgerEntryRepository(MyCondoDbContext db) : ILedgerEntryRep
         Guid tenantId, FlatId flatId, DateOnly? fromDate, DateOnly? toDate,
         int page, int pageSize, CancellationToken cancellationToken)
     {
-        IQueryable<LedgerEntryWithReference> query =
-            from e in db.Set<LedgerEntry>().AsNoTracking()
-            join p in db.Set<LedgerPosting>().AsNoTracking() on e.PostingId equals p.Id
-            where e.TenantId == tenantId && e.FlatId == flatId && e.AccountType == LedgerAccountType.ResidentReceivable
-            select new LedgerEntryWithReference(e, p.ReferenceType, p.ReferenceId);
+        IQueryable<LedgerEntry> entries = db.Set<LedgerEntry>().AsNoTracking()
+            .Where(e => e.TenantId == tenantId && e.FlatId == flatId && e.AccountType == LedgerAccountType.ResidentReceivable);
 
         if (fromDate is not null)
         {
-            query = query.Where(x => x.Entry.BusinessDate >= fromDate);
+            entries = entries.Where(e => e.BusinessDate >= fromDate);
         }
 
         if (toDate is not null)
         {
-            query = query.Where(x => x.Entry.BusinessDate <= toDate);
+            entries = entries.Where(e => e.BusinessDate <= toDate);
         }
 
-        long total = await query.LongCountAsync(cancellationToken);
+        long total = await entries.LongCountAsync(cancellationToken);
 
-        List<LedgerEntryWithReference> items = await query
-            .OrderBy(x => x.Entry.BusinessDate)
-            .ThenBy(x => x.Entry.CreatedAtUtc)
+        // Same EF-translatability constraint as SearchForFlatAsync above: ORDER BY must be composed
+        // before the record-constructing SELECT, not after.
+        List<LedgerEntryWithReference> items = await (
+            from e in entries
+            join p in db.Set<LedgerPosting>().AsNoTracking() on e.PostingId equals p.Id
+            orderby e.BusinessDate, e.CreatedAtUtc
+            select new LedgerEntryWithReference(e, p.ReferenceType, p.ReferenceId))
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
