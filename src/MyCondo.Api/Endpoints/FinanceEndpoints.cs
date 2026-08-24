@@ -9,9 +9,12 @@ using MyCondo.Application.Features.Finance.AccountingPeriods.Queries.GetAccounti
 using MyCondo.Application.Features.Finance.AccountMappings.Commands.SetAccountMapping;
 using MyCondo.Application.Features.Finance.AccountMappings.DTOs;
 using MyCondo.Application.Features.Finance.AccountMappings.Queries.GetAccountMappings;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Audit.DTOs;
+using MyCondo.Application.Features.Finance.Audit.Queries.ExportFinanceAuditLog;
 using MyCondo.Application.Features.Finance.Audit.Queries.GetFinanceAuditLog;
 using MyCondo.Application.Features.Finance.Integrity.DTOs;
+using MyCondo.Application.Features.Finance.Integrity.Queries.ExportFinancialIntegrityDashboard;
 using MyCondo.Application.Features.Finance.Integrity.Queries.GetFinancialIntegrityDashboard;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.Commands.CreateChartOfAccount;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.DTOs;
@@ -129,11 +132,40 @@ public static class FinanceEndpoints
             .RequirePermission("audit.view")
             .Produces<List<FinanceAuditLogEntryDto>>(StatusCodes.Status200OK);
 
+        auditLog.MapGet("/export", async (int take, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportFinanceAuditLogQuery(take, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("audit.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
         app.MapGet("/api/v1/finance/integrity-dashboard", async (ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new GetFinancialIntegrityDashboardQuery(), ct)))
             .WithTags("Finance")
             .RequirePermission("finance.report.view")
             .Produces<FinancialIntegrityDashboardDto>(StatusCodes.Status200OK);
+
+        app.MapGet("/api/v1/finance/integrity-dashboard/export", async (string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(new ExportFinancialIntegrityDashboardQuery(parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .WithTags("Finance")
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         return app;
     }

@@ -27,7 +27,7 @@ public sealed class ReportHtmlTemplate(IClock clock)
                 table.data th, table.data td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
                 table.data th { background: #f2f2f2; }
                 table.data td.numeric, table.data th.numeric { text-align: right; }
-                table.totals { margin-top: 12px; border-collapse: collapse; }
+                table.totals { margin-top: 12px; border-collapse: collapse; break-inside: avoid; page-break-inside: avoid; }
                 table.totals td { padding: 2px 8px 2px 0; font-weight: bold; }
                 """)
             .Append("</style></head><body>");

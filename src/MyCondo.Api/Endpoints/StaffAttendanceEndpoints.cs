@@ -1,10 +1,12 @@
 using Mediator;
 using MyCondo.Api.Authorization;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Commands.ApproveAttendanceCorrection;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Commands.ClockIn;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Commands.ClockOut;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Commands.RequestAttendanceCorrection;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.DTOs;
+using MyCondo.Application.Features.Payroll.AttendanceRecords.Queries.ExportAttendanceRegister;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Queries.GetAttendanceRecordsForStaffMember;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.Queries.GetAttendanceRecordsForTenant;
 using MyCondo.Application.Features.Payroll.StaffMembers.Commands.RegisterStaffMember;
@@ -66,6 +68,22 @@ public static class StaffAttendanceEndpoints
             })
             .RequirePermission("staffattendance.view")
             .Produces<PagedResult<AttendanceRegisterEntryDto>>(StatusCodes.Status200OK);
+
+        attendance.MapGet("/export", async (
+                DateOnly? workDate, Guid? staffMemberId, bool? onlyOpen, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportAttendanceRegisterQuery(workDate, staffMemberId, onlyOpen, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("staffattendance.view")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         attendance.MapPost("/{id:guid}/clock-out", async (Guid id, ISender sender, CancellationToken ct) =>
             {
