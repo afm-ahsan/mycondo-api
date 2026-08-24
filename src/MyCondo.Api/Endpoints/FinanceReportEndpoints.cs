@@ -8,6 +8,7 @@ using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseByCatego
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseByTypeReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseSummaryReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseTrendReport;
+using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetIncomeExpenditureStatement;
 using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetStatementOfFinancialPosition;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportFineReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportFinancialOverview;
@@ -201,6 +202,16 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<StatementOfFinancialPositionDto>(StatusCodes.Status200OK);
+
+        reports.MapGet("/financial-statements/income-expenditure", async (
+                DateOnly startDate, DateOnly endDate, Guid? fundId, ISender sender, CancellationToken ct) =>
+            {
+                IncomeExpenditureStatementDto result =
+                    await sender.Send(new GetIncomeExpenditureStatementQuery(startDate, endDate, fundId), ct);
+                return Results.Ok(result);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces<IncomeExpenditureStatementDto>(StatusCodes.Status200OK);
 
         reports.MapGet("/cash-flow", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
             {
