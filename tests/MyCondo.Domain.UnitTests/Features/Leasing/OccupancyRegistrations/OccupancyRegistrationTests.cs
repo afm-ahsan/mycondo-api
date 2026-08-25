@@ -15,9 +15,10 @@ public class OccupancyRegistrationTests
 
     private static OccupancyRegistration Register() =>
         OccupancyRegistration.Register(
-            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", "01700000000", "jane@example.com",
-            "1234567890", new DateOnly(1990, 1, 1), "Female", "O+", "Islam", "Bangladeshi", "Robert Doe",
-            "Mary Doe", "Married", "Engineer", "123 Example Road, Dhaka", "John Doe", "01711111111", null, Now);
+            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", "01700000000", "01799999999",
+            "jane@example.com", "1234567890", new DateOnly(1990, 1, 1), "Female", "O+", "Islam", "Bangladeshi",
+            "Robert Doe", "Mary Doe", "Married", "Engineer", "Acme Corp", "12 Office Road",
+            "123 Example Road, Dhaka", "John Doe", "01711111111", null, Now);
 
     [Fact]
     public void Register_Starts_In_Draft()
@@ -28,6 +29,44 @@ public class OccupancyRegistrationTests
     }
 
     [Fact]
+    public void Register_Sets_AlternatePhone_Employer_And_OfficeAddress()
+    {
+        OccupancyRegistration registration = Register();
+
+        registration.PrimaryAlternatePhone.Should().Be("+8801799999999");
+        registration.PrimaryEmployer.Should().Be("Acme Corp");
+        registration.PrimaryOfficeAddress.Should().Be("12 Office Road");
+    }
+
+    [Fact]
+    public void UpdateDraft_Replaces_AlternatePhone_Employer_And_OfficeAddress()
+    {
+        OccupancyRegistration registration = Register();
+
+        registration.UpdateDraft(
+            "Jane Doe", null, "01788888888", null, null, null, null, null, null, null, null, null, null, null,
+            "New Employer Ltd", "99 New Office Road", null, null, null, null);
+
+        registration.PrimaryAlternatePhone.Should().Be("+8801788888888");
+        registration.PrimaryEmployer.Should().Be("New Employer Ltd");
+        registration.PrimaryOfficeAddress.Should().Be("99 New Office Road");
+    }
+
+    [Fact]
+    public void UpdateDraft_Clears_AlternatePhone_Employer_And_OfficeAddress_When_Not_Provided()
+    {
+        OccupancyRegistration registration = Register();
+
+        registration.UpdateDraft(
+            "Jane Doe", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+            null, null, null, null);
+
+        registration.PrimaryAlternatePhone.Should().BeNull();
+        registration.PrimaryEmployer.Should().BeNull();
+        registration.PrimaryOfficeAddress.Should().BeNull();
+    }
+
+    [Fact]
     public void UpdateDraft_Throws_When_Not_Draft_Or_CorrectionsRequested()
     {
         OccupancyRegistration registration = Register();
@@ -35,7 +74,7 @@ public class OccupancyRegistrationTests
 
         Action act = () => registration.UpdateDraft(
             "New Name", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null);
+            null, null, null, null);
 
         act.Should().Throw<OccupancyRegistrationInvalidTransitionException>();
     }
@@ -47,7 +86,7 @@ public class OccupancyRegistrationTests
 
         registration.UpdateDraft(
             "Jane Doe", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null);
+            null, null, null, null);
 
         registration.PrimaryNationalIdNumber.Should().Be("1234567890");
     }
@@ -58,8 +97,8 @@ public class OccupancyRegistrationTests
         OccupancyRegistration registration = Register();
 
         registration.UpdateDraft(
-            "Jane Doe", null, null, "9876543210", null, null, null, null, null, null, null, null, null, null, null,
-            null, null);
+            "Jane Doe", null, null, null, "9876543210", null, null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null);
 
         registration.PrimaryNationalIdNumber.Should().Be("9876543210");
     }
@@ -70,8 +109,8 @@ public class OccupancyRegistrationTests
         OccupancyRegistration registration = Register();
 
         registration.UpdateDraft(
-            "Jane Doe", null, null, null, null, null, null, null, null, "Robert Doe", "Mary Doe", "Married", null,
-            null, null, null, null);
+            "Jane Doe", null, null, null, null, null, null, null, null, null, "Robert Doe", "Mary Doe", "Married",
+            null, null, null, null, null, null, null);
 
         registration.PrimaryFatherName.Should().Be("Robert Doe");
         registration.PrimaryMotherName.Should().Be("Mary Doe");
@@ -159,8 +198,8 @@ public class OccupancyRegistrationTests
         registration.RequestCorrections("Missing NID copy", Now);
 
         registration.UpdateDraft(
-            "Jane A. Doe", null, null, null, new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null,
-            null, null, null, null, null);
+            "Jane A. Doe", null, null, null, null, new DateOnly(1990, 1, 1), "Female", null, null, null, null, null,
+            null, null, null, null, null, null, null, null);
         registration.Submit(Guid.NewGuid(), Now);
 
         registration.Status.Should().Be(OccupancyRegistrationStatus.Submitted);
@@ -209,7 +248,7 @@ public class OccupancyRegistrationTests
     {
         Action act = () => OccupancyRegistration.Register(
             Guid.Empty, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null, Now);
+            null, null, null, null, null, null, null, null, null, null, null, null, null, Now);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -218,9 +257,9 @@ public class OccupancyRegistrationTests
     public void Submit_Throws_When_NationalIdNumber_Is_Missing()
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
-            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", null, null, null,
+            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", null, null, null, null,
             new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, null, null, null, null,
-            Now);
+            null, null, Now);
 
         Action act = () => registration.Submit(Guid.NewGuid(), Now);
 
@@ -231,8 +270,9 @@ public class OccupancyRegistrationTests
     public void Submit_Throws_When_Gender_Is_Missing()
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
-            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", null, null, "1234567890",
-            new DateOnly(1990, 1, 1), null, null, null, null, null, null, null, null, null, null, null, null, Now);
+            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", null, null, null, "1234567890",
+            new DateOnly(1990, 1, 1), null, null, null, null, null, null, null, null, null, null, null, null, null,
+            null, Now);
 
         Action act = () => registration.Submit(Guid.NewGuid(), Now);
 
@@ -243,8 +283,8 @@ public class OccupancyRegistrationTests
     public void Submit_Throws_When_DateOfBirth_Is_Missing()
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
-            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", null, null, "1234567890", null,
-            "Female", null, null, null, null, null, null, null, null, null, null, null, Now);
+            TenantId, FlatId, ResidentId, ResidentType.Occupant, "Jane Doe", null, null, null, "1234567890", null,
+            "Female", null, null, null, null, null, null, null, null, null, null, null, null, null, Now);
 
         Action act = () => registration.Submit(Guid.NewGuid(), Now);
 

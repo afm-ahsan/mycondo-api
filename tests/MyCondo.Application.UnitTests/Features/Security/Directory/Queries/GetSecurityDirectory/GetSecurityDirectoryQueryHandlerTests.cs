@@ -44,9 +44,9 @@ public class GetSecurityDirectoryQueryHandlerTests
     private static OccupancyRegistration ActiveTenant(string name, string phone)
     {
         OccupancyRegistration registration = OccupancyRegistration.Register(
-            TenantId, FlatId, ResidentId.New(), ResidentType.Occupant, name, phone, null, "1234567890",
+            TenantId, FlatId, ResidentId.New(), ResidentType.Occupant, name, phone, null, null, "1234567890",
             new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, null, null, null, null,
-            Now);
+            null, null, Now);
         registration.Submit(Guid.NewGuid(), Now);
         registration.ApproveByOwner(Guid.NewGuid(), Now);
         registration.VerifyByManagement(Guid.NewGuid(), Now);

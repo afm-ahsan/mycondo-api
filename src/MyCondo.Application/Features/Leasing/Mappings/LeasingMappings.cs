@@ -18,12 +18,13 @@ internal static class LeasingMappings
     public static OccupancyRegistrationDto ToDto(this OccupancyRegistration registration) => new(
         registration.Id.Value, registration.FlatId.Value, registration.PrimaryResidentId.Value,
         registration.OccupancyType.ToString(), registration.PrimaryFullName, registration.PrimaryPhone,
-        registration.PrimaryEmail, IdentityMasking.Mask(registration.PrimaryNationalIdNumber), registration.PrimaryDateOfBirth,
+        registration.PrimaryAlternatePhone, registration.PrimaryEmail,
+        IdentityMasking.Mask(registration.PrimaryNationalIdNumber), registration.PrimaryDateOfBirth,
         registration.PrimaryGender, registration.PrimaryBloodGroup, registration.PrimaryReligion,
         registration.PrimaryNationality, registration.PrimaryFatherName, registration.PrimaryMotherName,
-        registration.PrimaryMaritalStatus, registration.PrimaryProfession,
-        registration.PrimaryPermanentAddress, registration.EmergencyContactName, registration.EmergencyContactPhone,
-        registration.PrimaryPhotoAttachmentId, registration.MoveInExpectedDate,
+        registration.PrimaryMaritalStatus, registration.PrimaryProfession, registration.PrimaryEmployer,
+        registration.PrimaryOfficeAddress, registration.PrimaryPermanentAddress, registration.EmergencyContactName,
+        registration.EmergencyContactPhone, registration.PrimaryPhotoAttachmentId, registration.MoveInExpectedDate,
         registration.Status.ToString(), registration.SubmittedAtUtc, registration.OwnerReviewedAtUtc,
         registration.ManagementVerifiedAtUtc, registration.ActivatedAtUtc, registration.MovedOutAtUtc,
         registration.MoveOutReason, registration.CorrectionsRequestedReason, registration.RejectedReason);

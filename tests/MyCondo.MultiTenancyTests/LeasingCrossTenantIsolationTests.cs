@@ -34,7 +34,8 @@ public class LeasingCrossTenantIsolationTests : IClassFixture<MultiTenancyPostgr
         {
             dbA.Set<OccupancyRegistration>().Add(OccupancyRegistration.Register(
                 tenantA, flatA, ResidentId.New(), ResidentType.Occupant, "Tenant A Occupant", null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, DateTimeOffset.UtcNow));
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                DateTimeOffset.UtcNow));
             await dbA.SaveChangesAsync();
         }
 
@@ -42,7 +43,8 @@ public class LeasingCrossTenantIsolationTests : IClassFixture<MultiTenancyPostgr
         {
             dbB.Set<OccupancyRegistration>().Add(OccupancyRegistration.Register(
                 tenantB, flatB, ResidentId.New(), ResidentType.Occupant, "Tenant B Occupant", null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, DateTimeOffset.UtcNow));
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                DateTimeOffset.UtcNow));
             await dbB.SaveChangesAsync();
         }
 
@@ -64,7 +66,8 @@ public class LeasingCrossTenantIsolationTests : IClassFixture<MultiTenancyPostgr
 
         dbAsTenantB.Set<OccupancyRegistration>().Add(OccupancyRegistration.Register(
             tenantA, FlatId.New(), ResidentId.New(), ResidentType.Occupant, "Impersonator", null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, DateTimeOffset.UtcNow));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+            DateTimeOffset.UtcNow));
 
         Func<Task> act = () => dbAsTenantB.SaveChangesAsync();
 
