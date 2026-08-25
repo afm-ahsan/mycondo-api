@@ -125,6 +125,7 @@ public static class DependencyInjection
         services.AddSingleton<ReportHtmlTemplate>();
         services.AddSingleton<PlaywrightPdfRenderer>();
         services.AddSingleton<IReportExportService, ReportExportService>();
+        services.AddSingleton<IFinancialStatementsPdfRenderer, FinancialStatementsPdfRenderer>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IUserContextResolver, UserContextResolver>();
         services.AddScoped<IPlatformTokenService, PlatformJwtTokenService>();

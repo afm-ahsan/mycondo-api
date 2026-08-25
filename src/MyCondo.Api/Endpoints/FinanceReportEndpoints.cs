@@ -9,6 +9,7 @@ using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseByTypeRe
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseSummaryReport;
 using MyCondo.Application.Features.Finance.Reports.Queries.ExportExpenseTrendReport;
 using MyCondo.Application.Features.Finance.FinancialStatements.Notes;
+using MyCondo.Application.Features.Finance.FinancialStatements.Queries.ExportFinancialStatements;
 using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetFinancialPositionNotes;
 using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetIncomeExpenditureNotes;
 using MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetIncomeExpenditureStatement;
@@ -241,6 +242,26 @@ public static class FinanceReportEndpoints
             })
             .RequirePermission("finance.report.view")
             .Produces<FinancialStatementNotesDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
+        // Financial Statements PDF/CSV export — CondoBD Finance Phase 2A Task 8. Comparison export is
+        // explicitly out of scope; this is always a current-period, non-comparative document over the
+        // already-resolved [startDate, endDate] the interactive UI is showing. Reuses finance.report.view,
+        // the same permission gating the four interactive Financial Statements endpoints above.
+        reports.MapGet("/financial-statements/export", async (
+                DateOnly startDate, DateOnly endDate, Guid? fundId, string format, ISender sender, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse(format, ignoreCase: true, out ReportExportFormat parsedFormat))
+                {
+                    return Results.BadRequest(new { error = "format must be 'csv' or 'pdf'." });
+                }
+
+                ReportExportResult result = await sender.Send(
+                    new ExportFinancialStatementsQuery(startDate, endDate, fundId, parsedFormat), ct);
+                return Results.File(result.Content, result.ContentType, result.FileName);
+            })
+            .RequirePermission("finance.report.view")
+            .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest);
 
         reports.MapGet("/cash-flow", async (DateOnly fromDate, DateOnly toDate, ISender sender, CancellationToken ct) =>
