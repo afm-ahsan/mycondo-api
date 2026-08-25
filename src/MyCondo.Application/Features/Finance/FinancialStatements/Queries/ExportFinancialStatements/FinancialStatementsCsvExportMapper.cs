@@ -138,6 +138,16 @@ public static class FinancialStatementsCsvExportMapper
                     "Notes to Accounts", string.Empty, string.Empty, detailLabel, amount,
                     note.Key.ToString(), note.Title, null, null, null, null));
             }
+
+            if (note.IsDetailTruncated)
+            {
+                rows.Add(Row(
+                    "Notes to Accounts", string.Empty, string.Empty,
+                    $"Detail rows truncated — showing {FinancialStatementNoteService.MaxDetailRows} of " +
+                    $"{note.TotalRowCount} total rows. The schedule and Financial Statement totals above are " +
+                    "computed from the complete, untruncated data.",
+                    0m, note.Key.ToString(), note.Title, "Detail Truncated"));
+            }
         }
     }
 

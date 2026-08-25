@@ -135,6 +135,49 @@ public class FinancialStatementsCsvExportMapperTests
     }
 
     [Fact]
+    public void A_Truncated_Note_Emits_An_Explicit_Truncation_Warning_Row_Alongside_Its_Complete_Totals()
+    {
+        FinancialStatementNote note = new(
+            FinancialStatementNoteKey.ServiceChargeReceivable, "Service Charge Receivable", FinancialStatementNoteScope.AsOfDate,
+            FinancialStatementGroup.Receivables, null, EndDate, null,
+            GlBalance: 900_000m, ScheduleBalance: 900_000m, Difference: 0m, IsReconciled: true,
+            UnattributedAmount: 0m, TotalRowCount: 812, IsDetailTruncated: true, Warnings: [],
+            FlatBalanceRows: [new FlatBalanceNoteRow(Guid.NewGuid(), "A-1", Guid.NewGuid(), "Tower A", 900_000m, false)]);
+
+        ReportExportDocument document = FinancialStatementsCsvExportMapper.ToExportDocument(
+            SamplePosition(), SampleIncomeExpenditure(), [note], "All Funds");
+
+        document.Rows.Should().ContainSingle(r =>
+            r[0] == "Notes to Accounts" && r[7] == "Detail Truncated" &&
+            r[3].Contains("showing 500 of 812 total rows") &&
+            r[3].Contains("totals above are computed from the complete, untruncated data"));
+
+        document.Rows.Should().ContainSingle(r =>
+            r[0] == "Notes to Accounts" && r[3] == "Service Charge Receivable" && r[4] == "900,000.00");
+    }
+
+    [Fact]
+    public void A_Non_Truncated_Note_Emits_No_Truncation_Warning_Row()
+    {
+        FinancialStatementNote note = new(
+            FinancialStatementNoteKey.CashAndBank, "Cash & Bank", FinancialStatementNoteScope.AsOfDate,
+            FinancialStatementGroup.CashAndBank, null, EndDate, null,
+            GlBalance: 150_000m, ScheduleBalance: 150_000m, Difference: 0m, IsReconciled: true,
+            UnattributedAmount: 0m, TotalRowCount: 1, IsDetailTruncated: false, Warnings: [],
+            CashAndBankRows:
+            [
+                new CashAndBankNoteRow(
+                    null, Guid.NewGuid(), "1000", "Operating Account", null, "City Bank", null, "3210",
+                    null, true, 150_000m, false),
+            ]);
+
+        ReportExportDocument document = FinancialStatementsCsvExportMapper.ToExportDocument(
+            SamplePosition(), SampleIncomeExpenditure(), [note], "All Funds");
+
+        document.Rows.Should().NotContain(r => r[7] == "Detail Truncated");
+    }
+
+    [Fact]
     public void Totals_Block_Carries_The_Reported_Grand_Totals_And_Balance_Status()
     {
         StatementOfFinancialPositionDto position = SamplePosition(
