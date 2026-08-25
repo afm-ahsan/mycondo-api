@@ -44,7 +44,7 @@ public class RemoveMyAvatarCommandHandlerTests
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _attachments.GetByIdAsync(avatar.Id, Arg.Any<CancellationToken>()).Returns(avatar);
         _userContextResolver.ResolveProfileAsync(user, Arg.Any<CancellationToken>())
-            .Returns(new UserProfileDto(user.Id.Value, tenantId, user.Email, user.FullName, null, NowUtc, null, [], []));
+            .Returns(new UserProfileDto(user.Id.Value, tenantId, "Test Tenant", user.Email, user.FullName, null, NowUtc, null, [], []));
 
         await CreateHandler().Handle(new RemoveMyAvatarCommand(), CancellationToken.None);
 
@@ -63,7 +63,7 @@ public class RemoveMyAvatarCommandHandlerTests
         _currentUser.UserId.Returns(user.Id.Value);
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _userContextResolver.ResolveProfileAsync(user, Arg.Any<CancellationToken>())
-            .Returns(new UserProfileDto(user.Id.Value, tenantId, user.Email, user.FullName, null, NowUtc, null, [], []));
+            .Returns(new UserProfileDto(user.Id.Value, tenantId, "Test Tenant", user.Email, user.FullName, null, NowUtc, null, [], []));
 
         await CreateHandler().Handle(new RemoveMyAvatarCommand(), CancellationToken.None);
 

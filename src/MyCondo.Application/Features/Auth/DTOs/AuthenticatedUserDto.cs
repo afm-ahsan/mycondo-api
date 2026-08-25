@@ -13,6 +13,7 @@ public sealed record BuildingPermissionGrant(Guid BuildingId, string Permission)
 public sealed record AuthenticatedUserDto(
     Guid UserId,
     Guid TenantId,
+    string TenantName,
     string Email,
     string FullName,
     IReadOnlyList<string> Roles,
@@ -31,6 +32,7 @@ public sealed record AuthTokensDto(
 public sealed record UserProfileDto(
     Guid UserId,
     Guid TenantId,
+    string TenantName,
     string Email,
     string FullName,
     string? PhoneNumber,

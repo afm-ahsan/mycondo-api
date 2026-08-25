@@ -6,6 +6,7 @@ using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Tenancy;
 using MyCondo.Infrastructure.Persistence;
 
 namespace MyCondo.Infrastructure.Identity;
@@ -19,7 +20,7 @@ namespace MyCondo.Infrastructure.Identity;
 /// building-scoped assignment contributes only to that building's set. A role held both ways
 /// contributes to both — that's correct, not a duplicate to dedupe away. See ADR-014.
 /// </summary>
-public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResolver
+public sealed class UserContextResolver(MyCondoDbContext db, ITenantRepository tenants) : IUserContextResolver
 {
     public async Task<AuthenticatedUserDto> ResolveAsync(User user, CancellationToken cancellationToken)
     {
@@ -28,6 +29,7 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
         return new AuthenticatedUserDto(
             UserId: user.Id.Value,
             TenantId: user.TenantId,
+            TenantName: context.TenantName,
             Email: user.Email,
             FullName: user.FullName,
             Roles: context.Roles,
@@ -44,6 +46,7 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
         return new UserProfileDto(
             UserId: user.Id.Value,
             TenantId: user.TenantId,
+            TenantName: context.TenantName,
             Email: user.Email,
             FullName: user.FullName,
             PhoneNumber: user.PhoneNumber,
@@ -65,6 +68,10 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
 
     private async Task<ResolvedContext> ResolveCoreAsync(User user, CancellationToken ct)
     {
+        Tenant? tenant = await tenants.GetByIdAsync(user.TenantId, ct);
+        string tenantName = tenant?.Name
+            ?? throw new InvalidOperationException($"Tenant {user.TenantId} not found for user {user.Id.Value}.");
+
         List<RoleAssignment> assignments = await db.Set<RoleAssignment>()
             .AsNoTracking()
             .Where(a => a.TenantId == user.TenantId && a.UserId == user.Id)
@@ -72,7 +79,7 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
 
         if (assignments.Count == 0)
         {
-            return new ResolvedContext([], [], [], [], []);
+            return new ResolvedContext(tenantName, [], [], [], [], []);
         }
 
         List<RoleId> roleIds = assignments.Select(a => a.RoleId).Distinct().ToList();
@@ -127,6 +134,7 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
             .ToList();
 
         return new ResolvedContext(
+            tenantName,
             roleNames,
             tenantWidePermissions.ToList(),
             allPermissions,
@@ -135,6 +143,7 @@ public sealed class UserContextResolver(MyCondoDbContext db) : IUserContextResol
     }
 
     private sealed record ResolvedContext(
+        string TenantName,
         List<string> Roles,
         List<string> TenantWidePermissions,
         List<string> AllPermissions,

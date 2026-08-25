@@ -49,7 +49,7 @@ public class UploadMyAvatarCommandHandlerTests
         _currentUser.TenantId.Returns(tenantId);
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _userContextResolver.ResolveProfileAsync(user, Arg.Any<CancellationToken>())
-            .Returns(new UserProfileDto(user.Id.Value, tenantId, user.Email, user.FullName, null, NowUtc, null, [], []));
+            .Returns(new UserProfileDto(user.Id.Value, tenantId, "Test Tenant", user.Email, user.FullName, null, NowUtc, null, [], []));
 
         return (user, tenantId);
     }
