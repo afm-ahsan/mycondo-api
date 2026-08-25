@@ -11,6 +11,7 @@ public sealed class UpdateOccupancyRegistrationDraftCommandValidator
         RuleFor(x => x.OccupancyRegistrationId).NotEmpty();
         RuleFor(x => x.PrimaryFullName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.PrimaryPhone).NotEmpty().MustBeValidBangladeshMobileNumber();
+        RuleFor(x => x.PrimaryAlternatePhone).MustBeValidBangladeshMobileNumber();
         RuleFor(x => x.PrimaryEmail).MaximumLength(200).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.PrimaryEmail));
         RuleFor(x => x.PrimaryNationalIdNumber).MaximumLength(50);
         RuleFor(x => x.PrimaryDateOfBirth)
@@ -24,6 +25,8 @@ public sealed class UpdateOccupancyRegistrationDraftCommandValidator
         RuleFor(x => x.PrimaryMotherName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.PrimaryMaritalStatus).NotEmpty().MaximumLength(20);
         RuleFor(x => x.PrimaryProfession).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.PrimaryEmployer).MaximumLength(200);
+        RuleFor(x => x.PrimaryOfficeAddress).MaximumLength(400);
         RuleFor(x => x.PrimaryPermanentAddress).NotEmpty().MaximumLength(500);
         RuleFor(x => x.EmergencyContactPhone).MustBeValidBangladeshMobileNumber();
     }

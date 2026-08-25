@@ -71,11 +71,13 @@ public static class OccupancyRegistrationEndpoints
             {
                 OccupancyRegistrationDto result = await sender.Send(
                     new UpdateOccupancyRegistrationDraftCommand(
-                        id, body.PrimaryFullName, body.PrimaryPhone, body.PrimaryEmail, body.PrimaryNationalIdNumber,
-                        body.PrimaryDateOfBirth, body.PrimaryGender, body.PrimaryBloodGroup, body.PrimaryReligion,
-                        body.PrimaryNationality, body.PrimaryFatherName, body.PrimaryMotherName,
-                        body.PrimaryMaritalStatus, body.PrimaryProfession, body.PrimaryPermanentAddress,
-                        body.EmergencyContactName, body.EmergencyContactPhone, body.MoveInExpectedDate), ct);
+                        id, body.PrimaryFullName, body.PrimaryPhone, body.PrimaryAlternatePhone, body.PrimaryEmail,
+                        body.PrimaryNationalIdNumber, body.PrimaryDateOfBirth, body.PrimaryGender,
+                        body.PrimaryBloodGroup, body.PrimaryReligion, body.PrimaryNationality,
+                        body.PrimaryFatherName, body.PrimaryMotherName, body.PrimaryMaritalStatus,
+                        body.PrimaryProfession, body.PrimaryEmployer, body.PrimaryOfficeAddress,
+                        body.PrimaryPermanentAddress, body.EmergencyContactName, body.EmergencyContactPhone,
+                        body.MoveInExpectedDate), ct);
                 return Results.Ok(result);
             })
             .RequirePermission("occupancy-registration.create")
@@ -290,6 +292,7 @@ public static class OccupancyRegistrationEndpoints
 public sealed record UpdateOccupancyRegistrationDraftRequest(
     string PrimaryFullName,
     string? PrimaryPhone,
+    string? PrimaryAlternatePhone,
     string? PrimaryEmail,
     string? PrimaryNationalIdNumber,
     DateOnly? PrimaryDateOfBirth,
@@ -301,6 +304,8 @@ public sealed record UpdateOccupancyRegistrationDraftRequest(
     string? PrimaryMotherName,
     string? PrimaryMaritalStatus,
     string? PrimaryProfession,
+    string? PrimaryEmployer,
+    string? PrimaryOfficeAddress,
     string? PrimaryPermanentAddress,
     string? EmergencyContactName,
     string? EmergencyContactPhone,

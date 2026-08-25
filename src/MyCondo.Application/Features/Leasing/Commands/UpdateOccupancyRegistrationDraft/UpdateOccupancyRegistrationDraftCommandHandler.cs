@@ -33,11 +33,13 @@ public sealed class UpdateOccupancyRegistrationDraftCommandHandler(
         }
 
         registration.UpdateDraft(
-            command.PrimaryFullName, command.PrimaryPhone, command.PrimaryEmail, command.PrimaryNationalIdNumber,
-            command.PrimaryDateOfBirth, command.PrimaryGender, command.PrimaryBloodGroup, command.PrimaryReligion,
-            command.PrimaryNationality, command.PrimaryFatherName, command.PrimaryMotherName,
-            command.PrimaryMaritalStatus, command.PrimaryProfession, command.PrimaryPermanentAddress,
-            command.EmergencyContactName, command.EmergencyContactPhone, command.MoveInExpectedDate);
+            command.PrimaryFullName, command.PrimaryPhone, command.PrimaryAlternatePhone, command.PrimaryEmail,
+            command.PrimaryNationalIdNumber, command.PrimaryDateOfBirth, command.PrimaryGender,
+            command.PrimaryBloodGroup, command.PrimaryReligion, command.PrimaryNationality,
+            command.PrimaryFatherName, command.PrimaryMotherName, command.PrimaryMaritalStatus,
+            command.PrimaryProfession, command.PrimaryEmployer, command.PrimaryOfficeAddress,
+            command.PrimaryPermanentAddress, command.EmergencyContactName, command.EmergencyContactPhone,
+            command.MoveInExpectedDate);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

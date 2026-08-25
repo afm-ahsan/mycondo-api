@@ -9,9 +9,9 @@ public class UpdateOccupancyRegistrationDraftCommandValidatorTests
     private readonly UpdateOccupancyRegistrationDraftCommandValidator _validator = new();
 
     private static UpdateOccupancyRegistrationDraftCommand ValidCommand() => new(
-        Guid.NewGuid(), "Jane Doe", "01700000000", null, "1234567890", null, "Female", null, "Islam",
-        "Bangladeshi", "Robert Doe", "Mary Doe", "Married", "Engineer", "123 Example Road, Dhaka", null, null,
-        null);
+        Guid.NewGuid(), "Jane Doe", "01700000000", null, null, "1234567890", null, "Female", null, "Islam",
+        "Bangladeshi", "Robert Doe", "Mary Doe", "Married", "Engineer", null, null, "123 Example Road, Dhaka", null,
+        null, null);
 
     [Fact]
     public void Valid_Command_Passes()

@@ -27,6 +27,7 @@ public sealed class OccupancyRegistrationConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.OccupancyType).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(x => x.PrimaryFullName).IsRequired().HasMaxLength(200);
         builder.Property(x => x.PrimaryPhone).HasMaxLength(30);
+        builder.Property(x => x.PrimaryAlternatePhone).HasMaxLength(30);
         builder.Property(x => x.PrimaryEmail).HasMaxLength(200);
         builder.Property(x => x.PrimaryNationalIdNumber).HasMaxLength(50);
         builder.Property(x => x.PrimaryDateOfBirth);
@@ -38,6 +39,8 @@ public sealed class OccupancyRegistrationConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.PrimaryMotherName).HasMaxLength(200);
         builder.Property(x => x.PrimaryMaritalStatus).HasMaxLength(20);
         builder.Property(x => x.PrimaryProfession).HasMaxLength(200);
+        builder.Property(x => x.PrimaryEmployer).HasMaxLength(200);
+        builder.Property(x => x.PrimaryOfficeAddress).HasMaxLength(400);
         builder.Property(x => x.PrimaryPermanentAddress).HasMaxLength(500);
         builder.Property(x => x.EmergencyContactName).HasMaxLength(200);
         builder.Property(x => x.EmergencyContactPhone).HasMaxLength(30);

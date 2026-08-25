@@ -28,8 +28,9 @@ public class OccupancyRegistrationSearchFilterTests : IClassFixture<MultiTenancy
         Guid tenantId, FlatId flatId, string fullName, string? phone, string? email,
         OccupancyRegistrationStatus status = OccupancyRegistrationStatus.Draft) =>
         OccupancyRegistration.Register(
-            tenantId, flatId, ResidentId.New(), ResidentType.Occupant, fullName, phone, email, null, null, null,
-            null, null, null, null, null, null, null, null, null, null, null, DateTimeOffset.UtcNow);
+            tenantId, flatId, ResidentId.New(), ResidentType.Occupant, fullName, phone, null, email, null, null,
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+            DateTimeOffset.UtcNow);
 
     private static async Task<FlatId> SeedFlatAsync(MyCondoDbContext db, Guid tenantId, string flatNumber)
     {

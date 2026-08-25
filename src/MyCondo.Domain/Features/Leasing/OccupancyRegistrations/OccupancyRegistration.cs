@@ -27,6 +27,7 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
     public ResidentType OccupancyType { get; private set; }
     public string PrimaryFullName { get; private set; }
     public string? PrimaryPhone { get; private set; }
+    public string? PrimaryAlternatePhone { get; private set; }
     public string? PrimaryEmail { get; private set; }
     public string? PrimaryNationalIdNumber { get; private set; }
     public DateOnly? PrimaryDateOfBirth { get; private set; }
@@ -38,6 +39,8 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
     public string? PrimaryMotherName { get; private set; }
     public string? PrimaryMaritalStatus { get; private set; }
     public string? PrimaryProfession { get; private set; }
+    public string? PrimaryEmployer { get; private set; }
+    public string? PrimaryOfficeAddress { get; private set; }
     public string? PrimaryPermanentAddress { get; private set; }
     public string? EmergencyContactName { get; private set; }
     public string? EmergencyContactPhone { get; private set; }
@@ -69,12 +72,12 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
 
     private OccupancyRegistration(
         OccupancyRegistrationId id, Guid tenantId, FlatId flatId, ResidentId primaryResidentId,
-        ResidentType occupancyType, string primaryFullName, string? primaryPhone, string? primaryEmail,
-        string? primaryNationalIdNumber, DateOnly? primaryDateOfBirth, string? primaryGender,
+        ResidentType occupancyType, string primaryFullName, string? primaryPhone, string? primaryAlternatePhone,
+        string? primaryEmail, string? primaryNationalIdNumber, DateOnly? primaryDateOfBirth, string? primaryGender,
         string? primaryBloodGroup, string? primaryReligion, string? primaryNationality, string? primaryFatherName,
-        string? primaryMotherName, string? primaryMaritalStatus, string? primaryProfession,
-        string? primaryPermanentAddress, string? emergencyContactName, string? emergencyContactPhone,
-        DateOnly? moveInExpectedDate, DateTimeOffset nowUtc) : base(id)
+        string? primaryMotherName, string? primaryMaritalStatus, string? primaryProfession, string? primaryEmployer,
+        string? primaryOfficeAddress, string? primaryPermanentAddress, string? emergencyContactName,
+        string? emergencyContactPhone, DateOnly? moveInExpectedDate, DateTimeOffset nowUtc) : base(id)
     {
         TenantId = tenantId;
         FlatId = flatId;
@@ -82,6 +85,7 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         OccupancyType = occupancyType;
         PrimaryFullName = primaryFullName;
         PrimaryPhone = primaryPhone;
+        PrimaryAlternatePhone = primaryAlternatePhone;
         PrimaryEmail = primaryEmail;
         PrimaryNationalIdNumber = primaryNationalIdNumber;
         PrimaryDateOfBirth = primaryDateOfBirth;
@@ -93,6 +97,8 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         PrimaryMotherName = primaryMotherName;
         PrimaryMaritalStatus = primaryMaritalStatus;
         PrimaryProfession = primaryProfession;
+        PrimaryEmployer = primaryEmployer;
+        PrimaryOfficeAddress = primaryOfficeAddress;
         PrimaryPermanentAddress = primaryPermanentAddress;
         EmergencyContactName = emergencyContactName;
         EmergencyContactPhone = emergencyContactPhone;
@@ -104,12 +110,12 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
 
     public static OccupancyRegistration Register(
         Guid tenantId, FlatId flatId, ResidentId primaryResidentId, ResidentType occupancyType,
-        string primaryFullName, string? primaryPhone, string? primaryEmail, string? primaryNationalIdNumber,
-        DateOnly? primaryDateOfBirth, string? primaryGender, string? primaryBloodGroup, string? primaryReligion,
-        string? primaryNationality, string? primaryFatherName, string? primaryMotherName,
-        string? primaryMaritalStatus, string? primaryProfession, string? primaryPermanentAddress,
-        string? emergencyContactName, string? emergencyContactPhone, DateOnly? moveInExpectedDate,
-        DateTimeOffset nowUtc)
+        string primaryFullName, string? primaryPhone, string? primaryAlternatePhone, string? primaryEmail,
+        string? primaryNationalIdNumber, DateOnly? primaryDateOfBirth, string? primaryGender,
+        string? primaryBloodGroup, string? primaryReligion, string? primaryNationality, string? primaryFatherName,
+        string? primaryMotherName, string? primaryMaritalStatus, string? primaryProfession, string? primaryEmployer,
+        string? primaryOfficeAddress, string? primaryPermanentAddress, string? emergencyContactName,
+        string? emergencyContactPhone, DateOnly? moveInExpectedDate, DateTimeOffset nowUtc)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(primaryFullName);
         if (tenantId == Guid.Empty)
@@ -119,12 +125,13 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
 
         return new OccupancyRegistration(
             OccupancyRegistrationId.New(), tenantId, flatId, primaryResidentId, occupancyType,
-            primaryFullName.Trim(), BangladeshMobileNumber.Normalize(primaryPhone), primaryEmail?.Trim(),
+            primaryFullName.Trim(), BangladeshMobileNumber.Normalize(primaryPhone),
+            BangladeshMobileNumber.Normalize(primaryAlternatePhone), primaryEmail?.Trim(),
             primaryNationalIdNumber?.Trim(), primaryDateOfBirth, primaryGender?.Trim(), primaryBloodGroup?.Trim(),
             primaryReligion?.Trim(), primaryNationality?.Trim(), primaryFatherName?.Trim(), primaryMotherName?.Trim(),
-            primaryMaritalStatus?.Trim(), primaryProfession?.Trim(), primaryPermanentAddress?.Trim(),
-            emergencyContactName?.Trim(), BangladeshMobileNumber.Normalize(emergencyContactPhone),
-            moveInExpectedDate, nowUtc);
+            primaryMaritalStatus?.Trim(), primaryProfession?.Trim(), primaryEmployer?.Trim(),
+            primaryOfficeAddress?.Trim(), primaryPermanentAddress?.Trim(), emergencyContactName?.Trim(),
+            BangladeshMobileNumber.Normalize(emergencyContactPhone), moveInExpectedDate, nowUtc);
     }
 
     private void EnsureEditable(string attemptedAction)
@@ -136,17 +143,19 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
     }
 
     public void UpdateDraft(
-        string primaryFullName, string? primaryPhone, string? primaryEmail, string? primaryNationalIdNumber,
-        DateOnly? primaryDateOfBirth, string? primaryGender, string? primaryBloodGroup, string? primaryReligion,
-        string? primaryNationality, string? primaryFatherName, string? primaryMotherName,
-        string? primaryMaritalStatus, string? primaryProfession, string? primaryPermanentAddress,
-        string? emergencyContactName, string? emergencyContactPhone, DateOnly? moveInExpectedDate)
+        string primaryFullName, string? primaryPhone, string? primaryAlternatePhone, string? primaryEmail,
+        string? primaryNationalIdNumber, DateOnly? primaryDateOfBirth, string? primaryGender,
+        string? primaryBloodGroup, string? primaryReligion, string? primaryNationality, string? primaryFatherName,
+        string? primaryMotherName, string? primaryMaritalStatus, string? primaryProfession, string? primaryEmployer,
+        string? primaryOfficeAddress, string? primaryPermanentAddress, string? emergencyContactName,
+        string? emergencyContactPhone, DateOnly? moveInExpectedDate)
     {
         EnsureEditable("be edited");
         ArgumentException.ThrowIfNullOrWhiteSpace(primaryFullName);
 
         PrimaryFullName = primaryFullName.Trim();
         PrimaryPhone = BangladeshMobileNumber.Normalize(primaryPhone);
+        PrimaryAlternatePhone = BangladeshMobileNumber.Normalize(primaryAlternatePhone);
         PrimaryEmail = primaryEmail?.Trim();
         // The National ID is masked on every read, so the client can never round-trip the existing
         // value back through this form — an empty submission means "not retyped", not "clear it".
@@ -164,6 +173,8 @@ public sealed class OccupancyRegistration : AggregateRoot<OccupancyRegistrationI
         PrimaryMotherName = primaryMotherName?.Trim();
         PrimaryMaritalStatus = primaryMaritalStatus?.Trim();
         PrimaryProfession = primaryProfession?.Trim();
+        PrimaryEmployer = primaryEmployer?.Trim();
+        PrimaryOfficeAddress = primaryOfficeAddress?.Trim();
         PrimaryPermanentAddress = primaryPermanentAddress?.Trim();
         EmergencyContactName = emergencyContactName?.Trim();
         EmergencyContactPhone = BangladeshMobileNumber.Normalize(emergencyContactPhone);

@@ -43,9 +43,9 @@ public class CreateOccupancyRegistrationCommandHandlerTests
     private static Flat ActiveFlat() => Flat.Create(TenantId, BuildingId.New(), "A-101", 1, FlatType.Residential, Now);
 
     private static CreateOccupancyRegistrationCommand ValidCommand() => new(
-        FlatId.Value, "Occupant", "Jane Doe", "01700000000", "jane@example.com", "1234567890",
-        new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, "123 Example Road, Dhaka",
-        "John Doe", "01711111111", null);
+        FlatId.Value, "Occupant", "Jane Doe", "01700000000", "01799999999", "jane@example.com", "1234567890",
+        new DateOnly(1990, 1, 1), "Female", null, null, null, null, null, null, null, "Acme Corp", "12 Office Road",
+        "123 Example Road, Dhaka", "John Doe", "01711111111", null);
 
     [Fact]
     public async Task Reuses_Existing_Resident_When_Name_Matches_On_The_Flat()
@@ -75,12 +75,26 @@ public class CreateOccupancyRegistrationCommandHandlerTests
     }
 
     [Fact]
+    public async Task Persists_AlternatePhone_Employer_And_OfficeAddress()
+    {
+        _flats.GetByIdAsync(FlatId, Arg.Any<CancellationToken>()).Returns(ActiveFlat());
+        _registrations.GetActiveForFlatAsync(TenantId, FlatId, Arg.Any<CancellationToken>()).Returns((OccupancyRegistration?)null);
+        _residents.FindByFlatAndNameAsync(TenantId, FlatId, "Jane Doe", Arg.Any<CancellationToken>()).Returns((Resident?)null);
+
+        OccupancyRegistrationDto result = await CreateHandler().Handle(ValidCommand(), CancellationToken.None);
+
+        result.PrimaryAlternatePhone.Should().Be("+8801799999999");
+        result.PrimaryEmployer.Should().Be("Acme Corp");
+        result.PrimaryOfficeAddress.Should().Be("12 Office Road");
+    }
+
+    [Fact]
     public async Task Throws_When_Flat_Already_Has_An_Active_Registration()
     {
         _flats.GetByIdAsync(FlatId, Arg.Any<CancellationToken>()).Returns(ActiveFlat());
         OccupancyRegistration existingActive = OccupancyRegistration.Register(
             TenantId, FlatId, ResidentId.New(), ResidentType.Owner, "Existing Occupant", null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, Now);
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, Now);
         _registrations.GetActiveForFlatAsync(TenantId, FlatId, Arg.Any<CancellationToken>()).Returns(existingActive);
 
         Func<Task> act = () => CreateHandler().Handle(ValidCommand(), CancellationToken.None).AsTask();
