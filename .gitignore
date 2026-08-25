@@ -182,6 +182,9 @@ secrets.json
 *.p12
 *.key
 
+# Claude Code temporary worktrees
+.claude/worktrees/
+
 # ============================
 # Local file storage (MVP-1 avatar uploads — see StorageSettings)
 # ============================
