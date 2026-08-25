@@ -63,7 +63,7 @@ public class UpdateMyProfileCommandHandlerTests
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
 
         UserProfileDto expectedDto = new(
-            user.Id.Value, user.TenantId, user.Email, "Jane Doe", "01700000000", NowUtc, null, [], []);
+            user.Id.Value, user.TenantId, "Test Tenant", user.Email, "Jane Doe", "01700000000", NowUtc, null, [], []);
         _userContextResolver.ResolveProfileAsync(user, Arg.Any<CancellationToken>()).Returns(expectedDto);
 
         UpdateMyProfileCommand command = new("Jane Doe", "01700000000");
