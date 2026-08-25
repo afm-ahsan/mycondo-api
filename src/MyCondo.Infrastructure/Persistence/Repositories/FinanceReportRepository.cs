@@ -206,13 +206,21 @@ public sealed class FinanceReportRepository(MyCondoDbContext db) : IFinanceRepor
             return [];
         }
 
-        List<ChartOfAccountId> typedCashAccountIds = cashAccountIds.Select(id => new ChartOfAccountId(id)).ToList();
+        // ChartOfAccountId membership is filtered client-side, not in SQL — every Contains() shape
+        // tried (List<ChartOfAccountId>, List<Guid>, IReadOnlyList<Guid>) against the nullable-unwrapped
+        // e.ChartOfAccountId.Value.Value throws at query-translation time under the current EF
+        // Core/Npgsql provider, even though the same nullable-owned-value-object shape translates fine
+        // for equality/GroupBy elsewhere in this file. Tenant+date and postingIds.Contains(...) below
+        // are proven-safe patterns, so only the account-id filtering moves to memory.
+        HashSet<Guid> cashAccountIdSet = cashAccountIds.ToHashSet();
 
-        List<LedgerEntry> cashEntries = await db.Set<LedgerEntry>()
-            .Where(e => e.TenantId == tenantId
-                && e.BusinessDate >= fromDate && e.BusinessDate <= toDate
-                && e.ChartOfAccountId != null && typedCashAccountIds.Contains(e.ChartOfAccountId.Value))
+        List<LedgerEntry> entriesInRange = await db.Set<LedgerEntry>()
+            .Where(e => e.TenantId == tenantId && e.BusinessDate >= fromDate && e.BusinessDate <= toDate)
             .ToListAsync(cancellationToken);
+
+        List<LedgerEntry> cashEntries = entriesInRange
+            .Where(e => e.ChartOfAccountId is not null && cashAccountIdSet.Contains(e.ChartOfAccountId.Value.Value))
+            .ToList();
 
         if (cashEntries.Count == 0)
         {
@@ -226,10 +234,11 @@ public sealed class FinanceReportRepository(MyCondoDbContext db) : IFinanceRepor
             .ToListAsync(cancellationToken);
         Dictionary<LedgerPostingId, LedgerPosting> postingsById = postings.ToDictionary(p => p.Id);
 
-        List<LedgerEntry> counterEntries = await db.Set<LedgerEntry>()
-            .Where(e => e.TenantId == tenantId && postingIds.Contains(e.PostingId)
-                && (e.ChartOfAccountId == null || !typedCashAccountIds.Contains(e.ChartOfAccountId.Value)))
-            .ToListAsync(cancellationToken);
+        List<LedgerEntry> counterEntries = (await db.Set<LedgerEntry>()
+            .Where(e => e.TenantId == tenantId && postingIds.Contains(e.PostingId))
+            .ToListAsync(cancellationToken))
+            .Where(e => e.ChartOfAccountId is null || !cashAccountIdSet.Contains(e.ChartOfAccountId.Value.Value))
+            .ToList();
 
         AccountMapping? fixedDepositMapping = await db.Set<AccountMapping>()
             .FirstOrDefaultAsync(m => m.TenantId == tenantId && m.PostingRole == nameof(LedgerAccountType.FixedDeposit), cancellationToken);
@@ -337,17 +346,27 @@ public sealed class FinanceReportRepository(MyCondoDbContext db) : IFinanceRepor
     {
         ChartOfAccountId typedAccountId = new(chartOfAccountId);
 
-        return await db.Set<LedgerEntry>()
+        // Projecting straight into the MonthlyAccountActivityLine record inside GroupBy/Select fails to
+        // translate (EF can construct an anonymous type here, not a record, from a grouped aggregate
+        // projection) — project to an anonymous type server-side, same pattern as GetFundActivityAsync,
+        // then materialize the record client-side.
+        var grouped = await db.Set<LedgerEntry>()
             .Where(e => e.TenantId == tenantId && e.ChartOfAccountId == typedAccountId
                 && e.BusinessDate >= fromDate && e.BusinessDate <= toDate)
             .GroupBy(e => new { e.BusinessDate.Year, e.BusinessDate.Month })
-            .Select(g => new MonthlyAccountActivityLine(
+            .Select(g => new
+            {
                 g.Key.Year,
                 g.Key.Month,
-                g.Where(e => e.Direction == LedgerDirection.Debit).Sum(e => e.Amount),
-                g.Where(e => e.Direction == LedgerDirection.Credit).Sum(e => e.Amount)))
-            .OrderBy(l => l.Year).ThenBy(l => l.Month)
+                TotalDebit = g.Where(e => e.Direction == LedgerDirection.Debit).Sum(e => e.Amount),
+                TotalCredit = g.Where(e => e.Direction == LedgerDirection.Credit).Sum(e => e.Amount),
+            })
             .ToListAsync(cancellationToken);
+
+        return grouped
+            .Select(g => new MonthlyAccountActivityLine(g.Year, g.Month, g.TotalDebit, g.TotalCredit))
+            .OrderBy(l => l.Year).ThenBy(l => l.Month)
+            .ToList();
     }
 
     public async Task<IReadOnlyList<StatementAccountActivityLine>> GetStatementBalancesAsOfAsync(
