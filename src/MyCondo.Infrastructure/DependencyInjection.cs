@@ -62,6 +62,7 @@ using MyCondo.Domain.Features.Platform.PlatformRolePermissions;
 using MyCondo.Domain.Features.Platform.PlatformRoles;
 using MyCondo.Domain.Features.Platform.PlatformUserRoleAssignments;
 using MyCondo.Domain.Features.Platform.PlatformUsers;
+using MyCondo.Domain.Features.Platform.SubscriptionPackages;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
@@ -188,6 +189,9 @@ public static class DependencyInjection
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IFeatureDefinitionRepository, FeatureDefinitionRepository>();
         services.AddScoped<IFeaturePermissionRepository, FeaturePermissionRepository>();
+        services.AddScoped<ISubscriptionPackageRepository, SubscriptionPackageRepository>();
+        services.AddScoped<ISubscriptionPackageVersionRepository, SubscriptionPackageVersionRepository>();
+        services.AddScoped<ISubscriptionPackageFeatureRepository, SubscriptionPackageFeatureRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
         services.AddScoped<IPlatformUserRepository, PlatformUserRepository>();
