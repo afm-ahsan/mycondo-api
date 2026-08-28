@@ -181,4 +181,66 @@ public class TenantEntitlementServiceTests
         await _packageFeatures.Received(1).GetForPackageVersionAsync(versionId, Arg.Any<CancellationToken>());
         await _overrides.Received(1).GetForTenantAsync(TenantId, Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task GetEffectiveEntitlementDetails_Agrees_With_GetEffectiveEntitlements_For_Every_Feature()
+    {
+        SubscriptionPackageVersionId versionId = SubscriptionPackageVersionId.New();
+        _subscriptions.GetCurrentForTenantAsync(TenantId, Arg.Any<CancellationToken>())
+            .Returns(CreateSubscription(versionId));
+        _packageFeatures.GetForPackageVersionAsync(versionId, Arg.Any<CancellationToken>())
+            .Returns([new SubscriptionPackageFeature(versionId, NonCoreFeature.Id, enabled: true, limitValue: null)]);
+        TenantEntitlementService sut = CreateService();
+
+        IReadOnlyDictionary<string, bool> flat = await sut.GetEffectiveEntitlements(TenantId, CancellationToken.None);
+        IReadOnlyList<EffectiveEntitlement> details = await sut.GetEffectiveEntitlementDetails(TenantId, CancellationToken.None);
+
+        details.Should().HaveCount(flat.Count);
+        foreach (EffectiveEntitlement entitlement in details)
+        {
+            flat.Should().ContainKey(entitlement.FeatureKey);
+            entitlement.Enabled.Should().Be(flat[entitlement.FeatureKey]);
+        }
+    }
+
+    [Fact]
+    public async Task GetEffectiveEntitlementDetails_Carries_LimitValue_For_A_Numeric_Package_Feature()
+    {
+        FeatureDefinition numericFeature = FeatureDefinition.Create(
+            "utilities.meters", "Meters", null, null, "utilities", FeatureCatalogueStatus.Active,
+            isCore: false, 3, FeatureEntitlementType.Numeric);
+        _featureDefinitions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([CoreFeature, NonCoreFeature, numericFeature]);
+        SubscriptionPackageVersionId versionId = SubscriptionPackageVersionId.New();
+        _subscriptions.GetCurrentForTenantAsync(TenantId, Arg.Any<CancellationToken>())
+            .Returns(CreateSubscription(versionId));
+        _packageFeatures.GetForPackageVersionAsync(versionId, Arg.Any<CancellationToken>())
+            .Returns([new SubscriptionPackageFeature(versionId, numericFeature.Id, enabled: true, limitValue: 5)]);
+        TenantEntitlementService sut = CreateService();
+
+        IReadOnlyList<EffectiveEntitlement> details = await sut.GetEffectiveEntitlementDetails(TenantId, CancellationToken.None);
+
+        EffectiveEntitlement meters = details.Single(e => e.FeatureKey == "utilities.meters");
+        meters.Enabled.Should().BeTrue();
+        meters.LimitValue.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task GetEffectiveEntitlementDetails_Never_Marks_A_Reserved_Feature_Enabled()
+    {
+        FeatureDefinition reservedFeature = FeatureDefinition.Create(
+            "facilities.gym", "Gym", null, null, "facilities", FeatureCatalogueStatus.Reserved,
+            isCore: false, 4, FeatureEntitlementType.Boolean);
+        _featureDefinitions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([CoreFeature, NonCoreFeature, reservedFeature]);
+        SubscriptionPackageVersionId versionId = SubscriptionPackageVersionId.New();
+        _subscriptions.GetCurrentForTenantAsync(TenantId, Arg.Any<CancellationToken>())
+            .Returns(CreateSubscription(versionId));
+        // Even a package row that would otherwise enable it must not win over Reserved status.
+        _packageFeatures.GetForPackageVersionAsync(versionId, Arg.Any<CancellationToken>())
+            .Returns([new SubscriptionPackageFeature(versionId, reservedFeature.Id, enabled: true, limitValue: null)]);
+        TenantEntitlementService sut = CreateService();
+
+        IReadOnlyList<EffectiveEntitlement> details = await sut.GetEffectiveEntitlementDetails(TenantId, CancellationToken.None);
+
+        details.Single(e => e.FeatureKey == "facilities.gym").Enabled.Should().BeFalse();
+    }
 }

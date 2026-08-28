@@ -6,6 +6,7 @@ using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Platform.FeatureCatalogue;
 using MyCondo.Domain.Features.Tenancy;
 using MyCondo.Infrastructure.Persistence;
 
@@ -20,11 +21,21 @@ namespace MyCondo.Infrastructure.Identity;
 /// building-scoped assignment contributes only to that building's set. A role held both ways
 /// contributes to both — that's correct, not a duplicate to dedupe away. See ADR-014.
 /// </summary>
-public sealed class UserContextResolver(MyCondoDbContext db, ITenantRepository tenants) : IUserContextResolver
+public sealed class UserContextResolver(
+    MyCondoDbContext db,
+    ITenantRepository tenants,
+    ITenantEntitlementService entitlements
+) : IUserContextResolver
 {
     public async Task<AuthenticatedUserDto> ResolveAsync(User user, CancellationToken cancellationToken)
     {
         ResolvedContext context = await ResolveCoreAsync(user, cancellationToken);
+
+        IReadOnlyList<EffectiveEntitlement> effective =
+            await entitlements.GetEffectiveEntitlementDetails(user.TenantId, cancellationToken);
+        List<FeatureEntitlementDto> entitlementDtos = effective
+            .Select(e => new FeatureEntitlementDto(e.FeatureKey, e.Enabled, e.LimitValue))
+            .ToList();
 
         return new AuthenticatedUserDto(
             UserId: user.Id.Value,
@@ -36,6 +47,7 @@ public sealed class UserContextResolver(MyCondoDbContext db, ITenantRepository t
             Permissions: context.TenantWidePermissions,
             BuildingIds: context.BuildingIds,
             BuildingPermissions: context.BuildingPermissions,
+            Entitlements: entitlementDtos,
             AvatarUrl: ResolveAvatarUrl(user));
     }
 

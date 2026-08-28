@@ -1,3 +1,5 @@
+using MyCondo.Domain.Features.Platform.FeatureCatalogue;
+
 namespace MyCondo.Application.Common.Abstractions;
 
 /// <summary>
@@ -30,4 +32,13 @@ public interface ITenantEntitlementService
     /// or is entitled with no limit configured (ADR-033 §13/§17/§22). No quota enforcement is performed by
     /// this service or any caller of it.</summary>
     Task<int?> GetEntitlementValue(Guid tenantId, string featureKey, CancellationToken cancellationToken);
+
+    /// <summary>The tenant's complete effective entitlement set as one <see cref="EffectiveEntitlement"/>
+    /// per <c>FeatureDefinition</c> in the catalogue (ADR-033 Task 07 §34) — the per-feature detail
+    /// (including <see cref="EffectiveEntitlement.LimitValue"/>) that <see cref="GetEffectiveEntitlements"/>
+    /// flattens away, computed by the same single resolver pass so there remains exactly one entitlement
+    /// algorithm. Intended for session/bootstrap consumption; callers must still redact internal fields
+    /// (<see cref="EffectiveEntitlement.Source"/>, <see cref="EffectiveEntitlement.EntitlementType"/>)
+    /// before exposing this to an external contract (ADR-033 Task 07 §9).</summary>
+    Task<IReadOnlyList<EffectiveEntitlement>> GetEffectiveEntitlementDetails(Guid tenantId, CancellationToken cancellationToken);
 }

@@ -58,6 +58,12 @@ public sealed class TenantEntitlementService(
         return entitlement.LimitValue;
     }
 
+    public async Task<IReadOnlyList<EffectiveEntitlement>> GetEffectiveEntitlementDetails(Guid tenantId, CancellationToken cancellationToken)
+    {
+        Dictionary<string, EffectiveEntitlement> effective = await ResolveAllAsync(tenantId, cancellationToken);
+        return effective.Values.ToList();
+    }
+
     private async Task<Dictionary<string, EffectiveEntitlement>> ResolveAllAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         List<FeatureDefinition> catalogue = await featureDefinitions.GetAllAsync(cancellationToken);

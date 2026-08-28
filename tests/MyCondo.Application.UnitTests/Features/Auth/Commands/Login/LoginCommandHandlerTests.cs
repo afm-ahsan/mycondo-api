@@ -95,7 +95,7 @@ public class LoginCommandHandlerTests
         _users.GetByEmailAsync(tenantId, "admin@mycondo.com", Arg.Any<CancellationToken>()).Returns(user);
         _passwordHasher.Verify("Correct-Password", "hash").Returns(true);
 
-        AuthenticatedUserDto authDto = new(user.Id.Value, tenantId, "Test Tenant", user.Email, user.FullName, [], [], [], []);
+        AuthenticatedUserDto authDto = new(user.Id.Value, tenantId, "Test Tenant", user.Email, user.FullName, [], [], [], [], []);
         _userContextResolver.ResolveAsync(user, Arg.Any<CancellationToken>()).Returns(authDto);
         AuthTokensDto tokens = new("access", NowUtc, "refresh", NowUtc, authDto);
         _tokenService.IssueAsync(authDto, "127.0.0.1", Arg.Any<CancellationToken>()).Returns(tokens);
