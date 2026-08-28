@@ -18,9 +18,10 @@ namespace MyCondo.Application.Common.Services;
 /// deferred to ADR-035). Used only by <c>LegacyMigrationSubscriptionBackfillSeeder</c> (to log/audit a
 /// per-tenant comparison at backfill time) and by tests.</para>
 ///
-/// <para><b>NewEffective mirrors ADR-033 §13's exact resolver algorithm</b> (IsCore short-circuit →
-/// effective override → package version feature → default disabled) applied to an in-memory catalogue
-/// snapshot instead of a live database lookup.</para>
+/// <para><b>NewEffective delegates to <see cref="TenantEntitlementResolution.Resolve"/></b> — the same
+/// precedence function <c>TenantEntitlementService</c> (ADR-033 §13, Task 05) uses — applied to an
+/// in-memory catalogue/package/override snapshot instead of a live database lookup, so this simulation
+/// and the production resolver can never independently drift (ADR-033 §22/§29).</para>
 /// </summary>
 public sealed record ShadowComparisonResult(
     Guid TenantId,
@@ -49,6 +50,34 @@ public static class LegacyEntitlementShadowComparer
 
         HashSet<string> legacyExpected = BuildLegacyExpected(enabledLegacyModuleKeys, catalogue, catalogueByKey);
         HashSet<string> newEffective = BuildNewEffective(catalogue, assignedPackageFeatures, tenantOverrides, asOfUtc);
+
+        HashSet<string> lost = new(legacyExpected, StringComparer.Ordinal);
+        lost.ExceptWith(newEffective);
+
+        HashSet<string> gained = new(newEffective, StringComparer.Ordinal);
+        gained.ExceptWith(legacyExpected);
+
+        return new ShadowComparisonResult(tenantId, legacyExpected, newEffective, lost, gained);
+    }
+
+    /// <summary>
+    /// Task 05 §28's post-migration verification path — compares legacy-implied expected access against
+    /// the <em>real, live</em> <c>ITenantEntitlementService.GetEffectiveEntitlements</c> output for an
+    /// already-migrated (grandfathered) tenant, instead of re-simulating package/override resolution.
+    /// Read-only, non-authorizing, non-blocking (Task 05 §28) — a caller (test or diagnostic) supplies
+    /// <paramref name="actualEffectiveEntitlements"/> already fetched from the production service.
+    /// </summary>
+    public static ShadowComparisonResult CompareAgainstResolver(
+        Guid tenantId,
+        IReadOnlyCollection<string> enabledLegacyModuleKeys,
+        IReadOnlyCollection<FeatureDefinition> catalogue,
+        IReadOnlyDictionary<string, bool> actualEffectiveEntitlements)
+    {
+        Dictionary<string, FeatureDefinition> catalogueByKey = catalogue.ToDictionary(f => f.Key, StringComparer.Ordinal);
+
+        HashSet<string> legacyExpected = BuildLegacyExpected(enabledLegacyModuleKeys, catalogue, catalogueByKey);
+        HashSet<string> newEffective = new(
+            actualEffectiveEntitlements.Where(kv => kv.Value).Select(kv => kv.Key), StringComparer.Ordinal);
 
         HashSet<string> lost = new(legacyExpected, StringComparer.Ordinal);
         lost.ExceptWith(newEffective);
@@ -105,20 +134,24 @@ public static class LegacyEntitlementShadowComparer
             .Where(o => o.EffectiveFrom <= asOfUtc && (o.EffectiveUntil is null || asOfUtc < o.EffectiveUntil.Value))
             .ToDictionary(o => o.FeatureId);
 
-        HashSet<FeatureDefinitionId> enabledPackageFeatureIds = assignedPackageFeatures
-            .Where(f => f.Enabled)
-            .Select(f => f.FeatureId)
-            .ToHashSet();
+        Dictionary<FeatureDefinitionId, SubscriptionPackageFeature> packageFeatureByFeature = assignedPackageFeatures
+            .ToDictionary(f => f.FeatureId);
 
         HashSet<string> newEffective = new(StringComparer.Ordinal);
         foreach (FeatureDefinition feature in catalogue)
         {
-            bool enabled = feature.IsCore
-                || (effectiveOverrideByFeature.TryGetValue(feature.Id, out TenantFeatureOverride? tenantOverride)
-                    ? tenantOverride.Enabled
-                    : enabledPackageFeatureIds.Contains(feature.Id));
+            effectiveOverrideByFeature.TryGetValue(feature.Id, out TenantFeatureOverride? effectiveOverride);
+            packageFeatureByFeature.TryGetValue(feature.Id, out SubscriptionPackageFeature? packageFeature);
 
-            if (enabled)
+            // hasCurrentSubscription: true — this simulation always represents a package that is (or is
+            // about to be) the tenant's assigned subscription, never the "no subscription at all" case
+            // TenantEntitlementResolution's defensive branch exists for (see LegacyMigrationSubscriptionBackfillSeeder,
+            // this comparer's only caller: it simulates the grandfathered package the tenant is about to
+            // receive, not a live absent-subscription state).
+            EffectiveEntitlement resolved = TenantEntitlementResolution.Resolve(
+                feature, hasCurrentSubscription: true, effectiveOverride, packageFeature);
+
+            if (resolved.Enabled)
             {
                 newEffective.Add(feature.Key);
             }

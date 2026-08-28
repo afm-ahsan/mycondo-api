@@ -143,4 +143,65 @@ public class LegacyEntitlementShadowComparerTests
 
         result.NewEffectiveFeatureKeys.Should().NotContain("security.gates");
     }
+
+    [Fact]
+    public void A_Reserved_Feature_Is_Never_New_Effective_Even_With_An_Enabled_Package_Row()
+    {
+        // TenantEntitlementResolution's defensive Reserved guard (Task 05) — nothing at the persistence
+        // layer stops a Reserved feature from acquiring an Enabled=true SubscriptionPackageFeature row.
+        (FeatureDefinition SecurityRoot, FeatureDefinition SecurityGates, FeatureDefinition SecurityVisitors,
+            FeatureDefinition AdminRoot, FeatureDefinition AdminUsers, FeatureDefinition Vendors) catalogue = BuildCatalogue();
+        List<FeatureDefinition> all = [catalogue.SecurityRoot, catalogue.SecurityGates, catalogue.SecurityVisitors, catalogue.AdminRoot, catalogue.AdminUsers, catalogue.Vendors];
+        List<SubscriptionPackageFeature> packageFeatures = [new(VersionId, catalogue.Vendors.Id, enabled: true, limitValue: null)];
+
+        ShadowComparisonResult result = LegacyEntitlementShadowComparer.Compare(
+            TenantId, enabledLegacyModuleKeys: [], all, packageFeatures, tenantOverrides: [], Now);
+
+        result.NewEffectiveFeatureKeys.Should().NotContain("vendors");
+    }
+
+    [Fact]
+    public void CompareAgainstResolver_Detects_No_Loss_When_The_Live_Service_Grants_The_Full_Legacy_Expected_Set()
+    {
+        (FeatureDefinition SecurityRoot, FeatureDefinition SecurityGates, FeatureDefinition SecurityVisitors,
+            FeatureDefinition AdminRoot, FeatureDefinition AdminUsers, FeatureDefinition Vendors) catalogue = BuildCatalogue();
+        List<FeatureDefinition> all = [catalogue.SecurityRoot, catalogue.SecurityGates, catalogue.SecurityVisitors, catalogue.AdminRoot, catalogue.AdminUsers, catalogue.Vendors];
+        Dictionary<string, bool> actual = new(StringComparer.Ordinal)
+        {
+            ["security"] = true,
+            ["security.gates"] = true,
+            ["security.visitors"] = true,
+            ["administration"] = true,
+            ["administration.users"] = true,
+            ["vendors"] = false,
+        };
+
+        ShadowComparisonResult result = LegacyEntitlementShadowComparer.CompareAgainstResolver(
+            TenantId, enabledLegacyModuleKeys: ["security"], all, actual);
+
+        result.HasLoss.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CompareAgainstResolver_Detects_A_Loss_When_The_Live_Service_Disagrees_With_Legacy_Expected_Access()
+    {
+        (FeatureDefinition SecurityRoot, FeatureDefinition SecurityGates, FeatureDefinition SecurityVisitors,
+            FeatureDefinition AdminRoot, FeatureDefinition AdminUsers, FeatureDefinition Vendors) catalogue = BuildCatalogue();
+        List<FeatureDefinition> all = [catalogue.SecurityRoot, catalogue.SecurityGates, catalogue.SecurityVisitors, catalogue.AdminRoot, catalogue.AdminUsers, catalogue.Vendors];
+        Dictionary<string, bool> actual = new(StringComparer.Ordinal)
+        {
+            ["security"] = true,
+            ["security.gates"] = false,
+            ["security.visitors"] = true,
+            ["administration"] = true,
+            ["administration.users"] = true,
+            ["vendors"] = false,
+        };
+
+        ShadowComparisonResult result = LegacyEntitlementShadowComparer.CompareAgainstResolver(
+            TenantId, enabledLegacyModuleKeys: ["security"], all, actual);
+
+        result.HasLoss.Should().BeTrue();
+        result.LostFeatureKeys.Should().Contain("security.gates");
+    }
 }

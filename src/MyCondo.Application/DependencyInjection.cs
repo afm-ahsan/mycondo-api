@@ -40,6 +40,7 @@ public static class DependencyInjection
 
         services.AddScoped<IPermissionSeeder, PermissionSeeder>();
         services.AddScoped<IFeatureCatalogueSeeder, FeatureCatalogueSeeder>();
+        services.AddScoped<ITenantEntitlementService, TenantEntitlementService>();
         services.AddScoped<IOrganizationAdminBootstrapper, OrganizationAdminBootstrapper>();
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
