@@ -254,50 +254,22 @@ public class LegacyMigrationSubscriptionBackfillSeederTests
     }
 
     [Fact]
-    public async Task Does_Not_Grandfather_A_Tenant_Provisioned_At_Or_After_The_Subscription_Architecture_Cutover()
+    public async Task Grandfathers_A_Tenant_Created_After_The_Subscription_Schema_Migration_Landed()
     {
-        Tenant futureTenant = Tenant.Provision(
-            "Future Tenant", "future-tenant",
-            LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc);
-        Fixture fixture = BuildFixture([futureTenant], preSeedGrandfatheredPackage: false);
+        // ADR-033 Task 04B: no subscription-aware onboarding path exists yet — every tenant, regardless
+        // of when it was created relative to the OrganizationSubscription schema migration, is still
+        // provisioned through the identical non-subscription-aware flow. A tenant "created" long after
+        // that migration (simulated here via a recent CreatedAtUtc) must still be grandfathered as long
+        // as it has no current subscription; a CreatedAtUtc-based cutoff was found to wrongly exclude
+        // exactly this tenant and was removed.
+        Tenant recentTenant = Tenant.Provision("Recent Tenant", "recent-tenant", Now);
+        Fixture fixture = BuildFixture([recentTenant], preSeedGrandfatheredPackage: false);
+        fixture.TenantModulesByTenant[recentTenant.Id.Value] = [TenantModule.Enable(recentTenant.Id.Value, "property", Now, null)];
 
         LegacyMigrationSubscriptionBackfillSeeder seeder = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
         await seeder.SeedAsync(CancellationToken.None);
 
-        fixture.SubscriptionsStore.Should().NotContainKey(futureTenant.Id.Value);
-    }
-
-    [Fact]
-    public async Task Does_Not_Grandfather_A_Future_Tenant_With_Zero_TenantModule_Rows()
-    {
-        Tenant futureTenant = Tenant.Provision(
-            "Future Tenant", "future-tenant",
-            LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc.AddDays(1));
-        Fixture fixture = BuildFixture([futureTenant], preSeedGrandfatheredPackage: true);
-        // TenantModulesByTenant intentionally left empty — a future tenant with no legacy module rows
-        // must still be excluded on cohort grounds alone, not merely because it "has no modules to lose."
-
-        LegacyMigrationSubscriptionBackfillSeeder seeder = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
-        await seeder.SeedAsync(CancellationToken.None);
-
-        fixture.SubscriptionsStore.Should().NotContainKey(futureTenant.Id.Value);
-    }
-
-    [Fact]
-    public async Task Does_Not_Grandfather_A_Future_Tenant_That_Has_TenantModule_Rows()
-    {
-        Tenant futureTenant = Tenant.Provision(
-            "Future Tenant", "future-tenant",
-            LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc.AddDays(1));
-        Fixture fixture = BuildFixture([futureTenant], preSeedGrandfatheredPackage: true);
-        fixture.TenantModulesByTenant[futureTenant.Id.Value] = [TenantModule.Enable(futureTenant.Id.Value, "property", Now, null)];
-        // Legacy-module presence must not override cohort exclusion (Task 04A §12) — a future tenant
-        // that somehow has TenantModule rows is still not a legacy migration candidate.
-
-        LegacyMigrationSubscriptionBackfillSeeder seeder = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
-        await seeder.SeedAsync(CancellationToken.None);
-
-        fixture.SubscriptionsStore.Should().NotContainKey(futureTenant.Id.Value);
+        fixture.SubscriptionsStore.Should().ContainKey(recentTenant.Id.Value);
     }
 
     [Fact]

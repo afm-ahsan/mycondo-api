@@ -121,12 +121,12 @@ public static class DatabaseSeederExtensions
             // ExpenseCategoryCatalogueBackfillSeeder's data — independent concern, ordered last only for
             // startup-log readability.
             //
-            // Task 04A hardening: "no current subscription" alone is not eligibility — see
-            // LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc. Because that
-            // cutover is a fixed historical instant (not a rolling window), every tenant provisioned from
-            // here on is permanently ineligible regardless of how many more times this seeder runs, so it
-            // stays safe to leave registered as an ordinary every-startup seeder — it does not need to be
-            // demoted to a one-time/manually-triggered operation.
+            // Task 04B: "no current subscription" is eligibility on its own (Task 04A's CreatedAtUtc
+            // cutoff was found to have no operational basis — see the seeder's own doc comment — and was
+            // removed). This stays safe to leave registered as an ordinary every-startup seeder only for
+            // as long as this seeder remains the sole caller of OrganizationSubscription.Create in the
+            // codebase; once ADR-034/035 introduces a second, subscription-aware provisioning path, this
+            // registration must be re-examined alongside that work.
             await sp.GetRequiredService<LegacyMigrationSubscriptionBackfillSeeder>().SeedAsync(cancellationToken);
         }
         finally
