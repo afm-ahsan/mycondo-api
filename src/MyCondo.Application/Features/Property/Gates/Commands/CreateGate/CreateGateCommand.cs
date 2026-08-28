@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Property.Gates.DTOs;
 
 namespace MyCondo.Application.Features.Property.Gates.Commands.CreateGate;
@@ -11,4 +12,7 @@ public sealed record CreateGateCommand(
     bool IsEntryAllowed,
     bool IsExitAllowed,
     int DisplayOrder
-) : IRequest<GateDto>;
+) : IRequest<GateDto>, IRequiresFeature
+{
+    public string FeatureKey => "security.gates";
+}

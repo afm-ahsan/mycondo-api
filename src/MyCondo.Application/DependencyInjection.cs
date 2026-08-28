@@ -24,8 +24,9 @@ public static class DependencyInjection
         // implicitly). Order is registration order = execution order, outermost first: unhandled
         // exceptions wrap everything so they can observe/log any failure; logging brackets each
         // request; performance times validation+handler; validation runs immediately before the
-        // handler. Scoped to match handler lifetime and because ValidationBehavior depends on
-        // scoped IValidator<T> registrations.
+        // handler; feature entitlement (ADR-033 §16) runs last, immediately before the handler, so a
+        // structurally invalid request never spends an entitlement lookup. Scoped to match handler
+        // lifetime and because ValidationBehavior depends on scoped IValidator<T> registrations.
         services.AddMediator(opts =>
         {
             opts.ServiceLifetime = ServiceLifetime.Scoped;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(FeatureEntitlementBehavior<,>));
 
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
