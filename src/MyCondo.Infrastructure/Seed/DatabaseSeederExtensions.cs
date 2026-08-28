@@ -63,6 +63,12 @@ public static class DatabaseSeederExtensions
             await sp.GetRequiredService<IPermissionSeeder>().SeedAsync(cancellationToken);
             await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync(cancellationToken);
 
+            // 01b Feature Catalogue (ADR-033 §3/§5) — global platform-schema catalogue, every
+            // environment, independent of tenants. Runs after Permissions since FeaturePermission rows
+            // reference permission codes by natural key (no FK, but ordering keeps intent clear).
+            await sp.GetRequiredService<IFeatureCatalogueSeeder>().SeedAsync(cancellationToken);
+            await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync(cancellationToken);
+
             if (environment.IsDevelopment())
             {
                 // 02 Platform bootstrap (Platform SuperAdmin — no tenant concept involved).

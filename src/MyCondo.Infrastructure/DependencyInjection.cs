@@ -55,6 +55,7 @@ using MyCondo.Domain.Features.Payments.Payments;
 using MyCondo.Domain.Features.Payments.ResidentAccounts;
 using MyCondo.Domain.Features.Payroll.AttendanceRecords;
 using MyCondo.Domain.Features.Payroll.StaffMembers;
+using MyCondo.Domain.Features.Platform.FeatureCatalogue;
 using MyCondo.Domain.Features.Platform.PlatformAudit;
 using MyCondo.Domain.Features.Platform.PlatformRefreshTokens;
 using MyCondo.Domain.Features.Platform.PlatformRolePermissions;
@@ -185,6 +186,8 @@ public static class DependencyInjection
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantModuleRepository, TenantModuleRepository>();
         services.AddScoped<IPermissionRepository, PermissionRepository>();
+        services.AddScoped<IFeatureDefinitionRepository, FeatureDefinitionRepository>();
+        services.AddScoped<IFeaturePermissionRepository, FeaturePermissionRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
         services.AddScoped<IPlatformUserRepository, PlatformUserRepository>();
