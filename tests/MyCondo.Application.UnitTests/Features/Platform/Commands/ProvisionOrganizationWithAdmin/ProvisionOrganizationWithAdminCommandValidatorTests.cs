@@ -40,6 +40,20 @@ public class ProvisionOrganizationWithAdminCommandValidatorTests
     }
 
     [Theory]
+    [InlineData("")]
+    [InlineData("not-an-email")]
+    public void Rejects_Invalid_AdministratorEmail(string email)
+    {
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { AdministratorEmail = email };
+
+        ValidationResult result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(
+            e => e.PropertyName == nameof(ProvisionOrganizationWithAdminCommand.AdministratorEmail));
+    }
+
+    [Theory]
     [InlineData("Sh0!")]
     [InlineData("NoSpecialChar12")]
     public void Rejects_Weak_Password(string weakPassword)

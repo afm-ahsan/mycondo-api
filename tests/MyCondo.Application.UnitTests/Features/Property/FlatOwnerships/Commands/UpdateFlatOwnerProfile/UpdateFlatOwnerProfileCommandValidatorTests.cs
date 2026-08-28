@@ -79,4 +79,27 @@ public class UpdateFlatOwnerProfileCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateFlatOwnerProfileCommand.NationalIdNumber));
     }
+
+    [Fact]
+    public async Task Empty_Email_Passes()
+    {
+        Resident resident = CreateResident(Guid.NewGuid(), withNationalId: false);
+        _residents.GetByIdAsync(resident.Id, Arg.Any<CancellationToken>()).Returns(resident);
+
+        ValidationResult result = await CreateValidator().ValidateAsync(BuildCommand(resident.Id.Value) with { Email = null });
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Invalid_Email_Fails()
+    {
+        Resident resident = CreateResident(Guid.NewGuid(), withNationalId: false);
+        _residents.GetByIdAsync(resident.Id, Arg.Any<CancellationToken>()).Returns(resident);
+
+        ValidationResult result = await CreateValidator().ValidateAsync(BuildCommand(resident.Id.Value) with { Email = "not-an-email" });
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateFlatOwnerProfileCommand.Email));
+    }
 }
