@@ -35,6 +35,27 @@ public class UpdateOccupancyRegistrationDraftCommandValidatorTests
         result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateOccupancyRegistrationDraftCommand.PrimaryPhone));
     }
 
+    [Fact]
+    public void PrimaryEmail_Blank_Passes()
+    {
+        UpdateOccupancyRegistrationDraftCommand command = ValidCommand() with { PrimaryEmail = null };
+
+        ValidationResult result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void PrimaryEmail_Invalid_Fails()
+    {
+        UpdateOccupancyRegistrationDraftCommand command = ValidCommand() with { PrimaryEmail = "not-an-email" };
+
+        ValidationResult result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateOccupancyRegistrationDraftCommand.PrimaryEmail));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData(null)]

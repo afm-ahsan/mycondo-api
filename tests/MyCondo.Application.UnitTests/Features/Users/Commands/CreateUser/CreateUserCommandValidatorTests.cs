@@ -18,10 +18,12 @@ public class CreateUserCommandValidatorTests
         result.IsValid.Should().BeTrue();
     }
 
-    [Fact]
-    public void Invalid_Email_Fails()
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-an-email")]
+    public void Invalid_Email_Fails(string email)
     {
-        CreateUserCommand command = new("Full Name", "not-an-email", "+8801700000000", "Str0ngPassw0rd!", true);
+        CreateUserCommand command = new("Full Name", email, "+8801700000000", "Str0ngPassw0rd!", true);
 
         ValidationResult result = _validator.Validate(command);
 
