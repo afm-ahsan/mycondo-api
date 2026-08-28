@@ -26,9 +26,13 @@ public static class DependencyInjection
         // implicitly). Order is registration order = execution order, outermost first: unhandled
         // exceptions wrap everything so they can observe/log any failure; logging brackets each
         // request; performance times validation+handler; validation runs immediately before the
-        // handler; feature entitlement (ADR-033 §16) runs last, immediately before the handler, so a
-        // structurally invalid request never spends an entitlement lookup. Scoped to match handler
-        // lifetime and because ValidationBehavior depends on scoped IValidator<T> registrations.
+        // handler; tenant lifecycle (ADR-032 §6, Task 10) runs after validation so a structurally
+        // invalid request never spends a lifecycle lookup, and before feature entitlement so a hard
+        // organization/subscription lockout is authoritative before a commercial entitlement lookup
+        // runs (ADR-032 Task 10 §31/§32 — never lets a lifecycle denial masquerade as
+        // feature_not_entitled); feature entitlement (ADR-033 §16) runs last, immediately before the
+        // handler. Scoped to match handler lifetime and because ValidationBehavior depends on scoped
+        // IValidator<T> registrations.
         services.AddMediator(opts =>
         {
             opts.ServiceLifetime = ServiceLifetime.Scoped;
@@ -38,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TenantLifecycleBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(FeatureEntitlementBehavior<,>));
 
         // ADR-033 Task 09A — one resource-derived feature resolver per request family. .NET's built-in
@@ -59,6 +64,8 @@ public static class DependencyInjection
         services.AddScoped<IPermissionSeeder, PermissionSeeder>();
         services.AddScoped<IFeatureCatalogueSeeder, FeatureCatalogueSeeder>();
         services.AddScoped<ITenantEntitlementService, TenantEntitlementService>();
+        services.AddScoped<ITenantLifecycleAccessService, TenantLifecycleAccessService>();
+        services.AddScoped<ISubscriptionLifecycleAccessService, SubscriptionLifecycleAccessService>();
         services.AddScoped<IOrganizationAdminBootstrapper, OrganizationAdminBootstrapper>();
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();

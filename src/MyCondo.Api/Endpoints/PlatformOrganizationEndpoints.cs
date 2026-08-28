@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
 using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
@@ -183,6 +184,31 @@ public static class PlatformOrganizationEndpoints
                 return Results.NoContent();
             })
             .RequirePlatformPermission("platform.organization.reactivate")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/close", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new CloseOrganizationCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.organization.closed",
+                    targetType: "Tenant",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.organization.close")
             .Produces(StatusCodes.Status204NoContent);
 
         group.MapPut("/{id:guid}/modules", async (

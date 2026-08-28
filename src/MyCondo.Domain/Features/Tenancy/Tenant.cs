@@ -78,7 +78,7 @@ public sealed class Tenant : AggregateRoot<TenantId>, IAuditable
             return;
         }
 
-        if (Status == TenantStatus.Suspended)
+        if (Status == TenantStatus.Suspended || Status == TenantStatus.Closed)
         {
             throw new InvalidTenantStatusTransitionException(Id, Status, TenantStatus.Active);
         }
@@ -95,7 +95,7 @@ public sealed class Tenant : AggregateRoot<TenantId>, IAuditable
             return;
         }
 
-        if (Status == TenantStatus.PendingActivation)
+        if (Status == TenantStatus.PendingActivation || Status == TenantStatus.Closed)
         {
             throw new InvalidTenantStatusTransitionException(Id, Status, TenantStatus.Suspended);
         }
@@ -103,6 +103,24 @@ public sealed class Tenant : AggregateRoot<TenantId>, IAuditable
         Status = TenantStatus.Suspended;
         UpdatedAtUtc = nowUtc;
         RaiseDomainEvent(new TenantSuspendedEvent(Id, nowUtc));
+    }
+
+    /// <summary>
+    /// Active or Suspended → Closed — permanent, terminal organization decommission (ADR-032 §4/§10).
+    /// Idempotent when already Closed. Never deletes or archives tenant data as a side effect (ADR-032
+    /// §11's "feature disabled ≠ data deleted" invariant extends to organization closure — data retention/
+    /// purge is a separate, future, explicitly-approved operation).
+    /// </summary>
+    public void Close(DateTimeOffset nowUtc)
+    {
+        if (Status == TenantStatus.Closed)
+        {
+            return;
+        }
+
+        Status = TenantStatus.Closed;
+        UpdatedAtUtc = nowUtc;
+        RaiseDomainEvent(new TenantClosedEvent(Id, nowUtc));
     }
 
     /// <summary>

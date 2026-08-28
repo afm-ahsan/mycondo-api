@@ -17,5 +17,11 @@ public sealed class OrganizationSubscriptionRepository(MyCondoDbContext db) : IO
                  x.Status == OrganizationSubscriptionStatus.Restricted))
             .SingleOrDefaultAsync(cancellationToken);
 
+    public Task<OrganizationSubscription?> GetLatestForTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
+        db.Set<OrganizationSubscription>()
+            .Where(x => x.TenantId == tenantId)
+            .OrderByDescending(x => x.ActivatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public void Add(OrganizationSubscription subscription) => db.Set<OrganizationSubscription>().Add(subscription);
 }

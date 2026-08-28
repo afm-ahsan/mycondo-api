@@ -137,6 +137,78 @@ public class TenantTests
     }
 
     [Fact]
+    public void Close_Transitions_Active_To_Closed()
+    {
+        Tenant tenant = Tenant.Provision("ARP", "arp", Now);
+        tenant.Activate(Now);
+
+        tenant.Close(Now.AddMinutes(1));
+
+        tenant.Status.Should().Be(TenantStatus.Closed);
+        tenant.DomainEvents.Should().ContainSingle(e => e is TenantClosedEvent);
+    }
+
+    [Fact]
+    public void Close_Transitions_Suspended_To_Closed()
+    {
+        Tenant tenant = Tenant.Provision("ARP", "arp", Now);
+        tenant.Activate(Now);
+        tenant.Suspend(Now);
+
+        tenant.Close(Now.AddMinutes(1));
+
+        tenant.Status.Should().Be(TenantStatus.Closed);
+    }
+
+    [Fact]
+    public void Close_Is_Idempotent_When_Already_Closed()
+    {
+        Tenant tenant = Tenant.Provision("ARP", "arp", Now);
+        tenant.Activate(Now);
+        tenant.Close(Now);
+
+        tenant.Close(Now.AddMinutes(1));
+
+        tenant.DomainEvents.Should().ContainSingle(e => e is TenantClosedEvent);
+    }
+
+    [Fact]
+    public void Closed_Is_Terminal_Activate_Throws()
+    {
+        Tenant tenant = Tenant.Provision("ARP", "arp", Now);
+        tenant.Activate(Now);
+        tenant.Close(Now);
+
+        Action act = () => tenant.Activate(Now);
+
+        act.Should().Throw<InvalidTenantStatusTransitionException>();
+    }
+
+    [Fact]
+    public void Closed_Is_Terminal_Suspend_Throws()
+    {
+        Tenant tenant = Tenant.Provision("ARP", "arp", Now);
+        tenant.Activate(Now);
+        tenant.Close(Now);
+
+        Action act = () => tenant.Suspend(Now);
+
+        act.Should().Throw<InvalidTenantStatusTransitionException>();
+    }
+
+    [Fact]
+    public void Closed_Is_Terminal_Reactivate_Throws()
+    {
+        Tenant tenant = Tenant.Provision("ARP", "arp", Now);
+        tenant.Activate(Now);
+        tenant.Close(Now);
+
+        Action act = () => tenant.Reactivate(Now);
+
+        act.Should().Throw<InvalidTenantStatusTransitionException>();
+    }
+
+    [Fact]
     public void UpdateDetails_Normalizes_Name_And_Uppercases_Code()
     {
         Tenant tenant = Tenant.Provision("ARP", "arp", Now);
