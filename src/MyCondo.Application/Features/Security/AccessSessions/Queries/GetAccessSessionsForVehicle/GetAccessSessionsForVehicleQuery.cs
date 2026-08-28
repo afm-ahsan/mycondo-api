@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.AccessSessions.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,7 @@ public sealed record GetAccessSessionsForVehicleQuery(
     Guid VehicleId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<AccessSessionDto>>;
+) : IRequest<PagedResult<AccessSessionDto>>, IRequiresFeature
+{
+    public string FeatureKey => "security.vehicles";
+}

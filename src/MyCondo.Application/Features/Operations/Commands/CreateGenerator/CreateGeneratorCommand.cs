@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.CreateGenerator;
@@ -9,4 +10,7 @@ public sealed record CreateGeneratorCommand(
     string? Model,
     decimal? CapacityKva,
     string? Location
-) : IRequest<GeneratorDto>;
+) : IRequest<GeneratorDto>, IRequiresFeature
+{
+    public string FeatureKey => "operations.generator";
+}

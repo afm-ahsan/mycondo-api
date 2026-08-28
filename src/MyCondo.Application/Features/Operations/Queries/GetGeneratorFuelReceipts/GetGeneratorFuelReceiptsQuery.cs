@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,7 @@ public sealed record GetGeneratorFuelReceiptsQuery(
     Guid? GeneratorId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GeneratorFuelReceiptDto>>;
+) : IRequest<PagedResult<GeneratorFuelReceiptDto>>, IRequiresFeature
+{
+    public string FeatureKey => "operations.generator";
+}

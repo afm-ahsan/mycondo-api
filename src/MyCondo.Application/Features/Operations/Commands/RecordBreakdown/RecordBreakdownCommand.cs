@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.RecordBreakdown;
@@ -8,4 +9,7 @@ public sealed record RecordBreakdownCommand(
     DateTimeOffset ReportedAtUtc,
     string Description,
     DateTimeOffset DowntimeStartUtc
-) : IRequest<GeneratorBreakdownRecordDto>;
+) : IRequest<GeneratorBreakdownRecordDto>, IRequiresFeature
+{
+    public string FeatureKey => "operations.generator";
+}

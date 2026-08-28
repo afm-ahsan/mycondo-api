@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.DomesticWorkerAssignments.DTOs;
 
 namespace MyCondo.Application.Features.Security.DomesticWorkerAssignments.Commands.CreateDomesticWorkerAssignment;
@@ -11,4 +12,7 @@ public sealed record CreateDomesticWorkerAssignmentCommand(
     string? AllowedDays,
     TimeOnly? AllowedStartTime,
     TimeOnly? AllowedEndTime
-) : IRequest<DomesticWorkerAssignmentDto>;
+) : IRequest<DomesticWorkerAssignmentDto>, IRequiresFeature
+{
+    public string FeatureKey => "security.domestic_workers";
+}

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.Directory.DTOs;
 using MyCondo.Domain.Common;
 
@@ -10,4 +11,7 @@ namespace MyCondo.Application.Features.Security.Directory.Queries.GetSecurityDir
 /// "Authorized"/"Revoked" when supplied.</summary>
 public sealed record GetSecurityDirectoryQuery(
     string? Search, Guid? BuildingId, Guid? FlatId, string? AccessStatus, int Page, int PageSize
-) : IRequest<PagedResult<SecurityDirectoryEntryDto>>;
+) : IRequest<PagedResult<SecurityDirectoryEntryDto>>, IRequiresFeature
+{
+    public string FeatureKey => "security.directory";
+}

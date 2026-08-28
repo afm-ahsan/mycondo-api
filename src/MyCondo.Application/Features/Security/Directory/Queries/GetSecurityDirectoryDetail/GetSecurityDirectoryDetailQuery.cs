@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.Directory.DTOs;
 
 namespace MyCondo.Application.Features.Security.Directory.Queries.GetSecurityDirectoryDetail;
@@ -9,4 +10,7 @@ namespace MyCondo.Application.Features.Security.Directory.Queries.GetSecurityDir
 /// other.</summary>
 public sealed record GetSecurityDirectoryDetailQuery(
     Guid EntryId, string ResidentType
-) : IRequest<SecurityDirectoryDetailDto>;
+) : IRequest<SecurityDirectoryDetailDto>, IRequiresFeature
+{
+    public string FeatureKey => "security.directory";
+}

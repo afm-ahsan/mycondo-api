@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.Parcels.DTOs;
 using MyCondo.Domain.Common;
 
@@ -10,4 +11,7 @@ public sealed record GetParcelsForTenantQuery(
     int Page,
     int PageSize,
     Guid? BuildingId = null
-) : IRequest<PagedResult<ParcelDto>>;
+) : IRequest<PagedResult<ParcelDto>>, IRequiresFeature
+{
+    public string FeatureKey => "security.parcels";
+}

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.Parcels.DTOs;
 
 namespace MyCondo.Application.Features.Security.Parcels.Commands.ReceiveParcel;
@@ -13,4 +14,7 @@ public sealed record ReceiveParcelCommand(
     string ParcelType,
     int PackageCount,
     string? StorageLocation
-) : IRequest<ParcelDto>;
+) : IRequest<ParcelDto>, IRequiresFeature
+{
+    public string FeatureKey => "security.parcels";
+}

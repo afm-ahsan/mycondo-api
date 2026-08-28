@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.ServiceProviders.DTOs;
 
 namespace MyCondo.Application.Features.Security.ServiceProviders.Commands.RegisterServiceProvider;
@@ -10,4 +11,7 @@ public sealed record RegisterServiceProviderCommand(
     string? ServiceDescription,
     string? IdentityDocumentType,
     string? IdentityDocumentNumber
-) : IRequest<ServiceProviderProfileDto>;
+) : IRequest<ServiceProviderProfileDto>, IRequiresFeature
+{
+    public string FeatureKey => "security.service_providers";
+}

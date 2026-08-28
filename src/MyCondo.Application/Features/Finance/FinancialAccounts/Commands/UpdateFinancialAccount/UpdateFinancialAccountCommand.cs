@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.FinancialAccounts.DTOs;
 
 namespace MyCondo.Application.Features.Finance.FinancialAccounts.Commands.UpdateFinancialAccount;
@@ -10,4 +11,7 @@ public sealed record UpdateFinancialAccountCommand(
     string? BranchName,
     string? AccountNumber,
     Guid? FundId,
-    string? Notes) : IRequest<FinancialAccountDto>;
+    string? Notes) : IRequest<FinancialAccountDto>, IRequiresFeature
+{
+    public string FeatureKey => "finance.financial_accounts";
+}

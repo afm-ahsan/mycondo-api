@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.Vehicles.DTOs;
 
 namespace MyCondo.Application.Features.Security.Vehicles.Commands.RegisterVehicle;
@@ -11,4 +12,7 @@ public sealed record RegisterVehicleCommand(
     string? Color,
     string OwnershipCategory,
     Guid? FlatId
-) : IRequest<VehicleDto>;
+) : IRequest<VehicleDto>, IRequiresFeature
+{
+    public string FeatureKey => "security.vehicles";
+}

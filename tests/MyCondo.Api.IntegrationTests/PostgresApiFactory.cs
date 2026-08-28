@@ -8,6 +8,7 @@ using MyCondo.Application.Common.Services;
 using MyCondo.Infrastructure.Persistence;
 using MyCondo.Infrastructure.Persistence.Interceptors;
 using MyCondo.Infrastructure.Persistence.Repositories;
+using MyCondo.Infrastructure.Seed;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -157,8 +158,52 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
             PermissionRepository permissionRepository = new(migrationContext);
             PermissionSeeder permissionSeeder = new(permissionRepository, NullLogger<PermissionSeeder>.Instance);
             await permissionSeeder.SeedAsync(CancellationToken.None);
+
+            // Same rationale as the permission catalogue immediately above, extended to the Feature
+            // Catalogue (ADR-033 §3/§5, platform.feature_definitions/platform.feature_permissions) —
+            // also seeded by the environment-gated DatabaseSeederExtensions.SeedDatabaseAsync in real
+            // deployments, also skipped under "Testing". Any test whose request implements
+            // IRequiresFeature (ADR-033 §16) reaches ITenantEntitlementService.IsFeatureEnabled, which
+            // throws FeatureNotFoundException — not the intended 403 feature_not_entitled — for a feature
+            // key with no platform.feature_definitions row at all (ADR-033 §13 step 1: unknown key is a
+            // code defect, never a soft-fail). Seeding here once, factory-wide, means individual tests
+            // that only incidentally touch a gated endpoint (e.g. creating a Building as ordinary setup)
+            // don't each need their own IFeatureCatalogueSeeder call — only tests that actually assert on
+            // entitlement behavior still call FeatureCatalogueSeeder explicitly for clarity at the call
+            // site; this seeding is idempotent (insert-missing) so doing both is harmless.
+            FeatureDefinitionRepository featureDefinitionRepository = new(migrationContext);
+            FeaturePermissionRepository featurePermissionRepository = new(migrationContext);
+            FeatureCatalogueSeeder featureCatalogueSeeder = new(
+                featureDefinitionRepository, featurePermissionRepository, NullLogger<FeatureCatalogueSeeder>.Instance);
+            await featureCatalogueSeeder.SeedAsync(CancellationToken.None);
+
             await migrationContext.SaveChangesAsync();
         }
+    }
+
+    /// <summary>
+    /// Runs <see cref="LegacyMigrationSubscriptionBackfillSeeder"/> (ADR-033 Task 04) against every tenant
+    /// that currently has no <c>OrganizationSubscription</c> — the exact same reconciliation
+    /// <c>DatabaseSeederExtensions.SeedDatabaseAsync</c> runs at every real startup (skipped here under
+    /// "Testing"), which per that seeder's own Task 04B rationale is not limited to pre-existing tenants:
+    /// no subscription-aware provisioning path exists yet, so any tenant lacking a subscription — including
+    /// one freshly created by this test run's own <c>/api/v1/auth/register</c> call — is eligible and gets
+    /// grandfathered onto the full Active Feature Catalogue.
+    ///
+    /// Call this after registering a tenant that only needs Buildings/Flats (or any other non-core feature)
+    /// as incidental test setup — not from a test whose actual subject is entitlement/subscription timing
+    /// itself (e.g. <c>GateFeatureEntitlementDbTests</c>, <c>ParcelFeatureEntitlementDbTests</c>,
+    /// <c>TenantEntitlementSessionContractDbTests</c>), since those tests seed their own subscription state
+    /// deliberately and calling this would be a no-op at best or mask the exact "no subscription"/"package
+    /// doesn't grant it" scenario they exist to prove.
+    /// </summary>
+    public async Task GrantFullEntitlementToAllTenantsAsync()
+    {
+        using IServiceScope scope = Services.CreateScope();
+        LegacyMigrationSubscriptionBackfillSeeder seeder = new(
+            scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
+        await seeder.SeedAsync(CancellationToken.None);
     }
 
     /// <summary>

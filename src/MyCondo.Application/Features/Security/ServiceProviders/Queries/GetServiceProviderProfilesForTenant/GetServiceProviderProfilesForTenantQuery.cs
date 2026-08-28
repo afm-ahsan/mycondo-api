@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.ServiceProviders.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,7 @@ public sealed record GetServiceProviderProfilesForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<ServiceProviderProfileDto>>;
+) : IRequest<PagedResult<ServiceProviderProfileDto>>, IRequiresFeature
+{
+    public string FeatureKey => "security.service_providers";
+}

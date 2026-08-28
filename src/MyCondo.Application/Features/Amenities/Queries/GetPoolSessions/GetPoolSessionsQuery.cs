@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Domain.Common;
 
@@ -10,4 +11,7 @@ public sealed record GetPoolSessionsQuery(
     bool? OpenOnly,
     int Page,
     int PageSize
-) : IRequest<PagedResult<PoolSessionDto>>;
+) : IRequest<PagedResult<PoolSessionDto>>, IRequiresFeature
+{
+    public string FeatureKey => "facilities.swimming_pool";
+}

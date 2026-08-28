@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Property.Flats.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,7 @@ public sealed record GetFlatsForBuildingQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<FlatDto>>;
+) : IRequest<PagedResult<FlatDto>>, IRequiresFeature
+{
+    public string FeatureKey => "property.flats";
+}

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,7 @@ public sealed record GetGeneratorMaintenanceSchedulesQuery(
     Guid? GeneratorId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GeneratorMaintenanceScheduleDto>>;
+) : IRequest<PagedResult<GeneratorMaintenanceScheduleDto>>, IRequiresFeature
+{
+    public string FeatureKey => "operations.generator";
+}

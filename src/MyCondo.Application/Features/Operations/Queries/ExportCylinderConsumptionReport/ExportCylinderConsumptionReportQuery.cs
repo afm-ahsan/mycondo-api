@@ -8,4 +8,7 @@ public sealed record ExportCylinderConsumptionReportQuery(
     DateOnly FromDate,
     DateOnly ToDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, IRequiresFeature
+{
+    public string FeatureKey => "operations.gas_cylinders";
+}

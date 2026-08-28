@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.RecordCylinderPurchase;
@@ -13,4 +14,7 @@ public sealed record RecordCylinderPurchaseCommand(
     decimal RatePerCylinder,
     decimal DeliveryOrOtherCost,
     string? Remarks
-) : IRequest<CylinderPurchaseDto>;
+) : IRequest<CylinderPurchaseDto>, IRequiresFeature
+{
+    public string FeatureKey => "operations.gas_cylinders";
+}

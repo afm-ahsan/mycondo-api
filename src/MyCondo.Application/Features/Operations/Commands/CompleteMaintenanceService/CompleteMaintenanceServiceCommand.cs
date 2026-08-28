@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.CompleteMaintenanceService;
@@ -10,4 +11,7 @@ public sealed record CompleteMaintenanceServiceCommand(
     decimal? Cost,
     DateOnly? NextDueDate,
     decimal? NextDueHourMeterReading
-) : IRequest<GeneratorServiceRecordDto>;
+) : IRequest<GeneratorServiceRecordDto>, IRequiresFeature
+{
+    public string FeatureKey => "operations.generator";
+}

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Property.Flats.DTOs;
 
 namespace MyCondo.Application.Features.Property.Flats.Commands.UpdateFlat;
@@ -8,4 +9,7 @@ public sealed record UpdateFlatCommand(
     string FlatNumber,
     int? FloorNumber,
     string FlatType
-) : IRequest<FlatDto>;
+) : IRequest<FlatDto>, IRequiresFeature
+{
+    public string FeatureKey => "property.flats";
+}
