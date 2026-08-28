@@ -111,6 +111,16 @@ public static class DatabaseSeederExtensions
             // system accounts via step 05 above (FinanceChartOfAccountSeeder's set), and this step's own
             // category/type reconciliation. See ExpenseCategoryCatalogueBackfillSeeder's doc comment.
             await sp.GetRequiredService<ExpenseCategoryCatalogueBackfillSeeder>().SeedAsync(cancellationToken);
+
+            // 07 Legacy TenantModule → OrganizationSubscription compatibility backfill (ADR-033 §24
+            // steps 3-4, Task 04) — every environment: every existing tenant (including one provisioned
+            // moments ago in step 03, this same startup) gets a grandfathered OrganizationSubscription if
+            // it doesn't already have a current one. Runs after every other backfill step so the Feature
+            // Catalogue (01b) is fully seeded and every tenant (Development-only step 03 included) already
+            // exists. Does not touch or read TenantRoleCatalogueBackfillSeeder's/FinanceChartOfAccountBackfillSeeder's/
+            // ExpenseCategoryCatalogueBackfillSeeder's data — independent concern, ordered last only for
+            // startup-log readability.
+            await sp.GetRequiredService<LegacyMigrationSubscriptionBackfillSeeder>().SeedAsync(cancellationToken);
         }
         finally
         {

@@ -181,6 +181,7 @@ public static class DependencyInjection
         services.AddScoped<Seed.FinanceChartOfAccountBackfillSeeder>();
         services.AddScoped<Seed.TenantRoleCatalogueBackfillSeeder>();
         services.AddScoped<Seed.ExpenseCategoryCatalogueBackfillSeeder>();
+        services.AddScoped<Seed.LegacyMigrationSubscriptionBackfillSeeder>();
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
