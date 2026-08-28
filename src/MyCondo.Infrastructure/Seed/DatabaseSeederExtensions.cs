@@ -120,6 +120,13 @@ public static class DatabaseSeederExtensions
             // exists. Does not touch or read TenantRoleCatalogueBackfillSeeder's/FinanceChartOfAccountBackfillSeeder's/
             // ExpenseCategoryCatalogueBackfillSeeder's data — independent concern, ordered last only for
             // startup-log readability.
+            //
+            // Task 04A hardening: "no current subscription" alone is not eligibility — see
+            // LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc. Because that
+            // cutover is a fixed historical instant (not a rolling window), every tenant provisioned from
+            // here on is permanently ineligible regardless of how many more times this seeder runs, so it
+            // stays safe to leave registered as an ordinary every-startup seeder — it does not need to be
+            // demoted to a one-time/manually-triggered operation.
             await sp.GetRequiredService<LegacyMigrationSubscriptionBackfillSeeder>().SeedAsync(cancellationToken);
         }
         finally

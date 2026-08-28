@@ -237,6 +237,70 @@ public class LegacyMigrationSubscriptionBackfillSeederTests
     }
 
     [Fact]
+    public async Task Does_Not_Duplicate_An_Already_Migrated_Legacy_Tenants_Subscription_On_Rerun()
+    {
+        Tenant tenant = Tenant.Provision("Tenant A", "tenant-a", Now.AddYears(-1));
+        Fixture fixture = BuildFixture([tenant], preSeedGrandfatheredPackage: false);
+
+        LegacyMigrationSubscriptionBackfillSeeder firstRun = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
+        await firstRun.SeedAsync(CancellationToken.None);
+        OrganizationSubscription firstSubscription = fixture.SubscriptionsStore[tenant.Id.Value];
+
+        LegacyMigrationSubscriptionBackfillSeeder secondRun = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
+        await secondRun.SeedAsync(CancellationToken.None);
+
+        fixture.SubscriptionsStore.Should().ContainKey(tenant.Id.Value);
+        fixture.SubscriptionsStore[tenant.Id.Value].Should().BeSameAs(firstSubscription);
+    }
+
+    [Fact]
+    public async Task Does_Not_Grandfather_A_Tenant_Provisioned_At_Or_After_The_Subscription_Architecture_Cutover()
+    {
+        Tenant futureTenant = Tenant.Provision(
+            "Future Tenant", "future-tenant",
+            LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc);
+        Fixture fixture = BuildFixture([futureTenant], preSeedGrandfatheredPackage: false);
+
+        LegacyMigrationSubscriptionBackfillSeeder seeder = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
+        await seeder.SeedAsync(CancellationToken.None);
+
+        fixture.SubscriptionsStore.Should().NotContainKey(futureTenant.Id.Value);
+    }
+
+    [Fact]
+    public async Task Does_Not_Grandfather_A_Future_Tenant_With_Zero_TenantModule_Rows()
+    {
+        Tenant futureTenant = Tenant.Provision(
+            "Future Tenant", "future-tenant",
+            LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc.AddDays(1));
+        Fixture fixture = BuildFixture([futureTenant], preSeedGrandfatheredPackage: true);
+        // TenantModulesByTenant intentionally left empty — a future tenant with no legacy module rows
+        // must still be excluded on cohort grounds alone, not merely because it "has no modules to lose."
+
+        LegacyMigrationSubscriptionBackfillSeeder seeder = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
+        await seeder.SeedAsync(CancellationToken.None);
+
+        fixture.SubscriptionsStore.Should().NotContainKey(futureTenant.Id.Value);
+    }
+
+    [Fact]
+    public async Task Does_Not_Grandfather_A_Future_Tenant_That_Has_TenantModule_Rows()
+    {
+        Tenant futureTenant = Tenant.Provision(
+            "Future Tenant", "future-tenant",
+            LegacyMigrationSubscriptionBackfillSeeder.SubscriptionArchitectureCutoverUtc.AddDays(1));
+        Fixture fixture = BuildFixture([futureTenant], preSeedGrandfatheredPackage: true);
+        fixture.TenantModulesByTenant[futureTenant.Id.Value] = [TenantModule.Enable(futureTenant.Id.Value, "property", Now, null)];
+        // Legacy-module presence must not override cohort exclusion (Task 04A §12) — a future tenant
+        // that somehow has TenantModule rows is still not a legacy migration candidate.
+
+        LegacyMigrationSubscriptionBackfillSeeder seeder = new(fixture.ScopeFactory, NullLoggerFactory.Instance);
+        await seeder.SeedAsync(CancellationToken.None);
+
+        fixture.SubscriptionsStore.Should().NotContainKey(futureTenant.Id.Value);
+    }
+
+    [Fact]
     public async Task One_Tenants_Failure_Does_Not_Prevent_Another_Tenants_Migration()
     {
         Tenant failingTenant = Tenant.Provision("Failing Tenant", "failing-tenant", Now.AddYears(-1));

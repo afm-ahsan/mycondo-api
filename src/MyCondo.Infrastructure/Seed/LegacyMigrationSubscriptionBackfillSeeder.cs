@@ -57,6 +57,26 @@ namespace MyCondo.Infrastructure.Seed;
 /// another's backfill, and nothing is saved for a tenant until every check for that tenant has already
 /// passed, so a failure never leaves partial <c>OrganizationSubscription</c>+audit state. A failed
 /// tenant simply stays unmigrated and is retried the next time this seeder runs.</para>
+///
+/// <para><b>Legacy cohort safety (ADR-033 Task 04A — hardening on top of Task 04):</b> "has no current
+/// <see cref="OrganizationSubscription"/>" is necessary but was found <em>not sufficient</em> to prove a
+/// tenant genuinely predates the subscription architecture. Subscription-aware onboarding does not yet
+/// exist (deferred to ADR-034/035), so a tenant provisioned after this migration bridge ships still has
+/// no subscription — for an entirely different, non-legacy reason (partial provisioning, operational
+/// failure, a manual configuration delay, a future onboarding regression). Granting such a tenant the
+/// full-catalogue grandfathered package would silently mask that gap instead of leaving it for the real
+/// onboarding/subscription workflow to resolve. <see cref="SubscriptionArchitectureCutoverUtc"/> is
+/// therefore a second, independent eligibility condition: only a tenant whose <see
+/// cref="Tenant.CreatedAtUtc"/> predates the instant the <c>OrganizationSubscription</c> schema itself
+/// became live (migration <c>20260828073656_AddOrganizationSubscriptionAndTenantFeatureOverrideSchema</c>,
+/// ADR-033 Task 03) is eligible at all. Before that migration it was structurally impossible for any
+/// tenant to carry a subscription, so "no subscription" carried no information about cohort membership;
+/// from that instant on it does, and cohort membership must come from an independent, immutable fact
+/// (creation time) rather than the presence/absence of the very row this seeder creates. This is a fixed
+/// historical constant, never <see cref="IClock.UtcNow"/> read at seed time — a tenant's eligibility must
+/// not depend on when the seeder happens to run. A tenant at or after the cutover that lacks a
+/// subscription is left alone (not skipped-as-already-migrated, not failed) for the real onboarding
+/// workflow — see §7 below and ADR-033 Task 04A §7.</para>
 /// </summary>
 public sealed class LegacyMigrationSubscriptionBackfillSeeder(
     IServiceScopeFactory scopeFactory,
@@ -64,6 +84,17 @@ public sealed class LegacyMigrationSubscriptionBackfillSeeder(
 )
 {
     public const string GrandfatheredPackageCode = "LEGACY-MIGRATION-GRANDFATHERED";
+
+    /// <summary>
+    /// The instant the <c>OrganizationSubscription</c>/<c>TenantFeatureOverride</c> schema became live
+    /// (migration <c>20260828073656_AddOrganizationSubscriptionAndTenantFeatureOverrideSchema</c>, ADR-033
+    /// Task 03) — the earliest possible moment any tenant could structurally have a subscription at all.
+    /// Only tenants provisioned strictly before this instant are eligible for the legacy migration
+    /// cohort; see this class's own doc comment for why "no subscription" alone cannot decide this.
+    /// Deliberately a fixed UTC literal, not derived from a runtime clock.
+    /// </summary>
+    public static readonly DateTimeOffset SubscriptionArchitectureCutoverUtc =
+        new(2026, 8, 28, 7, 36, 56, TimeSpan.Zero);
 
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
@@ -89,7 +120,7 @@ public sealed class LegacyMigrationSubscriptionBackfillSeeder(
                 await EnsureGrandfatheredPackageAsync(sp, catalogue, nowUtc, logger, cancellationToken);
         }
 
-        int migrated = 0, skipped = 0, failed = 0;
+        int migrated = 0, skipped = 0, failed = 0, notLegacyCohort = 0;
 
         foreach (Tenant tenant in tenants)
         {
@@ -98,6 +129,18 @@ public sealed class LegacyMigrationSubscriptionBackfillSeeder(
 
             try
             {
+                if (tenant.CreatedAtUtc >= SubscriptionArchitectureCutoverUtc)
+                {
+                    // Provisioned at/after the subscription architecture went live — never a legacy
+                    // migration candidate no matter how long it has since gone without a subscription
+                    // (ADR-033 Task 04A §7). Left alone for the real onboarding/subscription workflow;
+                    // deliberately not run through LegacyEntitlementShadowComparer, so it can never
+                    // surface as a shadow-comparison "loss" for a grant it was never entitled to receive
+                    // (Task 04A §14).
+                    notLegacyCohort++;
+                    continue;
+                }
+
                 IOrganizationSubscriptionRepository subscriptions =
                     sp.GetRequiredService<IOrganizationSubscriptionRepository>();
 
@@ -189,8 +232,9 @@ public sealed class LegacyMigrationSubscriptionBackfillSeeder(
 
         logger.LogInformation(
             "[DatabaseSeed] Legacy migration subscription backfill: {Migrated} tenant(s) migrated, " +
-            "{Skipped} already had a subscription, {Failed} failed.",
-            migrated, skipped, failed);
+            "{Skipped} already had a subscription, {NotLegacyCohort} excluded (created at/after the " +
+            "subscription architecture cutover), {Failed} failed.",
+            migrated, skipped, notLegacyCohort, failed);
     }
 
     /// <summary>
