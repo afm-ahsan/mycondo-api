@@ -11,6 +11,13 @@ public sealed class RatePlanRepository(MyCondoDbContext db) : IRatePlanRepositor
     public Task<RatePlan?> GetByIdAsync(RatePlanId id, CancellationToken cancellationToken) =>
         db.Set<RatePlan>().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public Task<UtilityType?> GetUtilityTypeAsync(Guid tenantId, RatePlanId id, CancellationToken cancellationToken) =>
+        db.Set<RatePlan>()
+            .AsNoTracking()
+            .Where(p => p.Id == id && p.TenantId == tenantId)
+            .Select(p => (UtilityType?)p.UtilityType)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<PagedResult<RatePlan>> SearchAsync(
         Guid tenantId, BuildingId? buildingId, UtilityType? utilityType, int page, int pageSize, CancellationToken cancellationToken)
     {

@@ -15,6 +15,13 @@ public sealed class ReadingRepository(MyCondoDbContext db) : IReadingRepository
     public Task<Reading?> GetByIdAsync(ReadingId id, CancellationToken cancellationToken) =>
         db.Set<Reading>().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
 
+    public Task<UtilityType?> GetUtilityTypeAsync(Guid tenantId, ReadingId id, CancellationToken cancellationToken) =>
+        db.Set<Reading>()
+            .AsNoTracking()
+            .Where(r => r.Id == id && r.TenantId == tenantId)
+            .Select(r => (UtilityType?)r.UtilityType)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<PagedResult<Reading>> SearchAsync(
         Guid tenantId, MeterId? meterId, FlatId? flatId, ReadingStatus? status, int page, int pageSize,
         CancellationToken cancellationToken)

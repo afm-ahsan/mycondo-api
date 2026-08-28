@@ -6,10 +6,12 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Behaviors;
 using MyCondo.Application.Common.Events;
 using MyCondo.Application.Common.Services;
+using MyCondo.Application.Features.Amenities.Common;
 using MyCondo.Application.Features.Billing.Services;
 using MyCondo.Application.Features.Finance.FinancialStatements.Notes;
 using MyCondo.Application.Features.Finance.FinancialStatements.Services;
 using MyCondo.Application.Features.Finance.Services;
+using MyCondo.Application.Features.Utilities.Common;
 
 namespace MyCondo.Application;
 
@@ -38,6 +40,20 @@ public static class DependencyInjection
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(FeatureEntitlementBehavior<,>));
 
+        // ADR-033 Task 09A — one resource-derived feature resolver per request family. .NET's built-in
+        // container does NOT support registering multiple open generics against the same open service
+        // type distinguished only by generic constraint (it throws on the first non-matching descriptor
+        // rather than trying the next), so RegisterResolvedFeatureResolvers scans for each family's
+        // IHasXxxId-marked requests and registers one CLOSED IRequestFeatureResolver<TRequest> per
+        // request — same reflection-scan shape as RegisterDomainEventHandlers below, so a new request
+        // joining an existing family needs no new line here.
+        RegisterResolvedFeatureResolvers(services, assembly, typeof(IHasFacilityId), typeof(FacilityFeatureResolver<>));
+        RegisterResolvedFeatureResolvers(services, assembly, typeof(IHasBookingId), typeof(BookingFacilityFeatureResolver<>));
+        RegisterResolvedFeatureResolvers(services, assembly, typeof(IHasBlackoutDateId), typeof(BlackoutDateFacilityFeatureResolver<>));
+        RegisterResolvedFeatureResolvers(services, assembly, typeof(IHasMeterId), typeof(MeterFeatureResolver<>));
+        RegisterResolvedFeatureResolvers(services, assembly, typeof(IHasReadingId), typeof(ReadingFeatureResolver<>));
+        RegisterResolvedFeatureResolvers(services, assembly, typeof(IHasRatePlanId), typeof(RatePlanFeatureResolver<>));
+
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
         services.AddScoped<IPermissionSeeder, PermissionSeeder>();
@@ -63,6 +79,27 @@ public static class DependencyInjection
         RegisterDomainEventHandlers(services, assembly);
 
         return services;
+    }
+
+    private static void RegisterResolvedFeatureResolvers(
+        IServiceCollection services, Assembly assembly, Type markerInterface, Type openResolverType)
+    {
+        foreach (Type requestType in assembly.GetTypes())
+        {
+            if (requestType.IsAbstract || requestType.IsInterface)
+            {
+                continue;
+            }
+
+            if (!markerInterface.IsAssignableFrom(requestType) || !typeof(IRequiresResolvedFeature).IsAssignableFrom(requestType))
+            {
+                continue;
+            }
+
+            Type serviceType = typeof(IRequestFeatureResolver<>).MakeGenericType(requestType);
+            Type implementationType = openResolverType.MakeGenericType(requestType);
+            services.AddScoped(serviceType, implementationType);
+        }
     }
 
     private static void RegisterDomainEventHandlers(IServiceCollection services, Assembly assembly)

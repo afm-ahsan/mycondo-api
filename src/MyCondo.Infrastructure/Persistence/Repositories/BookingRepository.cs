@@ -12,6 +12,13 @@ public sealed class BookingRepository(MyCondoDbContext db) : IBookingRepository
     public Task<Booking?> GetByIdAsync(BookingId id, CancellationToken cancellationToken) =>
         db.Set<Booking>().FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
+    public Task<FacilityId?> GetFacilityIdAsync(Guid tenantId, BookingId id, CancellationToken cancellationToken) =>
+        db.Set<Booking>()
+            .AsNoTracking()
+            .Where(b => b.Id == id && b.TenantId == tenantId)
+            .Select(b => (FacilityId?)b.FacilityId)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<PagedResult<Booking>> SearchAsync(
         Guid tenantId, FacilityId? facilityId, FlatId? flatId, BookingStatus? status, BuildingId? buildingId,
         string? eventType, BookingPaymentStatus? paymentStatus, DateTimeOffset? fromDate, DateTimeOffset? toDate,

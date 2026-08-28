@@ -1,4 +1,6 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Amenities.Common;
 using MyCondo.Application.Features.Amenities.DTOs;
 
 namespace MyCondo.Application.Features.Amenities.Commands.RequestBooking;
@@ -13,4 +15,4 @@ public sealed record RequestBookingCommand(
     int CleanupBufferMinutes,
     int ExpectedGuestCount,
     bool TermsAccepted
-) : IRequest<BookingDto>;
+) : IRequest<BookingDto>, IHasFacilityId, IRequiresResolvedFeature;
