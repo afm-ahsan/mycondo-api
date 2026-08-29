@@ -7,6 +7,7 @@ using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
 using MyCondo.Domain.Features.Tenancy;
 
 namespace MyCondo.Domain.Abstractions;
@@ -37,6 +38,13 @@ public interface ITenantScopedUnitOfWork : IAsyncDisposable
     IExpenseTypeRepository ExpenseTypes { get; }
     IChartOfAccountRepository ChartOfAccounts { get; }
     IAccountMappingRepository AccountMappings { get; }
+
+    /// <summary>Platform-schema, not RLS-protected — exposed here (rather than only via the ambient
+    /// ISubscriptionPackage* repositories) solely so <c>ProvisionOrganizationWithAdminCommandHandler</c>
+    /// can add the new tenant's initial <c>OrganizationSubscription</c> in the same
+    /// <see cref="SaveChangesAsync"/> transaction as the tenant/admin rows it writes through this unit
+    /// of work — atomicity, not a tenant-context requirement.</summary>
+    IOrganizationSubscriptionRepository OrganizationSubscriptions { get; }
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

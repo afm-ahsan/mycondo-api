@@ -5,6 +5,8 @@ using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Common.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
+using MyCondo.Domain.Features.Platform.SubscriptionPackages;
 using MyCondo.Domain.Features.Tenancy;
 
 namespace MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
@@ -26,6 +28,8 @@ namespace MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWi
 /// </summary>
 public sealed class ProvisionOrganizationWithAdminCommandHandler(
     ITenantRepository tenants,
+    ISubscriptionPackageRepository subscriptionPackages,
+    ISubscriptionPackageVersionRepository subscriptionPackageVersions,
     ITenantScopedUnitOfWorkFactory tenantScopedUnitOfWorkFactory,
     IPasswordHasher passwordHasher,
     IClock clock,
@@ -51,6 +55,9 @@ public sealed class ProvisionOrganizationWithAdminCommandHandler(
             throw new ConflictException($"An organization with code '{normalizedCode}' already exists.");
         }
 
+        SubscriptionPackageVersion packageVersion = await ResolveAssignablePackageVersionAsync(
+            command.SubscriptionPackageVersionId, cancellationToken);
+
         DateTimeOffset nowUtc = clock.UtcNow;
         TenantId tenantId = TenantId.New();
 
@@ -67,6 +74,25 @@ public sealed class ProvisionOrganizationWithAdminCommandHandler(
         uow.Users.Add(admin);
 
         tenant.SetPrimaryAdministrator(admin.Id.Value, admin.FullName, admin.Email);
+
+        // Monthly is the only billing cycle this provisioning path offers — negotiated cycle/price terms
+        // are out of Task 12A's scope (ADR-033 §11: list price is only ever a starting snapshot). A
+        // package version with no MonthlyPrice fails ResolveBasePrice with the existing
+        // UnsupportedBillingCycleException, which is the correct rejection for that case.
+        decimal basePrice = OrganizationSubscriptionCommercialTerms.ResolveBasePrice(packageVersion, BillingCycle.Monthly);
+        OrganizationSubscription subscription = OrganizationSubscription.Create(
+            tenant.Id.Value,
+            packageVersion.Id,
+            BillingCycle.Monthly,
+            startDate: DateOnly.FromDateTime(nowUtc.UtcDateTime),
+            endDate: null,
+            nextBillingDate: null,
+            basePrice: basePrice,
+            discount: 0m,
+            currency: packageVersion.Currency,
+            activatedAtUtc: nowUtc,
+            autoRenew: true);
+        uow.OrganizationSubscriptions.Add(subscription);
 
         OrganizationAdminBootstrapper organizationAdminBootstrapper = new(
             uow.Roles, uow.Permissions, uow.RolePermissions, uow.RoleAssignments,
@@ -105,5 +131,64 @@ public sealed class ProvisionOrganizationWithAdminCommandHandler(
 
         return new ProvisionOrganizationResult(
             tenant.Id.Value, tenant.Name, tenant.Code!, tenant.Slug, tenant.Status.ToString(), admin.Id.Value);
+    }
+
+    /// <summary>
+    /// Validates the caller-supplied package version the way ADR-033's package/version model already
+    /// requires a "currently offered" version to look: <see cref="SubscriptionPackageVersion.Status"/>
+    /// Active alone is the deterministic "current version" signal, but this also cross-checks
+    /// <see cref="SubscriptionPackage.CurrentVersionId"/> and the package's own Active status as
+    /// defense-in-depth against the two ever drifting apart (they are set by two separate calls — see
+    /// <c>LegacyMigrationSubscriptionBackfillSeeder.EnsureGrandfatheredPackageAsync</c>, the only other
+    /// caller of this pair today). No new repository query methods are added — both repositories only
+    /// expose <c>GetAllAsync</c> today (see <see cref="ISubscriptionPackageVersionRepository"/>/
+    /// <see cref="ISubscriptionPackageRepository"/>), and the seeder above already establishes that
+    /// in-memory-filter pattern as this codebase's existing way of doing this lookup.
+    /// </summary>
+    private async Task<SubscriptionPackageVersion> ResolveAssignablePackageVersionAsync(
+        Guid subscriptionPackageVersionId, CancellationToken cancellationToken)
+    {
+        SubscriptionPackageVersionId versionId = new(subscriptionPackageVersionId);
+
+        SubscriptionPackageVersion? version = (await subscriptionPackageVersions.GetAllAsync(cancellationToken))
+            .SingleOrDefault(v => v.Id == versionId);
+        if (version is null)
+        {
+            throw new NotFoundException("SubscriptionPackageVersion", subscriptionPackageVersionId);
+        }
+
+        if (version.Status != SubscriptionPackageVersionStatus.Active)
+        {
+            throw new ConflictException(
+                $"Subscription package version '{subscriptionPackageVersionId}' is not commercially active and cannot be assigned.");
+        }
+
+        SubscriptionPackage? package = (await subscriptionPackages.GetAllAsync(cancellationToken))
+            .SingleOrDefault(p => p.Id == version.PackageId);
+        if (package is null || package.Status != SubscriptionPackageStatus.Active || package.CurrentVersionId != version.Id)
+        {
+            throw new ConflictException(
+                $"Subscription package version '{subscriptionPackageVersionId}' does not belong to an active, currently offered subscription package.");
+        }
+
+        // The "LEGACY-MIGRATION-GRANDFATHERED" package (LegacyMigrationSubscriptionBackfillSeeder) is a
+        // migration-bridge artifact, never a commercial offering — Task 12A must not let it be assigned
+        // to a newly provisioned tenant even explicitly. Literal duplicated here, not referenced from
+        // Infrastructure, to keep Application's dependency direction intact (Application must not
+        // reference Infrastructure).
+        if (string.Equals(package.Code, "LEGACY-MIGRATION-GRANDFATHERED", StringComparison.Ordinal))
+        {
+            throw new ConflictException(
+                "The legacy migration grandfathered package cannot be assigned to a newly provisioned organization.");
+        }
+
+        DateOnly today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        if (version.EffectiveFrom > today || (version.EffectiveUntil is not null && version.EffectiveUntil < today))
+        {
+            throw new ConflictException(
+                $"Subscription package version '{subscriptionPackageVersionId}' is not effective as of {today:yyyy-MM-dd}.");
+        }
+
+        return version;
     }
 }

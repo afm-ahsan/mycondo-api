@@ -12,6 +12,8 @@ using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
+using MyCondo.Domain.Features.Platform.SubscriptionPackages;
 using MyCondo.Domain.Features.Tenancy;
 using NSubstitute;
 
@@ -29,6 +31,9 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
     private static readonly DateTimeOffset NowUtc = new(2026, 8, 10, 0, 0, 0, TimeSpan.Zero);
 
     private readonly ITenantRepository _ambientTenants = Substitute.For<ITenantRepository>();
+    private readonly ISubscriptionPackageRepository _ambientSubscriptionPackages = Substitute.For<ISubscriptionPackageRepository>();
+    private readonly ISubscriptionPackageVersionRepository _ambientSubscriptionPackageVersions =
+        Substitute.For<ISubscriptionPackageVersionRepository>();
     private readonly ITenantScopedUnitOfWorkFactory _uowFactory = Substitute.For<ITenantScopedUnitOfWorkFactory>();
     private readonly ITenantScopedUnitOfWork _uow = Substitute.For<ITenantScopedUnitOfWork>();
     private readonly IPasswordHasher _passwordHasher = Substitute.For<IPasswordHasher>();
@@ -45,9 +50,32 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
     private readonly ITenantModuleRepository _uowTenantModules = Substitute.For<ITenantModuleRepository>();
     private readonly IExpenseCategoryRepository _uowExpenseCategories = Substitute.For<IExpenseCategoryRepository>();
     private readonly IExpenseTypeRepository _uowExpenseTypes = Substitute.For<IExpenseTypeRepository>();
+    private readonly IOrganizationSubscriptionRepository _uowOrganizationSubscriptions =
+        Substitute.For<IOrganizationSubscriptionRepository>();
+
+    private readonly SubscriptionPackage _activePackage;
+    private readonly SubscriptionPackageVersion _activePackageVersion;
 
     public ProvisionOrganizationWithAdminCommandHandlerTests()
     {
+        _activePackage = SubscriptionPackage.Create("PRO", "Professional", description: null);
+        _activePackageVersion = SubscriptionPackageVersion.Create(
+            _activePackage.Id,
+            version: 1,
+            effectiveFrom: DateOnly.FromDateTime(NowUtc.UtcDateTime).AddDays(-1),
+            effectiveUntil: null,
+            monthlyPrice: 1000m,
+            quarterlyPrice: null,
+            semiAnnualPrice: null,
+            annualPrice: null,
+            currency: "BDT");
+        _activePackageVersion.Activate();
+        _activePackage.Activate();
+        _activePackage.SetCurrentVersion(_activePackageVersion.Id);
+
+        _ambientSubscriptionPackages.GetAllAsync(Arg.Any<CancellationToken>()).Returns([_activePackage]);
+        _ambientSubscriptionPackageVersions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([_activePackageVersion]);
+
         _clock.UtcNow.Returns(NowUtc);
         _currentPlatformUser.PlatformUserId.Returns(Guid.NewGuid());
         _passwordHasher.Hash(Arg.Any<string>()).Returns("hashed-password");
@@ -75,6 +103,7 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         _uow.TenantModules.Returns(_uowTenantModules);
         _uow.ExpenseCategories.Returns(_uowExpenseCategories);
         _uow.ExpenseTypes.Returns(_uowExpenseTypes);
+        _uow.OrganizationSubscriptions.Returns(_uowOrganizationSubscriptions);
 
         _uowFactory.Create(Arg.Any<Guid>()).Returns(_uow);
     }
@@ -85,17 +114,19 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
             .ToList();
 
     private ProvisionOrganizationWithAdminCommandHandler CreateHandler() => new(
-        _ambientTenants, _uowFactory, _passwordHasher, _clock, _currentPlatformUser, _loggerFactory,
+        _ambientTenants, _ambientSubscriptionPackages, _ambientSubscriptionPackageVersions, _uowFactory,
+        _passwordHasher, _clock, _currentPlatformUser, _loggerFactory,
         Substitute.For<ILogger<ProvisionOrganizationWithAdminCommandHandler>>());
 
-    private static ProvisionOrganizationWithAdminCommand ValidCommand() => new(
+    private ProvisionOrganizationWithAdminCommand ValidCommand() => new(
         Name: "Akter Residence Park",
         Code: "ARP",
         Slug: "arp",
         AdministratorFullName: "Admin",
         AdministratorEmail: "admin@mycondo.com",
         AdministratorPassword: "Correct-Horse-Battery-9",
-        EnabledModuleKeys: ["billing", "payments"]);
+        EnabledModuleKeys: ["billing", "payments"],
+        SubscriptionPackageVersionId: _activePackageVersion.Id.Value);
 
     [Fact]
     public async Task Throws_Conflict_When_Slug_Already_Exists()
@@ -172,5 +203,111 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         // Writes to RLS-protected tables must go through the tenant-scoped unit of work, not the
         // ambient one (which has no tenant JWT claim to satisfy RLS's WITH CHECK).
         _ambientTenants.DidNotReceive().Add(Arg.Any<Tenant>());
+    }
+
+    [Fact]
+    public async Task Creates_One_Current_OrganizationSubscription_Referencing_The_Selected_Package_Version()
+    {
+        ProvisionOrganizationResult result = await CreateHandler().Handle(ValidCommand(), CancellationToken.None);
+
+        _uowOrganizationSubscriptions.Received(1).Add(Arg.Is<OrganizationSubscription>(s =>
+            s.TenantId == result.TenantId &&
+            s.PackageVersionId == _activePackageVersion.Id &&
+            s.Status == OrganizationSubscriptionStatus.Active &&
+            s.BasePrice == 1000m &&
+            s.EffectivePrice == 1000m &&
+            s.Currency == "BDT"));
+    }
+
+    [Fact]
+    public async Task Throws_NotFound_When_SubscriptionPackageVersion_Does_Not_Exist()
+    {
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { SubscriptionPackageVersionId = Guid.NewGuid() };
+
+        Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        _uowFactory.DidNotReceive().Create(Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task Throws_Conflict_When_SubscriptionPackageVersion_Is_Not_Active()
+    {
+        SubscriptionPackage draftPackage = SubscriptionPackage.Create("DRAFT", "Draft Package", description: null);
+        SubscriptionPackageVersion draftVersion = SubscriptionPackageVersion.Create(
+            draftPackage.Id, version: 1, effectiveFrom: DateOnly.FromDateTime(NowUtc.UtcDateTime), effectiveUntil: null,
+            monthlyPrice: 500m, quarterlyPrice: null, semiAnnualPrice: null, annualPrice: null, currency: "BDT");
+        _ambientSubscriptionPackages.GetAllAsync(Arg.Any<CancellationToken>()).Returns([draftPackage]);
+        _ambientSubscriptionPackageVersions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([draftVersion]);
+
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { SubscriptionPackageVersionId = draftVersion.Id.Value };
+
+        Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        _uowFactory.DidNotReceive().Create(Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task Throws_Conflict_When_Package_Is_Retired()
+    {
+        SubscriptionPackage retiredPackage = SubscriptionPackage.Create("OLD", "Old Package", description: null);
+        SubscriptionPackageVersion retiredVersion = SubscriptionPackageVersion.Create(
+            retiredPackage.Id, version: 1, effectiveFrom: DateOnly.FromDateTime(NowUtc.UtcDateTime), effectiveUntil: null,
+            monthlyPrice: 500m, quarterlyPrice: null, semiAnnualPrice: null, annualPrice: null, currency: "BDT");
+        retiredVersion.Activate();
+        retiredPackage.Activate();
+        retiredPackage.SetCurrentVersion(retiredVersion.Id);
+        retiredPackage.Retire();
+        _ambientSubscriptionPackages.GetAllAsync(Arg.Any<CancellationToken>()).Returns([retiredPackage]);
+        _ambientSubscriptionPackageVersions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([retiredVersion]);
+
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { SubscriptionPackageVersionId = retiredVersion.Id.Value };
+
+        Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task Throws_Conflict_When_PackageVersion_Is_Not_Yet_Effective()
+    {
+        SubscriptionPackage futurePackage = SubscriptionPackage.Create("FUT", "Future Package", description: null);
+        SubscriptionPackageVersion futureVersion = SubscriptionPackageVersion.Create(
+            futurePackage.Id, version: 1, effectiveFrom: DateOnly.FromDateTime(NowUtc.UtcDateTime).AddDays(30),
+            effectiveUntil: null, monthlyPrice: 500m, quarterlyPrice: null, semiAnnualPrice: null, annualPrice: null,
+            currency: "BDT");
+        futureVersion.Activate();
+        futurePackage.Activate();
+        futurePackage.SetCurrentVersion(futureVersion.Id);
+        _ambientSubscriptionPackages.GetAllAsync(Arg.Any<CancellationToken>()).Returns([futurePackage]);
+        _ambientSubscriptionPackageVersions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([futureVersion]);
+
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { SubscriptionPackageVersionId = futureVersion.Id.Value };
+
+        Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task Throws_Conflict_When_The_Legacy_Grandfathered_Package_Is_Explicitly_Selected()
+    {
+        SubscriptionPackage legacyPackage = SubscriptionPackage.Create(
+            "LEGACY-MIGRATION-GRANDFATHERED", "Legacy Migration (Grandfathered)", description: null);
+        SubscriptionPackageVersion legacyVersion = SubscriptionPackageVersion.Create(
+            legacyPackage.Id, version: 1, effectiveFrom: DateOnly.FromDateTime(NowUtc.UtcDateTime), effectiveUntil: null,
+            monthlyPrice: 0m, quarterlyPrice: null, semiAnnualPrice: null, annualPrice: null, currency: "BDT");
+        legacyVersion.Activate();
+        legacyPackage.Activate();
+        legacyPackage.SetCurrentVersion(legacyVersion.Id);
+        _ambientSubscriptionPackages.GetAllAsync(Arg.Any<CancellationToken>()).Returns([legacyPackage]);
+        _ambientSubscriptionPackageVersions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([legacyVersion]);
+
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { SubscriptionPackageVersionId = legacyVersion.Id.Value };
+
+        Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
     }
 }

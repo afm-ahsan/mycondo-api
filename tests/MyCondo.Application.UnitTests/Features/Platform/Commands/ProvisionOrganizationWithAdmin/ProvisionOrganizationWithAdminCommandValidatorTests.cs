@@ -15,7 +15,8 @@ public class ProvisionOrganizationWithAdminCommandValidatorTests
         AdministratorFullName: "Admin",
         AdministratorEmail: "admin@mycondo.com",
         AdministratorPassword: "Correct-Horse-Battery-9",
-        EnabledModuleKeys: ["billing", "payments"]);
+        EnabledModuleKeys: ["billing", "payments"],
+        SubscriptionPackageVersionId: Guid.NewGuid());
 
     [Fact]
     public void Valid_Command_Passes()
@@ -77,5 +78,17 @@ public class ProvisionOrganizationWithAdminCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(
             e => e.PropertyName == nameof(ProvisionOrganizationWithAdminCommand.EnabledModuleKeys));
+    }
+
+    [Fact]
+    public void Rejects_Empty_SubscriptionPackageVersionId()
+    {
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { SubscriptionPackageVersionId = Guid.Empty };
+
+        ValidationResult result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(
+            e => e.PropertyName == nameof(ProvisionOrganizationWithAdminCommand.SubscriptionPackageVersionId));
     }
 }

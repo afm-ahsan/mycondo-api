@@ -9,5 +9,6 @@ public sealed record ProvisionOrganizationWithAdminCommand(
     string AdministratorFullName,
     string AdministratorEmail,
     string AdministratorPassword,
-    IReadOnlyList<string> EnabledModuleKeys
+    IReadOnlyList<string> EnabledModuleKeys,
+    Guid SubscriptionPackageVersionId
 ) : IRequest<ProvisionOrganizationResult>;
