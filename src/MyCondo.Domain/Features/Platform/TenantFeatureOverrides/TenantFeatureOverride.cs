@@ -101,4 +101,70 @@ public sealed class TenantFeatureOverride : Entity<TenantFeatureOverrideId>
             TenantFeatureOverrideId.New(), tenantId, feature.Id, enabled, effectiveFrom, effectiveUntil,
             trimmedReason, createdBy, createdAtUtc);
     }
+
+    /// <summary>
+    /// Edits an existing override's terms in place (Task 13C) — <see cref="TenantId"/>/<see cref="FeatureId"/>
+    /// never change (a different target feature is a different override). Re-runs
+    /// <see cref="TenantFeatureOverrideEligibility"/> against <paramref name="feature"/> because a feature's
+    /// Core/Reserved status can change after this override was created; the caller is responsible for the
+    /// application-layer overlap pre-check (<see cref="ITenantFeatureOverrideRepository.HasOverlappingOverrideAsync"/>,
+    /// excluding this override's own id) before calling this method, exactly as <see cref="Create"/>'s own
+    /// caller does.
+    /// </summary>
+    public void Update(
+        FeatureDefinition feature,
+        bool enabled,
+        DateTimeOffset effectiveFrom,
+        DateTimeOffset? effectiveUntil,
+        string? reason)
+    {
+        ArgumentNullException.ThrowIfNull(feature);
+
+        if (feature.Id != FeatureId)
+        {
+            throw new ArgumentException("Feature does not match this override's target feature.", nameof(feature));
+        }
+
+        TenantFeatureOverrideEligibility.Validate(feature);
+
+        if (effectiveUntil is not null && effectiveUntil < effectiveFrom)
+        {
+            throw new ArgumentException("EffectiveUntil must not be before EffectiveFrom.", nameof(effectiveUntil));
+        }
+
+        string? trimmedReason = reason?.Trim();
+        if (trimmedReason is { Length: 0 })
+        {
+            throw new ArgumentException("Reason cannot be whitespace-only.", nameof(reason));
+        }
+
+        Enabled = enabled;
+        EffectiveFrom = effectiveFrom;
+        EffectiveUntil = effectiveUntil;
+        Reason = trimmedReason;
+    }
+
+    /// <summary>
+    /// Ends this override early by shortening its window to close at <paramref name="endAtUtc"/> (Task 13C)
+    /// — only ever shrinks the effective window, so it can never introduce a new overlap with another
+    /// override for the same (TenantId, FeatureId), unlike <see cref="Update"/>. The caller
+    /// (<c>EndTenantFeatureOverrideCommandHandler</c>) is expected to have already turned an out-of-range
+    /// <paramref name="endAtUtc"/> into a friendly <c>ConflictException</c>; the checks here are a
+    /// defense-in-depth invariant, not the primary validation path.
+    /// </summary>
+    public void End(DateTimeOffset endAtUtc)
+    {
+        if (endAtUtc <= EffectiveFrom)
+        {
+            throw new ArgumentException("End time must be after the override's EffectiveFrom.", nameof(endAtUtc));
+        }
+
+        if (EffectiveUntil is not null && endAtUtc >= EffectiveUntil.Value)
+        {
+            throw new ArgumentException(
+                "End time must be before the override's current EffectiveUntil to end it early.", nameof(endAtUtc));
+        }
+
+        EffectiveUntil = endAtUtc;
+    }
 }

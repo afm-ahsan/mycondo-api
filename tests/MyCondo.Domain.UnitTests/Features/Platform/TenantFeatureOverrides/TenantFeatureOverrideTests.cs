@@ -135,4 +135,82 @@ public class TenantFeatureOverrideTests
 
         a.Should().NotBe(b);
     }
+
+    [Fact]
+    public void Update_Changes_Enabled_Window_And_Reason()
+    {
+        FeatureDefinition feature = CreateFeature();
+        TenantFeatureOverride @override = CreateOverride(feature: feature, enabled: true);
+
+        @override.Update(feature, false, EffectiveFrom.AddDays(1), EffectiveFrom.AddMonths(1), "Revised reason");
+
+        @override.Enabled.Should().BeFalse();
+        @override.EffectiveFrom.Should().Be(EffectiveFrom.AddDays(1));
+        @override.EffectiveUntil.Should().Be(EffectiveFrom.AddMonths(1));
+        @override.Reason.Should().Be("Revised reason");
+    }
+
+    [Fact]
+    public void Update_Throws_When_Feature_Does_Not_Match_Target_Feature()
+    {
+        FeatureDefinition feature = CreateFeature();
+        TenantFeatureOverride @override = CreateOverride(feature: feature);
+        FeatureDefinition otherFeature = CreateFeature();
+
+        Action act = () => @override.Update(otherFeature, true, EffectiveFrom, null, null);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Update_Throws_When_EffectiveUntil_Before_EffectiveFrom()
+    {
+        FeatureDefinition feature = CreateFeature();
+        TenantFeatureOverride @override = CreateOverride(feature: feature);
+
+        Action act = () => @override.Update(feature, true, EffectiveFrom, EffectiveFrom.AddDays(-1), null);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Update_Throws_For_Whitespace_Only_Reason()
+    {
+        FeatureDefinition feature = CreateFeature();
+        TenantFeatureOverride @override = CreateOverride(feature: feature);
+
+        Action act = () => @override.Update(feature, true, EffectiveFrom, null, "   ");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void End_Shortens_Window_To_Given_Time()
+    {
+        TenantFeatureOverride @override = CreateOverride(effectiveUntil: null);
+
+        @override.End(EffectiveFrom.AddMonths(1));
+
+        @override.EffectiveUntil.Should().Be(EffectiveFrom.AddMonths(1));
+    }
+
+    [Fact]
+    public void End_Throws_When_EndAt_Is_Not_After_EffectiveFrom()
+    {
+        TenantFeatureOverride @override = CreateOverride(effectiveUntil: null);
+
+        Action act = () => @override.End(EffectiveFrom);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void End_Throws_When_EndAt_Is_Not_Before_Current_EffectiveUntil()
+    {
+        TenantFeatureOverride @override = CreateOverride(effectiveUntil: EffectiveFrom.AddMonths(1));
+
+        Action act = () => @override.End(EffectiveFrom.AddMonths(2));
+
+        act.Should().Throw<ArgumentException>();
+    }
 }

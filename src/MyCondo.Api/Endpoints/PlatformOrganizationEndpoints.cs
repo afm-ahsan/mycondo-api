@@ -3,12 +3,16 @@ using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Platform.Commands.ChangeOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
+using MyCondo.Application.Features.Platform.Commands.CreateTenantFeatureOverride;
+using MyCondo.Application.Features.Platform.Commands.EndTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
 using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
 using MyCondo.Application.Features.Platform.Commands.UpdateOrganization;
+using MyCondo.Application.Features.Platform.Commands.UpdateTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.DTOs;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationById;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationFeatureOverrides;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationSummaryStats;
 using MyCondo.Application.Features.Platform.Queries.ListOrganizations;
@@ -277,6 +281,103 @@ public static class PlatformOrganizationEndpoints
             .RequirePlatformPermission("platform.organization.features.manage")
             .Produces(StatusCodes.Status204NoContent);
 
+        group.MapGet("/{id:guid}/feature-overrides", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                List<TenantFeatureOverrideDto> result = await sender.Send(new GetOrganizationFeatureOverridesQuery(id), ct);
+                return Results.Ok(result);
+            })
+            .RequirePlatformPermission("platform.support.access")
+            .Produces<List<TenantFeatureOverrideDto>>(StatusCodes.Status200OK);
+
+        group.MapPost("/{id:guid}/feature-overrides", async (
+                Guid id,
+                CreateTenantFeatureOverrideRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                Guid actorId = currentUser.PlatformUserId ?? throw new UnauthorizedAccessException();
+
+                Guid overrideId = await sender.Send(
+                    new CreateTenantFeatureOverrideCommand(
+                        id, request.FeatureKey, request.Enabled, request.EffectiveFrom, request.EffectiveUntil,
+                        request.Reason, actorId),
+                    ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: actorId,
+                    action: "platform.feature-override.created",
+                    targetType: "TenantFeatureOverride",
+                    targetId: overrideId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.Ok(new CreateTenantFeatureOverrideResponse(overrideId));
+            })
+            .RequirePlatformPermission("platform.support.access")
+            .Produces<CreateTenantFeatureOverrideResponse>(StatusCodes.Status200OK);
+
+        group.MapPatch("/{id:guid}/feature-overrides/{overrideId:guid}", async (
+                Guid id,
+                Guid overrideId,
+                UpdateTenantFeatureOverrideRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(
+                    new UpdateTenantFeatureOverrideCommand(
+                        id, overrideId, request.Enabled, request.EffectiveFrom, request.EffectiveUntil, request.Reason),
+                    ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.feature-override.updated",
+                    targetType: "TenantFeatureOverride",
+                    targetId: overrideId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.support.access")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/feature-overrides/{overrideId:guid}/end", async (
+                Guid id,
+                Guid overrideId,
+                EndTenantFeatureOverrideRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new EndTenantFeatureOverrideCommand(id, overrideId, request.EffectiveUntil), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.feature-override.ended",
+                    targetType: "TenantFeatureOverride",
+                    targetId: overrideId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.support.access")
+            .Produces(StatusCodes.Status204NoContent);
+
         return app;
     }
 }
@@ -287,3 +388,13 @@ public sealed record ReplaceOrganizationModulesRequest(IReadOnlyList<string> Mod
 
 public sealed record ChangeOrganizationSubscriptionRequest(
     Guid SubscriptionPackageVersionId, BillingCycle BillingCycle, bool AutoRenew);
+
+public sealed record CreateTenantFeatureOverrideRequest(
+    string FeatureKey, bool Enabled, DateTimeOffset EffectiveFrom, DateTimeOffset? EffectiveUntil, string? Reason);
+
+public sealed record CreateTenantFeatureOverrideResponse(Guid Id);
+
+public sealed record UpdateTenantFeatureOverrideRequest(
+    bool Enabled, DateTimeOffset EffectiveFrom, DateTimeOffset? EffectiveUntil, string? Reason);
+
+public sealed record EndTenantFeatureOverrideRequest(DateTimeOffset EffectiveUntil);

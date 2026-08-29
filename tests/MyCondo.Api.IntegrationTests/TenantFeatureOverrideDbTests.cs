@@ -170,8 +170,77 @@ public class TenantFeatureOverrideDbTests : IClassFixture<PostgresApiFactory>
         using IServiceScope readScope = _factory.Services.CreateScope();
         bool hasOverlap = await readScope.ServiceProvider
             .GetRequiredService<ITenantFeatureOverrideRepository>()
-            .HasOverlappingOverrideAsync(tenantId, feature.Id, EffectiveFrom.AddMonths(1), null, CancellationToken.None);
+            .HasOverlappingOverrideAsync(tenantId, feature.Id, EffectiveFrom.AddMonths(1), null, excludeId: null, CancellationToken.None);
 
         hasOverlap.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_Returns_A_Tracked_Override_That_Update_Persists()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        FeatureDefinition feature = await CreateFeatureAsync(scope);
+
+        ITenantFeatureOverrideRepository overrides = scope.ServiceProvider.GetRequiredService<ITenantFeatureOverrideRepository>();
+        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        Guid tenantId = Guid.NewGuid();
+        TenantFeatureOverride @override = TenantFeatureOverride.Create(
+            tenantId, feature, true, EffectiveFrom, null, "Pilot enterprise customer", Guid.NewGuid(), EffectiveFrom);
+        overrides.Add(@override);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        using IServiceScope editScope = _factory.Services.CreateScope();
+        ITenantFeatureOverrideRepository editOverrides = editScope.ServiceProvider.GetRequiredService<ITenantFeatureOverrideRepository>();
+        IUnitOfWork editUnitOfWork = editScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        TenantFeatureOverride tracked = await editOverrides.GetByIdAsync(@override.Id, CancellationToken.None)
+            ?? throw new InvalidOperationException("Override was not found for edit.");
+        tracked.Update(feature, false, EffectiveFrom.AddDays(1), EffectiveFrom.AddMonths(1), "Revised reason");
+        await editUnitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        using IServiceScope readScope = _factory.Services.CreateScope();
+        List<TenantFeatureOverride> all = await readScope.ServiceProvider
+            .GetRequiredService<ITenantFeatureOverrideRepository>()
+            .GetForTenantAsync(tenantId, CancellationToken.None);
+
+        TenantFeatureOverride reloaded = all.Should().ContainSingle(o => o.Id == @override.Id).Subject;
+        reloaded.Enabled.Should().BeFalse();
+        reloaded.EffectiveFrom.Should().Be(EffectiveFrom.AddDays(1));
+        reloaded.EffectiveUntil.Should().Be(EffectiveFrom.AddMonths(1));
+        reloaded.Reason.Should().Be("Revised reason");
+    }
+
+    [Fact]
+    public async Task End_Persists_A_Shortened_Window()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        FeatureDefinition feature = await CreateFeatureAsync(scope);
+
+        ITenantFeatureOverrideRepository overrides = scope.ServiceProvider.GetRequiredService<ITenantFeatureOverrideRepository>();
+        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        Guid tenantId = Guid.NewGuid();
+        TenantFeatureOverride @override = TenantFeatureOverride.Create(
+            tenantId, feature, true, EffectiveFrom, null, "Temporary support exception", Guid.NewGuid(), EffectiveFrom);
+        overrides.Add(@override);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        using IServiceScope editScope = _factory.Services.CreateScope();
+        ITenantFeatureOverrideRepository editOverrides = editScope.ServiceProvider.GetRequiredService<ITenantFeatureOverrideRepository>();
+        IUnitOfWork editUnitOfWork = editScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        TenantFeatureOverride tracked = await editOverrides.GetByIdAsync(@override.Id, CancellationToken.None)
+            ?? throw new InvalidOperationException("Override was not found for edit.");
+        tracked.End(EffectiveFrom.AddMonths(1));
+        await editUnitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        using IServiceScope readScope = _factory.Services.CreateScope();
+        List<TenantFeatureOverride> all = await readScope.ServiceProvider
+            .GetRequiredService<ITenantFeatureOverrideRepository>()
+            .GetForTenantAsync(tenantId, CancellationToken.None);
+
+        TenantFeatureOverride reloaded = all.Should().ContainSingle(o => o.Id == @override.Id).Subject;
+        reloaded.EffectiveUntil.Should().Be(EffectiveFrom.AddMonths(1));
     }
 }
