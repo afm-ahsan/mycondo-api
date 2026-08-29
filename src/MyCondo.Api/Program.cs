@@ -58,6 +58,7 @@ app.MapMyCondoHealthChecks();
 app.MapAuthEndpoints();
 app.MapPlatformAuthEndpoints();
 app.MapPlatformOrganizationEndpoints();
+app.MapPlatformSubscriptionPackageEndpoints();
 app.MapTenantEndpoints();
 app.MapRoleEndpoints();
 app.MapUserEndpoints();
