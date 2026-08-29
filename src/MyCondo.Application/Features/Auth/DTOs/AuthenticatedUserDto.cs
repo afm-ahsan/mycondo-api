@@ -24,6 +24,14 @@ public sealed record FeatureEntitlementDto(string FeatureKey, bool Enabled, int?
 /// resolved once per login/refresh via <c>ITenantEntitlementService</c> — never placed on the JWT itself
 /// (ADR-033 Task 07 §4/§16), since entitlements can change without a token refresh and must not go stale
 /// for the life of an access token.
+///
+/// <paramref name="LifecycleAccessMode"/> is one of <c>"Full"</c>, <c>"ReadOnly"</c>, <c>"Denied"</c> —
+/// the combined Organization + Subscription lifecycle outcome (ADR-032 Task 10's <c>TenantLifecycleBehavior</c>
+/// decision, resolved once per login/refresh so the frontend never has to re-derive the policy itself,
+/// ADR-032 Task 11 §5/§7). <paramref name="LifecycleReason"/> is the matching safe reason code
+/// (<c>tenant_suspended</c>, <c>tenant_closed</c>, <c>subscription_restricted</c>, <c>subscription_expired</c>)
+/// — the same codes <c>GlobalExceptionMiddleware</c> attaches to a lifecycle-denied 403 — or <c>null</c> when
+/// the mode is <c>"Full"</c>. Neither field carries package/pricing/billing detail (ADR-032 Task 11 §6).
 /// </summary>
 public sealed record AuthenticatedUserDto(
     Guid UserId,
@@ -36,6 +44,8 @@ public sealed record AuthenticatedUserDto(
     IReadOnlyList<Guid> BuildingIds,
     IReadOnlyList<BuildingPermissionGrant> BuildingPermissions,
     IReadOnlyList<FeatureEntitlementDto> Entitlements,
+    string LifecycleAccessMode = "Full",
+    string? LifecycleReason = null,
     string? AvatarUrl = null);
 
 public sealed record AuthTokensDto(

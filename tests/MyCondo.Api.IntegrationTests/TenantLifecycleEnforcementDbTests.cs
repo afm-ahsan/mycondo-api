@@ -376,4 +376,86 @@ public class TenantLifecycleEnforcementDbTests : IClassFixture<PostgresApiFactor
         body.Should().NotContain("tenant_suspended");
         body.Should().NotContain("subscription_restricted");
     }
+
+    // ADR-032 Task 11 §5/§7/§34 — the session DTO carries the same lifecycle outcome this class already
+    // proves is enforced per-request, so the frontend never has to re-derive the policy independently.
+
+    [Fact]
+    public async Task Active_Session_Reports_Full_Lifecycle_Access_Mode_With_No_Reason()
+    {
+        string slug = "lifecycle-session-full";
+        Guid tenantId = await SeedActiveTenantAsync(slug);
+        await SeedSubscriptionAsync(tenantId, OrganizationSubscriptionStatus.Active);
+
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto tokens = await RegisterAsync(client, tenantId, $"admin-{slug}@example.com");
+
+        tokens.User.LifecycleAccessMode.Should().Be("Full");
+        tokens.User.LifecycleReason.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(OrganizationSubscriptionStatus.Restricted, "subscription_restricted")]
+    [InlineData(OrganizationSubscriptionStatus.Expired, "subscription_expired")]
+    [InlineData(OrganizationSubscriptionStatus.Canceled, "subscription_expired")]
+    public async Task ReadOnly_Subscription_States_Report_ReadOnly_Lifecycle_Access_Mode_With_The_Distinguishing_Reason(
+        OrganizationSubscriptionStatus status, string expectedReason)
+    {
+        string slug = $"lifecycle-session-{status.ToString().ToLowerInvariant()}";
+        Guid tenantId = await SeedActiveTenantAsync(slug);
+        await SeedSubscriptionAsync(tenantId, status);
+
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto tokens = await RegisterAsync(client, tenantId, $"admin-{slug}@example.com");
+
+        tokens.User.LifecycleAccessMode.Should().Be("ReadOnly");
+        tokens.User.LifecycleReason.Should().Be(expectedReason);
+    }
+
+    [Fact]
+    public async Task Refresh_Reports_Denied_Lifecycle_Access_Mode_After_The_Organization_Is_Suspended_Mid_Session()
+    {
+        // RotateAsync itself never checks tenant status (that remains TenantLifecycleBehavior's
+        // per-request job — see §33/§34 above), but ResolveAsync recomputes the lifecycle fields fresh
+        // on every refresh, so the session *snapshot* the frontend receives is never stale even though
+        // the refresh call itself is not blocked outright.
+        string slug = "lifecycle-session-suspended-midsession";
+        Guid tenantId = await SeedActiveTenantAsync(slug);
+        await SeedSubscriptionAsync(tenantId, OrganizationSubscriptionStatus.Active);
+
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto initial = await RegisterAsync(client, tenantId, $"admin-{slug}@example.com");
+        initial.User.LifecycleAccessMode.Should().Be("Full");
+
+        await SuspendTenantAsync(tenantId);
+
+        HttpResponseMessage refreshResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { tenantId });
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        AuthTokensDto? refreshed = await refreshResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+
+        refreshed.Should().NotBeNull();
+        refreshed!.User.LifecycleAccessMode.Should().Be("Denied");
+        refreshed.User.LifecycleReason.Should().Be("tenant_suspended");
+    }
+
+    [Fact]
+    public async Task Refresh_Reports_Denied_Lifecycle_Access_Mode_After_The_Organization_Is_Closed_Mid_Session()
+    {
+        string slug = "lifecycle-session-closed-midsession";
+        Guid tenantId = await SeedActiveTenantAsync(slug);
+
+        using HttpClient client = _factory.CreateClient();
+        AuthTokensDto initial = await RegisterAsync(client, tenantId, $"admin-{slug}@example.com");
+        initial.User.LifecycleAccessMode.Should().Be("Full");
+
+        await CloseTenantAsync(tenantId);
+
+        HttpResponseMessage refreshResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { tenantId });
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        AuthTokensDto? refreshed = await refreshResponse.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
+
+        refreshed.Should().NotBeNull();
+        refreshed!.User.LifecycleAccessMode.Should().Be("Denied");
+        refreshed.User.LifecycleReason.Should().Be("tenant_closed");
+    }
 }
