@@ -84,6 +84,17 @@ namespace MyCondo.Infrastructure.Seed;
 /// only pre-onboarding tenants with no additional gate needed; if it is instead asynchronous/eventual
 /// (e.g. a pending-payment window), a new, non-timestamp cohort signal (e.g. an explicit provisioning-mode
 /// marker on <see cref="Tenant"/>) must be introduced before that flow ships — not a revived timestamp.</para>
+///
+/// <para><b>Revisited (ADR-033 Task 12C):</b> <c>ProvisionOrganizationWithAdminCommandHandler</c> (Task
+/// 12A) is exactly the synchronous-same-transaction case anticipated above — it creates the tenant's
+/// <see cref="OrganizationSubscription"/> in the same <c>SaveChangesAsync</c> call as the tenant itself, so
+/// "no current subscription" still correctly identifies only pre-Task-12A legacy tenants, no additional
+/// gate needed. This eligibility rule is therefore unaffected by Task 12A/12B. It does <em>not</em>,
+/// however, make every zero-subscription state momentary: this seeder's own per-tenant failure isolation
+/// (retried next startup) and the <c>comparison.HasLoss</c> safety net below leave a tenant unmigrated —
+/// and therefore still dependent on the lifecycle policy's no-subscription fallback — for an unbounded
+/// window when either path is actually hit. Task 12C's lifecycle fallback decision accounts for this; see
+/// <see cref="MyCondo.Application.Common.Abstractions.SubscriptionLifecyclePolicy"/>.</para>
 /// </summary>
 public sealed class LegacyMigrationSubscriptionBackfillSeeder(
     IServiceScopeFactory scopeFactory,

@@ -14,8 +14,9 @@ public interface ISubscriptionLifecycleAccessService
     /// the <see cref="OrganizationSubscriptionStatus"/> that produced it (for the caller to build a
     /// distinguishing error code). <c>SourceStatus</c> is <c>null</c> when the mode is
     /// <see cref="TenantAccessMode.Full"/>, including the "no subscription has ever been provisioned for
-    /// this tenant" case (ADR-032 Task 10 §21/§77 — subscription-aware provisioning does not exist yet, so
-    /// a missing subscription must not be treated as a lockout).</summary>
+    /// this tenant" case (ADR-032 Task 10 §21/§77; retained per ADR-033 Task 12C — see
+    /// <see cref="SubscriptionLifecyclePolicy.Evaluate"/> for why a missing subscription still must not be
+    /// treated as a lockout).</summary>
     Task<SubscriptionLifecycleAccess> GetAccessAsync(Guid tenantId, CancellationToken cancellationToken);
 }
 
@@ -40,9 +41,18 @@ public static class SubscriptionLifecyclePolicy
     /// <summary>Classifies a resolved subscription status. <paramref name="status"/> is <c>null</c> only
     /// for "no subscription row exists for this tenant at all" (never for Active/PastDue/Restricted, which
     /// <see cref="IOrganizationSubscriptionRepository.GetCurrentForTenantAsync"/> always returns when
-    /// present) — see ADR-032 Task 10 §21: with no subscription-aware provisioning path yet, this is the
-    /// normal state for every tenant provisioned since Task 04's legacy-backfill cutoff, not a defect, so
-    /// it resolves to <see cref="TenantAccessMode.Full"/> rather than an invented lockout.</summary>
+    /// present) — originally ADR-032 Task 10 §21 for "no subscription-aware provisioning path exists yet."
+    ///
+    /// <para><b>Retained (ADR-033 Task 12C):</b> subscription-aware provisioning now exists
+    /// (<c>ProvisionOrganizationWithAdminCommandHandler</c>, Task 12A) and creates every new tenant's
+    /// subscription atomically, so a successfully provisioned tenant is never null here. This fallback is
+    /// still reachable, though: <c>LegacyMigrationSubscriptionBackfillSeeder</c>'s per-tenant failure
+    /// isolation and its <c>comparison.HasLoss</c> safety net can each leave a legacy tenant unmigrated —
+    /// and therefore null here — for an unbounded window until backfill succeeds for it. Task 12C evaluated
+    /// removing this fallback and retained it for exactly that category: doing so today would turn a
+    /// transient backfill failure into a hard lockout for an otherwise-legitimate, previously operational
+    /// tenant rather than the current degraded-but-available state. Revisit only once that failure/rejection
+    /// window is itself closed (or made provably unreachable).</para></summary>
     public static SubscriptionLifecycleAccess Evaluate(OrganizationSubscriptionStatus? status) => status switch
     {
         null => SubscriptionLifecycleAccess.Full,
