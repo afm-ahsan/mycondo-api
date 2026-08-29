@@ -8,6 +8,7 @@ using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
 using MyCondo.Application.Features.Platform.Commands.UpdateOrganization;
 using MyCondo.Application.Features.Platform.DTOs;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationById;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationSummaryStats;
 using MyCondo.Application.Features.Platform.Queries.ListOrganizations;
 using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
@@ -59,6 +60,14 @@ public static class PlatformOrganizationEndpoints
             })
             .RequirePlatformPermission("platform.organization.read")
             .Produces<OrganizationDetailDto>(StatusCodes.Status200OK);
+
+        group.MapGet("/{id:guid}/subscription", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                OrganizationSubscriptionDto result = await sender.Send(new GetOrganizationSubscriptionQuery(id), ct);
+                return Results.Ok(result);
+            })
+            .RequirePlatformPermission("platform.subscription.read")
+            .Produces<OrganizationSubscriptionDto>(StatusCodes.Status200OK);
 
         group.MapPost("/", async (
                 ProvisionOrganizationWithAdminCommand command,

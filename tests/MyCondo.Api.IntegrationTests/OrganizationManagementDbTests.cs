@@ -344,4 +344,58 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>, 
         JsonDocument problem = JsonDocument.Parse(await gatesResponse.Content.ReadAsStringAsync());
         problem.RootElement.GetProperty("code").GetString().Should().Be("feature_not_entitled");
     }
+
+    [Fact]
+    public async Task Get_Subscription_Returns_Exact_Package_Version_Lifecycle_And_Commercial_Snapshot()
+    {
+        using HttpClient client = CreatePlatformClient("platform.organization.create", "platform.subscription.read");
+
+        HttpResponseMessage createResponse = await client.PostAsJsonAsync(
+            "/api/v1/platform/organizations", NewOrganizationBody("E2E10", "e2e-org-10", "admin@e2e-org-10.test"));
+        ProvisionOrganizationResult result =
+            (await createResponse.Content.ReadFromJsonAsync<ProvisionOrganizationResult>(JsonOptions))!;
+
+        HttpResponseMessage subscriptionResponse =
+            await client.GetAsync($"/api/v1/platform/organizations/{result.TenantId}/subscription");
+
+        subscriptionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        OrganizationSubscriptionDto dto =
+            (await subscriptionResponse.Content.ReadFromJsonAsync<OrganizationSubscriptionDto>(JsonOptions))!;
+
+        dto.TenantId.Should().Be(result.TenantId);
+        dto.HasSubscription.Should().BeTrue();
+        dto.Subscription.Should().NotBeNull();
+        dto.Subscription!.PackageVersionId.Should().Be(_subscriptionPackageVersionId);
+        dto.Subscription.PackageVersion.Should().Be(1);
+        dto.Subscription.Status.Should().Be(nameof(OrganizationSubscriptionStatus.Active));
+        dto.Subscription.BillingCycle.Should().Be(nameof(BillingCycle.Monthly));
+        dto.Subscription.Currency.Should().Be("BDT");
+        dto.Subscription.BasePrice.Should().Be(1000m);
+        dto.Subscription.Discount.Should().Be(0m);
+        dto.Subscription.EffectivePrice.Should().Be(1000m);
+        dto.Subscription.AutoRenew.Should().BeTrue();
+
+        // The seeded test package (InitializeAsync) grants zero features — every non-core feature must
+        // therefore resolve to DefaultDisabled, and every core feature to Core, proving this endpoint
+        // reuses ITenantEntitlementService's precedence rather than a second entitlement engine.
+        dto.Features.Should().NotBeEmpty();
+        dto.Features.Should().Contain(f => f.Source == "Core" && f.Enabled);
+        dto.Features.Where(f => f.Source != "Core").Should().OnlyContain(f => f.Source == "DefaultDisabled" && !f.Enabled);
+    }
+
+    [Fact]
+    public async Task Get_Subscription_Requires_Its_Own_Permission_Not_Organization_Read()
+    {
+        using HttpClient createClient = CreatePlatformClient("platform.organization.create");
+        HttpResponseMessage createResponse = await createClient.PostAsJsonAsync(
+            "/api/v1/platform/organizations", NewOrganizationBody("E2E11", "e2e-org-11", "admin@e2e-org-11.test"));
+        ProvisionOrganizationResult result =
+            (await createResponse.Content.ReadFromJsonAsync<ProvisionOrganizationResult>(JsonOptions))!;
+
+        using HttpClient organizationReadOnlyClient = CreatePlatformClient("platform.organization.read");
+        HttpResponseMessage forbiddenResponse =
+            await organizationReadOnlyClient.GetAsync($"/api/v1/platform/organizations/{result.TenantId}/subscription");
+
+        forbiddenResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }
