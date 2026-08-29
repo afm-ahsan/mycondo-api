@@ -1,6 +1,7 @@
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Platform.Commands.ChangeOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
@@ -15,6 +16,7 @@ using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
 using MyCondo.Application.Features.Tenancy.Commands.SuspendTenant;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
 using MyCondo.Domain.Features.Platform.PlatformAudit;
 
 namespace MyCondo.Api.Endpoints;
@@ -68,6 +70,35 @@ public static class PlatformOrganizationEndpoints
             })
             .RequirePlatformPermission("platform.subscription.read")
             .Produces<OrganizationSubscriptionDto>(StatusCodes.Status200OK);
+
+        group.MapPatch("/{id:guid}/subscription", async (
+                Guid id,
+                ChangeOrganizationSubscriptionRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(
+                    new ChangeOrganizationSubscriptionCommand(
+                        id, request.SubscriptionPackageVersionId, request.BillingCycle, request.AutoRenew),
+                    ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.changed",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
 
         group.MapPost("/", async (
                 ProvisionOrganizationWithAdminCommand command,
@@ -253,3 +284,6 @@ public static class PlatformOrganizationEndpoints
 public sealed record UpdateOrganizationRequest(string Name, string? Code);
 
 public sealed record ReplaceOrganizationModulesRequest(IReadOnlyList<string> ModuleKeys);
+
+public sealed record ChangeOrganizationSubscriptionRequest(
+    Guid SubscriptionPackageVersionId, BillingCycle BillingCycle, bool AutoRenew);

@@ -133,6 +133,45 @@ public sealed class OrganizationSubscription : AggregateRoot<OrganizationSubscri
             nextBillingDate, basePrice, discount, effectivePrice, currency.Trim(), activatedAtUtc, autoRenew);
     }
 
+    /// <summary>
+    /// Changes the assigned package version, billing cycle, and AutoRenew (ADR-033 Task 13B) — only
+    /// while Active or PastDue, the same statuses <see cref="Cancel"/> allows. <paramref name="basePrice"/>
+    /// must already have been resolved against the new version's billing-cycle prices via
+    /// <see cref="OrganizationSubscriptionCommercialTerms.ResolveBasePrice"/>, exactly like <see cref="Create"/>.
+    /// Discount resets to zero: this command carries no negotiated-discount input (ADR-033 §11's
+    /// negotiated pricing/proration remain out of scope for Task 13B), so a discount snapshotted against
+    /// the previous package/version must not silently carry forward against new commercial terms it was
+    /// never negotiated for. <see cref="StartDate"/>/<see cref="NextBillingDate"/> are untouched — this
+    /// command changes the commercial agreement's terms, not its billing schedule.
+    /// </summary>
+    public void ChangePackageVersion(
+        SubscriptionPackageVersionId packageVersionId,
+        BillingCycle billingCycle,
+        decimal basePrice,
+        string currency,
+        bool autoRenew)
+    {
+        if (Status != OrganizationSubscriptionStatus.Active && Status != OrganizationSubscriptionStatus.PastDue)
+        {
+            throw new OrganizationSubscriptionChangeNotAllowedException(Id, Status);
+        }
+
+        if (basePrice < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(basePrice), "BasePrice cannot be negative.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(currency);
+
+        PackageVersionId = packageVersionId;
+        BillingCycle = billingCycle;
+        BasePrice = basePrice;
+        Discount = 0m;
+        EffectivePrice = basePrice;
+        Currency = currency.Trim();
+        AutoRenew = autoRenew;
+    }
+
     /// <summary>Active → PastDue — payment overdue, grace window open. Full operational access is
     /// retained at the application layer (ADR-032 §5); this method only records the lifecycle fact.</summary>
     public void MarkPastDue()

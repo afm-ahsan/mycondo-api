@@ -269,4 +269,113 @@ public class OrganizationSubscriptionTests
 
         a.Should().NotBe(b);
     }
+
+    [Fact]
+    public void ChangePackageVersion_From_Active_Updates_Package_Cycle_Price_Currency_And_AutoRenew()
+    {
+        OrganizationSubscription subscription = CreateSubscription(basePrice: 8000m, discount: 1000m, autoRenew: false);
+        SubscriptionPackageVersionId newVersionId = SubscriptionPackageVersionId.New();
+
+        subscription.ChangePackageVersion(newVersionId, BillingCycle.Annual, 96000m, "USD", autoRenew: true);
+
+        subscription.PackageVersionId.Should().Be(newVersionId);
+        subscription.BillingCycle.Should().Be(BillingCycle.Annual);
+        subscription.BasePrice.Should().Be(96000m);
+        subscription.Currency.Should().Be("USD");
+        subscription.AutoRenew.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ChangePackageVersion_Resets_Discount_And_Recomputes_EffectivePrice()
+    {
+        OrganizationSubscription subscription = CreateSubscription(basePrice: 8000m, discount: 1500m);
+
+        subscription.ChangePackageVersion(SubscriptionPackageVersionId.New(), BillingCycle.Monthly, 5000m, "BDT", autoRenew: false);
+
+        subscription.Discount.Should().Be(0m);
+        subscription.EffectivePrice.Should().Be(5000m);
+    }
+
+    [Fact]
+    public void ChangePackageVersion_Does_Not_Alter_StartDate_Or_NextBillingDate()
+    {
+        OrganizationSubscription subscription = CreateSubscription();
+
+        subscription.ChangePackageVersion(SubscriptionPackageVersionId.New(), BillingCycle.Annual, 96000m, "BDT", autoRenew: true);
+
+        subscription.StartDate.Should().Be(StartDate);
+        subscription.NextBillingDate.Should().BeNull();
+    }
+
+    [Fact]
+    public void ChangePackageVersion_From_PastDue_Succeeds()
+    {
+        OrganizationSubscription subscription = CreateSubscription();
+        subscription.MarkPastDue();
+
+        subscription.ChangePackageVersion(SubscriptionPackageVersionId.New(), BillingCycle.Annual, 96000m, "BDT", autoRenew: true);
+
+        subscription.Status.Should().Be(OrganizationSubscriptionStatus.PastDue);
+        subscription.BasePrice.Should().Be(96000m);
+    }
+
+    [Fact]
+    public void ChangePackageVersion_From_Restricted_Throws()
+    {
+        OrganizationSubscription subscription = CreateSubscription();
+        subscription.MarkPastDue();
+        subscription.Restrict(ActivatedAt.AddDays(30));
+
+        Action act = () => subscription.ChangePackageVersion(
+            SubscriptionPackageVersionId.New(), BillingCycle.Annual, 96000m, "BDT", autoRenew: true);
+
+        act.Should().Throw<OrganizationSubscriptionChangeNotAllowedException>();
+    }
+
+    [Fact]
+    public void ChangePackageVersion_From_Canceled_Throws()
+    {
+        OrganizationSubscription subscription = CreateSubscription();
+        subscription.Cancel(ActivatedAt.AddDays(10));
+
+        Action act = () => subscription.ChangePackageVersion(
+            SubscriptionPackageVersionId.New(), BillingCycle.Annual, 96000m, "BDT", autoRenew: true);
+
+        act.Should().Throw<OrganizationSubscriptionChangeNotAllowedException>();
+    }
+
+    [Fact]
+    public void ChangePackageVersion_From_Expired_Throws()
+    {
+        OrganizationSubscription subscription = CreateSubscription();
+        subscription.Cancel(ActivatedAt.AddDays(10));
+        subscription.Expire(ActivatedAt.AddDays(40));
+
+        Action act = () => subscription.ChangePackageVersion(
+            SubscriptionPackageVersionId.New(), BillingCycle.Annual, 96000m, "BDT", autoRenew: true);
+
+        act.Should().Throw<OrganizationSubscriptionChangeNotAllowedException>();
+    }
+
+    [Fact]
+    public void ChangePackageVersion_Throws_For_Negative_BasePrice()
+    {
+        OrganizationSubscription subscription = CreateSubscription();
+
+        Action act = () => subscription.ChangePackageVersion(
+            SubscriptionPackageVersionId.New(), BillingCycle.Monthly, -1m, "BDT", autoRenew: false);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void ChangePackageVersion_Throws_For_Blank_Currency()
+    {
+        OrganizationSubscription subscription = CreateSubscription();
+
+        Action act = () => subscription.ChangePackageVersion(
+            SubscriptionPackageVersionId.New(), BillingCycle.Monthly, 5000m, "  ", autoRenew: false);
+
+        act.Should().Throw<ArgumentException>();
+    }
 }
