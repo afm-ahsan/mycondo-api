@@ -75,15 +75,16 @@ public sealed class ProvisionOrganizationWithAdminCommandHandler(
 
         tenant.SetPrimaryAdministrator(admin.Id.Value, admin.FullName, admin.Email);
 
-        // Monthly is the only billing cycle this provisioning path offers — negotiated cycle/price terms
-        // are out of Task 12A's scope (ADR-033 §11: list price is only ever a starting snapshot). A
-        // package version with no MonthlyPrice fails ResolveBasePrice with the existing
-        // UnsupportedBillingCycleException, which is the correct rejection for that case.
-        decimal basePrice = OrganizationSubscriptionCommercialTerms.ResolveBasePrice(packageVersion, BillingCycle.Monthly);
+        // The caller-selected billing cycle must be one the assigned package version actually prices —
+        // negotiated cycle/price terms remain out of scope (ADR-033 §11: list price is only ever a
+        // starting snapshot). A package version with no price for the requested cycle fails
+        // ResolveBasePrice with the existing UnsupportedBillingCycleException, which is the correct
+        // rejection for that case — this handler must not silently fall back to another cycle.
+        decimal basePrice = OrganizationSubscriptionCommercialTerms.ResolveBasePrice(packageVersion, command.BillingCycle);
         OrganizationSubscription subscription = OrganizationSubscription.Create(
             tenant.Id.Value,
             packageVersion.Id,
-            BillingCycle.Monthly,
+            command.BillingCycle,
             startDate: DateOnly.FromDateTime(nowUtc.UtcDateTime),
             endDate: null,
             nextBillingDate: null,
@@ -91,7 +92,7 @@ public sealed class ProvisionOrganizationWithAdminCommandHandler(
             discount: 0m,
             currency: packageVersion.Currency,
             activatedAtUtc: nowUtc,
-            autoRenew: true);
+            autoRenew: command.AutoRenew);
         uow.OrganizationSubscriptions.Add(subscription);
 
         OrganizationAdminBootstrapper organizationAdminBootstrapper = new(

@@ -122,6 +122,8 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>, 
         administratorPassword = "Correct-Horse-Battery-9",
         enabledModuleKeys = new[] { "billing", "payments" },
         subscriptionPackageVersionId = _subscriptionPackageVersionId,
+        billingCycle = "Monthly",
+        autoRenew = true,
     };
 
     [Fact]

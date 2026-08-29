@@ -34,6 +34,8 @@ public sealed partial class ProvisionOrganizationWithAdminCommandValidator
             .WithMessage($"Module keys must be one of: {string.Join(", ", TenantModuleKeys.All)}.");
 
         RuleFor(x => x.SubscriptionPackageVersionId).NotEmpty();
+
+        RuleFor(x => x.BillingCycle).IsInEnum();
     }
 
     [GeneratedRegex("^[a-z0-9](-?[a-z0-9])*$")]

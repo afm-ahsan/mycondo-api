@@ -13,6 +13,7 @@ using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions.Exceptions;
 using MyCondo.Domain.Features.Platform.SubscriptionPackages;
 using MyCondo.Domain.Features.Tenancy;
 using NSubstitute;
@@ -126,7 +127,9 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
         AdministratorEmail: "admin@mycondo.com",
         AdministratorPassword: "Correct-Horse-Battery-9",
         EnabledModuleKeys: ["billing", "payments"],
-        SubscriptionPackageVersionId: _activePackageVersion.Id.Value);
+        SubscriptionPackageVersionId: _activePackageVersion.Id.Value,
+        BillingCycle: BillingCycle.Monthly,
+        AutoRenew: true);
 
     [Fact]
     public async Task Throws_Conflict_When_Slug_Already_Exists()
@@ -217,6 +220,50 @@ public class ProvisionOrganizationWithAdminCommandHandlerTests
             s.BasePrice == 1000m &&
             s.EffectivePrice == 1000m &&
             s.Currency == "BDT"));
+    }
+
+    [Fact]
+    public async Task Uses_The_Requested_BillingCycle_And_AutoRenew()
+    {
+        SubscriptionPackage package = SubscriptionPackage.Create("ANN", "Annual Only", description: null);
+        SubscriptionPackageVersion version = SubscriptionPackageVersion.Create(
+            package.Id, version: 1, effectiveFrom: DateOnly.FromDateTime(NowUtc.UtcDateTime).AddDays(-1),
+            effectiveUntil: null, monthlyPrice: null, quarterlyPrice: null, semiAnnualPrice: null,
+            annualPrice: 9600m, currency: "BDT");
+        version.Activate();
+        package.Activate();
+        package.SetCurrentVersion(version.Id);
+        _ambientSubscriptionPackages.GetAllAsync(Arg.Any<CancellationToken>()).Returns([package]);
+        _ambientSubscriptionPackageVersions.GetAllAsync(Arg.Any<CancellationToken>()).Returns([version]);
+
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with
+        {
+            SubscriptionPackageVersionId = version.Id.Value,
+            BillingCycle = BillingCycle.Annual,
+            AutoRenew = false,
+        };
+
+        ProvisionOrganizationResult result = await CreateHandler().Handle(command, CancellationToken.None);
+
+        _uowOrganizationSubscriptions.Received(1).Add(Arg.Is<OrganizationSubscription>(s =>
+            s.TenantId == result.TenantId &&
+            s.BillingCycle == BillingCycle.Annual &&
+            s.BasePrice == 9600m &&
+            s.AutoRenew == false));
+    }
+
+    [Fact]
+    public async Task Throws_When_The_Requested_BillingCycle_Has_No_Configured_Price()
+    {
+        // _activePackageVersion (see constructor) only configures MonthlyPrice.
+        ProvisionOrganizationWithAdminCommand command = ValidCommand() with { BillingCycle = BillingCycle.Quarterly };
+
+        Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnsupportedBillingCycleException>();
+        // The rejection happens before the tenant-scoped unit of work is ever saved — no partial
+        // tenant/admin/subscription state is committed.
+        await _uow.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
