@@ -11,7 +11,7 @@ public sealed record GetPoolSessionsQuery(
     bool? OpenOnly,
     int Page,
     int PageSize
-) : IRequest<PagedResult<PoolSessionDto>>, IRequiresFeature
+) : IRequest<PagedResult<PoolSessionDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "facilities.swimming_pool";
 }

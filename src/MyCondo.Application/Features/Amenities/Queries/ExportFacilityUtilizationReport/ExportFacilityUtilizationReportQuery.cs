@@ -8,7 +8,7 @@ public sealed record ExportFacilityUtilizationReportQuery(
     DateOnly FromDate,
     DateOnly ToDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>, IRequiresFeature
+) : IRequest<ReportExportResult>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "facilities.reports";
 }

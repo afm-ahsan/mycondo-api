@@ -1,6 +1,7 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.AccountingPeriods.DTOs;
 
 namespace MyCondo.Application.Features.Finance.AccountingPeriods.Commands.SoftCloseAccountingPeriod;
 
-public sealed record SoftCloseAccountingPeriodCommand(Guid AccountingPeriodId) : IRequest<AccountingPeriodDto>;
+public sealed record SoftCloseAccountingPeriodCommand(Guid AccountingPeriodId) : IRequest<AccountingPeriodDto>, ILifecycleWriteOperation;

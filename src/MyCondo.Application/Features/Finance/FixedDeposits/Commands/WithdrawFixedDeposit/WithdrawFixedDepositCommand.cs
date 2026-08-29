@@ -7,7 +7,7 @@ namespace MyCondo.Application.Features.Finance.FixedDeposits.Commands.WithdrawFi
 public sealed record WithdrawFixedDepositCommand(
     Guid FixedDepositId,
     DateOnly? AccountingDate,
-    Guid ReceivingFinancialAccountId) : IRequest<FixedDepositDto>, IRequiresFeature
+    Guid ReceivingFinancialAccountId) : IRequest<FixedDepositDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.fixed_deposits";
 }

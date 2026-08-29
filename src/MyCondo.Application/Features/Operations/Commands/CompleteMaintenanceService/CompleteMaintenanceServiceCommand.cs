@@ -11,7 +11,7 @@ public sealed record CompleteMaintenanceServiceCommand(
     decimal? Cost,
     DateOnly? NextDueDate,
     decimal? NextDueHourMeterReading
-) : IRequest<GeneratorServiceRecordDto>, IRequiresFeature
+) : IRequest<GeneratorServiceRecordDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

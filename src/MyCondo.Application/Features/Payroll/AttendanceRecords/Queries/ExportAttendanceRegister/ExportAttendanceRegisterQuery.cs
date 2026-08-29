@@ -12,7 +12,7 @@ public sealed record ExportAttendanceRegisterQuery(
     Guid? StaffMemberId,
     bool? OnlyOpen,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>, IRequiresFeature
+) : IRequest<ReportExportResult>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.staff_attendance";
 }

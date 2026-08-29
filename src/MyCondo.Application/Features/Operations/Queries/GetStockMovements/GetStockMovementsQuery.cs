@@ -9,7 +9,7 @@ public sealed record GetStockMovementsQuery(
     string? CylinderType,
     int Page,
     int PageSize
-) : IRequest<PagedResult<CylinderStockMovementDto>>, IRequiresFeature
+) : IRequest<PagedResult<CylinderStockMovementDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

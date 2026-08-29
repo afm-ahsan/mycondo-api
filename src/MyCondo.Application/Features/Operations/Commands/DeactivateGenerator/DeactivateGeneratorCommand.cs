@@ -4,7 +4,7 @@ using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.DeactivateGenerator;
 
-public sealed record DeactivateGeneratorCommand(Guid GeneratorId) : IRequest<GeneratorDto>, IRequiresFeature
+public sealed record DeactivateGeneratorCommand(Guid GeneratorId) : IRequest<GeneratorDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

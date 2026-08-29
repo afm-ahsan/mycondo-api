@@ -11,7 +11,7 @@ namespace MyCondo.Application.Features.Security.Directory.Queries.GetSecurityDir
 /// "Authorized"/"Revoked" when supplied.</summary>
 public sealed record GetSecurityDirectoryQuery(
     string? Search, Guid? BuildingId, Guid? FlatId, string? AccessStatus, int Page, int PageSize
-) : IRequest<PagedResult<SecurityDirectoryEntryDto>>, IRequiresFeature
+) : IRequest<PagedResult<SecurityDirectoryEntryDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.directory";
 }

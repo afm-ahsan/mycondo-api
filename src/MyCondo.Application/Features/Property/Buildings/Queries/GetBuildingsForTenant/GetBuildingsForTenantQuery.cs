@@ -9,7 +9,7 @@ public sealed record GetBuildingsForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<BuildingDto>>, IRequiresFeature
+) : IRequest<PagedResult<BuildingDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "property.buildings";
 }

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetExpenseByCategoryReport;
@@ -14,4 +15,4 @@ public sealed record ExpenseByCategoryReportDto(
 /// <c>IExpenseRepository.GetExpenseCompositionByCategoryAsync</c>, the same method the Financial
 /// Overview report uses, so this report and that one can never disagree on category composition.
 /// </summary>
-public sealed record GetExpenseByCategoryReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseByCategoryReportDto>;
+public sealed record GetExpenseByCategoryReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseByCategoryReportDto>, ILifecycleReadOperation;

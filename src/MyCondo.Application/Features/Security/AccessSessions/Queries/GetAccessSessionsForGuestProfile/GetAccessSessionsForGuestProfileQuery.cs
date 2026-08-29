@@ -9,7 +9,7 @@ public sealed record GetAccessSessionsForGuestProfileQuery(
     Guid GuestProfileId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<AccessSessionDto>>, IRequiresFeature
+) : IRequest<PagedResult<AccessSessionDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.visitors";
 }

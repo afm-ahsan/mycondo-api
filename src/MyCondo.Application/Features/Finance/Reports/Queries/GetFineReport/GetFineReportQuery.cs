@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetFineReport;
@@ -15,4 +16,4 @@ public sealed record FineReportDto(
     decimal Collected,
     decimal Waived);
 
-public sealed record GetFineReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<FineReportDto>;
+public sealed record GetFineReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<FineReportDto>, ILifecycleReadOperation;

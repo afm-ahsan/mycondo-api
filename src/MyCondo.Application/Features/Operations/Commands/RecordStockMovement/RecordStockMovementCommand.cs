@@ -13,7 +13,7 @@ public sealed record RecordStockMovementCommand(
     int Quantity,
     DateTimeOffset OccurredAtUtc,
     Guid? CylinderPurchaseId
-) : IRequest<CylinderStockMovementDto>, IRequiresFeature
+) : IRequest<CylinderStockMovementDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

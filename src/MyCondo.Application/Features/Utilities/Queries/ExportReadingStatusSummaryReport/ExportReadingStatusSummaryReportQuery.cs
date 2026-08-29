@@ -7,7 +7,7 @@ public sealed record ExportReadingStatusSummaryReportQuery(
     Guid? BuildingId,
     string? UtilityType,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>, IRequiresFeature
+) : IRequest<ReportExportResult>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "utilities.reports";
 }

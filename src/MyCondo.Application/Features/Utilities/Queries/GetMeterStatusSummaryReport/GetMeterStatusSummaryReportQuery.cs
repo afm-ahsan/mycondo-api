@@ -7,7 +7,7 @@ namespace MyCondo.Application.Features.Utilities.Queries.GetMeterStatusSummaryRe
 public sealed record GetMeterStatusSummaryReportQuery(
     Guid? BuildingId,
     string? UtilityType
-) : IRequest<IReadOnlyList<MeterStatusSummaryLineDto>>, IRequiresFeature
+) : IRequest<IReadOnlyList<MeterStatusSummaryLineDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "utilities.reports";
 }

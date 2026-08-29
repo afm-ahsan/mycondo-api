@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Billing.DTOs;
 
 namespace MyCondo.Application.Features.Billing.Commands.CreateServiceChargeRule;
@@ -12,4 +13,4 @@ public sealed record CreateServiceChargeRuleCommand(
     string? UnitTypeFilter,
     string Frequency,
     DateOnly EffectiveFrom
-) : IRequest<ServiceChargeRuleDto>;
+) : IRequest<ServiceChargeRuleDto>, ILifecycleWriteOperation;

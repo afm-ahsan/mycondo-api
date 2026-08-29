@@ -10,7 +10,7 @@ namespace MyCondo.Application.Features.Security.Directory.Queries.GetSecurityDir
 /// other.</summary>
 public sealed record GetSecurityDirectoryDetailQuery(
     Guid EntryId, string ResidentType
-) : IRequest<SecurityDirectoryDetailDto>, IRequiresFeature
+) : IRequest<SecurityDirectoryDetailDto>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.directory";
 }

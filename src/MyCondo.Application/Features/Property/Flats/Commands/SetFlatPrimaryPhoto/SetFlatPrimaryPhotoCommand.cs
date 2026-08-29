@@ -6,7 +6,7 @@ namespace MyCondo.Application.Features.Property.Flats.Commands.SetFlatPrimaryPho
 
 public sealed record SetFlatPrimaryPhotoCommand(
     Guid FlatId, Guid? AttachmentId
-) : IRequest<FlatDto>, IRequiresFeature
+) : IRequest<FlatDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "property.flats";
 }

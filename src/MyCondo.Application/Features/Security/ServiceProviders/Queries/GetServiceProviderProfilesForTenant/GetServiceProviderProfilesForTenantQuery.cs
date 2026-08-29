@@ -9,7 +9,7 @@ public sealed record GetServiceProviderProfilesForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<ServiceProviderProfileDto>>, IRequiresFeature
+) : IRequest<PagedResult<ServiceProviderProfileDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.service_providers";
 }

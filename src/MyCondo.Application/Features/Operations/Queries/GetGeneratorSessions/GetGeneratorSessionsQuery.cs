@@ -10,7 +10,7 @@ public sealed record GetGeneratorSessionsQuery(
     string? Status,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GeneratorSessionDto>>, IRequiresFeature
+) : IRequest<PagedResult<GeneratorSessionDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.generator";
 }

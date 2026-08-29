@@ -9,7 +9,7 @@ public sealed record ResolveBreakdownCommand(
     string Resolution,
     decimal? Cost,
     DateTimeOffset DowntimeEndUtc
-) : IRequest<GeneratorBreakdownRecordDto>, IRequiresFeature
+) : IRequest<GeneratorBreakdownRecordDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

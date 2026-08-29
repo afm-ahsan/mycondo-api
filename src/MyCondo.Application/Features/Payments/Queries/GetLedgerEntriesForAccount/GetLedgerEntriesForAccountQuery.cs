@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Domain.Common;
 
@@ -11,4 +12,4 @@ public sealed record GetLedgerEntriesForAccountQuery(
     string? ReferenceType,
     int Page,
     int PageSize
-) : IRequest<PagedResult<LedgerEntryDto>>;
+) : IRequest<PagedResult<LedgerEntryDto>>, ILifecycleReadOperation;

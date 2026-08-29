@@ -9,7 +9,7 @@ public sealed record GetVehiclesForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<VehicleDto>>, IRequiresFeature
+) : IRequest<PagedResult<VehicleDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.vehicles";
 }

@@ -12,7 +12,7 @@ public sealed record CreateServiceProviderAssignmentCommand(
     string? AllowedDays,
     TimeOnly? AllowedStartTime,
     TimeOnly? AllowedEndTime
-) : IRequest<ServiceProviderAssignmentDto>, IRequiresFeature
+) : IRequest<ServiceProviderAssignmentDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.service_providers";
 }

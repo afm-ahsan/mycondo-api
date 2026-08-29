@@ -9,7 +9,7 @@ public sealed record RecordStockAdjustmentCommand(
     int SignedQuantity,
     string Reason,
     DateTimeOffset OccurredAtUtc
-) : IRequest<CylinderStockMovementDto>, IRequiresFeature
+) : IRequest<CylinderStockMovementDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

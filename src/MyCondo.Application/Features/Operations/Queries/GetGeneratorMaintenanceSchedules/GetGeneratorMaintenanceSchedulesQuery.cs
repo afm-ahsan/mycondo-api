@@ -9,7 +9,7 @@ public sealed record GetGeneratorMaintenanceSchedulesQuery(
     Guid? GeneratorId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GeneratorMaintenanceScheduleDto>>, IRequiresFeature
+) : IRequest<PagedResult<GeneratorMaintenanceScheduleDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.generator";
 }

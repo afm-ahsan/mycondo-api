@@ -14,7 +14,7 @@ public sealed record ReceiveParcelCommand(
     string ParcelType,
     int PackageCount,
     string? StorageLocation
-) : IRequest<ParcelDto>, IRequiresFeature
+) : IRequest<ParcelDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.parcels";
 }

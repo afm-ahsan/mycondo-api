@@ -12,7 +12,7 @@ public sealed record RegisterVehicleCommand(
     string? Color,
     string OwnershipCategory,
     Guid? FlatId
-) : IRequest<VehicleDto>, IRequiresFeature
+) : IRequest<VehicleDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.vehicles";
 }

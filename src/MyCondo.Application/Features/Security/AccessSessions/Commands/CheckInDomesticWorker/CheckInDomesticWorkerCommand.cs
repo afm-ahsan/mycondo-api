@@ -10,7 +10,7 @@ public sealed record CheckInDomesticWorkerCommand(
     Guid EntryGateId,
     string? Remarks,
     string? OverrideReason
-) : IRequest<AccessSessionDto>, IRequiresFeature
+) : IRequest<AccessSessionDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.domestic_workers";
 }

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetServiceChargeCollectionReport;
@@ -17,4 +18,4 @@ public sealed record ServiceChargeCollectionReportDto(
     decimal Collected,
     decimal Waived);
 
-public sealed record GetServiceChargeCollectionReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ServiceChargeCollectionReportDto>;
+public sealed record GetServiceChargeCollectionReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ServiceChargeCollectionReportDto>, ILifecycleReadOperation;

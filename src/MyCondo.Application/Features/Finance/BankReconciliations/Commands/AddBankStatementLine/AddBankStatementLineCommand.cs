@@ -6,7 +6,7 @@ namespace MyCondo.Application.Features.Finance.BankReconciliations.Commands.AddB
 
 public sealed record AddBankStatementLineCommand(
     Guid BankReconciliationId, DateOnly TransactionDate, string Description, decimal Amount)
-    : IRequest<BankStatementLineDto>, IRequiresFeature
+    : IRequest<BankStatementLineDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.bank_reconciliation";
 }

@@ -1,8 +1,9 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnershipsForFlat;
 
-public sealed record GetFlatOwnershipsForFlatQuery(Guid FlatId) : IRequest<List<FlatOwnershipDto>>;
+public sealed record GetFlatOwnershipsForFlatQuery(Guid FlatId) : IRequest<List<FlatOwnershipDto>>, ILifecycleReadOperation;
 
 public sealed record FlatOwnershipDto(
     Guid FlatOwnershipId,

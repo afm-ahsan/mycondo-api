@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetOutstandingDuesReport;
@@ -18,4 +19,4 @@ public sealed record OutstandingDuesReportDto(
 /// <summary>Simple per-flat/per-resident total outstanding balance — not bucketed by age (that's the
 /// existing Receivable Ageing report). <paramref name="BuildingId"/> narrows to one building; omit for
 /// the tenant-wide list.</summary>
-public sealed record GetOutstandingDuesReportQuery(Guid? BuildingId) : IRequest<OutstandingDuesReportDto>;
+public sealed record GetOutstandingDuesReportQuery(Guid? BuildingId) : IRequest<OutstandingDuesReportDto>, ILifecycleReadOperation;

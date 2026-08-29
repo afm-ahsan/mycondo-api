@@ -7,7 +7,7 @@ namespace MyCondo.Application.Features.Operations.Commands.StartGeneratorSession
 public sealed record StartGeneratorSessionCommand(
     Guid GeneratorId,
     decimal OpeningFuelLevel
-) : IRequest<GeneratorSessionDto>, IRequiresFeature
+) : IRequest<GeneratorSessionDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

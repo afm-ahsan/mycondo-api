@@ -13,4 +13,4 @@ public sealed record RecordReadingCommand(
     decimal PresentReading,
     DateOnly ReadingDate,
     string? OverrideReason
-) : IRequest<ReadingDto>, IHasMeterId, IRequiresResolvedFeature;
+) : IRequest<ReadingDto>, IHasMeterId, IRequiresResolvedFeature, ILifecycleWriteOperation;

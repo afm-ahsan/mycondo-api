@@ -5,7 +5,7 @@ using MyCondo.Domain.Common;
 
 namespace MyCondo.Application.Features.Operations.Queries.GetSuppliers;
 
-public sealed record GetSuppliersQuery(int Page, int PageSize) : IRequest<PagedResult<GasCylinderSupplierDto>>, IRequiresFeature
+public sealed record GetSuppliersQuery(int Page, int PageSize) : IRequest<PagedResult<GasCylinderSupplierDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

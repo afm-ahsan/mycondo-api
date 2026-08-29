@@ -7,7 +7,7 @@ namespace MyCondo.Application.Features.Utilities.Queries.GetReadingStatusSummary
 public sealed record GetReadingStatusSummaryReportQuery(
     Guid? BuildingId,
     string? UtilityType
-) : IRequest<IReadOnlyList<ReadingStatusSummaryLineDto>>, IRequiresFeature
+) : IRequest<IReadOnlyList<ReadingStatusSummaryLineDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "utilities.reports";
 }

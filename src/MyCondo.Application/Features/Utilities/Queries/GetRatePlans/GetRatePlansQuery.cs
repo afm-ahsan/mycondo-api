@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Utilities.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,4 @@ public sealed record GetRatePlansQuery(
     string? UtilityType,
     int Page,
     int PageSize
-) : IRequest<PagedResult<RatePlanDto>>;
+) : IRequest<PagedResult<RatePlanDto>>, ILifecycleReadOperation;

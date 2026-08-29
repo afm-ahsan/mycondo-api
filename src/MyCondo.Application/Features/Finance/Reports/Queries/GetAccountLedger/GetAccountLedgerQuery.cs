@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetAccountLedger;
@@ -34,4 +35,4 @@ public sealed record GetAccountLedgerQuery(
     DateOnly? ToDate,
     int Page,
     int PageSize
-) : IRequest<AccountLedgerReportDto>;
+) : IRequest<AccountLedgerReportDto>, ILifecycleReadOperation;

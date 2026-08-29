@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetExpenseByTypeReport;
@@ -12,4 +13,4 @@ public sealed record ExpenseByTypeReportDto(
 /// <summary>Posted (Posted/Paid) expense totals grouped by Expense Type for a period — one level below
 /// <c>GetExpenseByCategoryReportQuery</c>, same posted-only population
 /// (<c>IExpenseRepository.GetExpenseCompositionByTypeAsync</c>).</summary>
-public sealed record GetExpenseByTypeReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseByTypeReportDto>;
+public sealed record GetExpenseByTypeReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseByTypeReportDto>, ILifecycleReadOperation;

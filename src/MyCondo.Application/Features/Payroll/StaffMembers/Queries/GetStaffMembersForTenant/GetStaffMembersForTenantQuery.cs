@@ -9,7 +9,7 @@ public sealed record GetStaffMembersForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<StaffMemberDto>>, IRequiresFeature
+) : IRequest<PagedResult<StaffMemberDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.staff_attendance";
 }

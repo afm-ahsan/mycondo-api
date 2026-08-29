@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetFixedDepositInterestReport;
@@ -31,4 +32,4 @@ public sealed record FixedDepositInterestReportDto(
     decimal OutstandingAccruedNotReceivedAsOfToDate,
     IReadOnlyList<FixedDepositInterestLineDto> ByFixedDeposit);
 
-public sealed record GetFixedDepositInterestReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<FixedDepositInterestReportDto>;
+public sealed record GetFixedDepositInterestReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<FixedDepositInterestReportDto>, ILifecycleReadOperation;

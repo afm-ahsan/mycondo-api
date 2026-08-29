@@ -12,7 +12,7 @@ public sealed record UpdateGateCommand(
     bool IsEntryAllowed,
     bool IsExitAllowed,
     int DisplayOrder
-) : IRequest<GateDto>, IRequiresFeature
+) : IRequest<GateDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.gates";
 }

@@ -8,7 +8,7 @@ public sealed record CollectParcelCommand(
     Guid ParcelId,
     string CollectorName,
     string? Acknowledgement
-) : IRequest<ParcelDto>, IRequiresFeature
+) : IRequest<ParcelDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.parcels";
 }

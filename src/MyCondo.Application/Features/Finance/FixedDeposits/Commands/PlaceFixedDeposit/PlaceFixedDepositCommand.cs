@@ -18,7 +18,7 @@ public sealed record PlaceFixedDepositCommand(
     DateOnly MaturityDate,
     decimal? ExpectedGrossInterest,
     decimal? ExpectedDeductionRatePercent,
-    string? Notes) : IRequest<FixedDepositDto>, IRequiresFeature
+    string? Notes) : IRequest<FixedDepositDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.fixed_deposits";
 }

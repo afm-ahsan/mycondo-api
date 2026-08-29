@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Expenses.Expenses.DTOs;
 using MyCondo.Domain.Common;
 
@@ -13,4 +14,4 @@ public sealed record GetExpensesForTenantQuery(
     DateOnly? ToDate,
     int Page = 1,
     int PageSize = 20
-) : IRequest<PagedResult<ExpenseDto>>;
+) : IRequest<PagedResult<ExpenseDto>>, ILifecycleReadOperation;

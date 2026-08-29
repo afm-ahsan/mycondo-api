@@ -9,7 +9,7 @@ public sealed record GetAccessSessionsForVehicleQuery(
     Guid VehicleId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<AccessSessionDto>>, IRequiresFeature
+) : IRequest<PagedResult<AccessSessionDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.vehicles";
 }

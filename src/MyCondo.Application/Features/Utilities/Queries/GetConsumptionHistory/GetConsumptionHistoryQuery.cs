@@ -9,4 +9,4 @@ public sealed record GetConsumptionHistoryQuery(
     Guid MeterId,
     DateOnly FromDate,
     DateOnly ToDate
-) : IRequest<IReadOnlyList<ReadingDto>>, IHasMeterId, IRequiresResolvedFeature;
+) : IRequest<IReadOnlyList<ReadingDto>>, IHasMeterId, IRequiresResolvedFeature, ILifecycleReadOperation;

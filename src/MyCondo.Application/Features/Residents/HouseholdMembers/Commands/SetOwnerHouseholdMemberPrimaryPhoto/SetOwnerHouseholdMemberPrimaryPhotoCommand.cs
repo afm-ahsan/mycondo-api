@@ -1,8 +1,9 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Residents.HouseholdMembers.DTOs;
 
 namespace MyCondo.Application.Features.Residents.HouseholdMembers.Commands.SetOwnerHouseholdMemberPrimaryPhoto;
 
 public sealed record SetOwnerHouseholdMemberPrimaryPhotoCommand(
     Guid ResidentHouseholdMemberId, Guid? AttachmentId
-) : IRequest<ResidentHouseholdMemberDto>;
+) : IRequest<ResidentHouseholdMemberDto>, ILifecycleWriteOperation;

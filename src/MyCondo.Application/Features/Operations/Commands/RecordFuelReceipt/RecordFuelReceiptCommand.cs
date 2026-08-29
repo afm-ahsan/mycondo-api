@@ -11,7 +11,7 @@ public sealed record RecordFuelReceiptCommand(
     decimal? Cost,
     string? Supplier,
     string? Remarks
-) : IRequest<GeneratorFuelReceiptDto>, IRequiresFeature
+) : IRequest<GeneratorFuelReceiptDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

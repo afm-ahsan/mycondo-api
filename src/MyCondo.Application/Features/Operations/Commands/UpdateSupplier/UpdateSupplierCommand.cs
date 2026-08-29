@@ -10,7 +10,7 @@ public sealed record UpdateSupplierCommand(
     string? ContactPhone,
     string? ContactEmail,
     string? Address
-) : IRequest<GasCylinderSupplierDto>, IRequiresFeature
+) : IRequest<GasCylinderSupplierDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

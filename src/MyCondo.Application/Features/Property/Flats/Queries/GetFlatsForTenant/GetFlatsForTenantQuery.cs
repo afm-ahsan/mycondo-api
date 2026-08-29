@@ -14,7 +14,7 @@ public sealed record GetFlatsForTenantQuery(
     Guid? BuildingId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<FlatDto>>, IRequiresFeature
+) : IRequest<PagedResult<FlatDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "property.flats";
 }

@@ -10,4 +10,4 @@ public sealed record InspectBookingCommand(
     string? Notes,
     decimal? DamageDeductionAmount,
     string? DamageDeductionReason
-) : IRequest<BookingDto>, IHasBookingId, IRequiresResolvedFeature;
+) : IRequest<BookingDto>, IHasBookingId, IRequiresResolvedFeature, ILifecycleWriteOperation;

@@ -12,7 +12,7 @@ public sealed record CheckInPoolSessionCommand(
     Guid? AccompaniedBySessionId,
     bool SafetyAcknowledged,
     string? OverrideReason
-) : IRequest<PoolSessionDto>, IRequiresFeature
+) : IRequest<PoolSessionDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "facilities.swimming_pool";
 }

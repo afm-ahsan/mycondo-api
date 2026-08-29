@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetCashBankPositionReport;
@@ -17,4 +18,4 @@ public sealed record CashBankPositionReportDto(
     IReadOnlyList<CashBankAccountLineDto> Accounts,
     decimal TotalBalance);
 
-public sealed record GetCashBankPositionReportQuery(DateOnly? AsOfDate) : IRequest<CashBankPositionReportDto>;
+public sealed record GetCashBankPositionReportQuery(DateOnly? AsOfDate) : IRequest<CashBankPositionReportDto>, ILifecycleReadOperation;

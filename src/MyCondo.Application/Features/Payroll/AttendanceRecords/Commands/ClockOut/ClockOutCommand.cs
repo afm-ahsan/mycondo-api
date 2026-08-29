@@ -4,7 +4,7 @@ using MyCondo.Application.Features.Payroll.AttendanceRecords.DTOs;
 
 namespace MyCondo.Application.Features.Payroll.AttendanceRecords.Commands.ClockOut;
 
-public sealed record ClockOutCommand(Guid AttendanceRecordId) : IRequest<AttendanceRecordDto>, IRequiresFeature
+public sealed record ClockOutCommand(Guid AttendanceRecordId) : IRequest<AttendanceRecordDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.staff_attendance";
 }

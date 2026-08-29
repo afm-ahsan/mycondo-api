@@ -10,7 +10,7 @@ namespace MyCondo.Application.Features.Finance.BankReconciliations.Commands.AddR
 /// finite role vocabulary every other posting call site already uses; no new account types are
 /// introduced by this feature.</summary>
 public sealed record AddReconciliationAdjustmentCommand(
-    Guid BankStatementLineId, string OtherSideRole, string Description) : IRequest<BankStatementLineDto>, IRequiresFeature
+    Guid BankStatementLineId, string OtherSideRole, string Description) : IRequest<BankStatementLineDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.bank_reconciliation";
 }

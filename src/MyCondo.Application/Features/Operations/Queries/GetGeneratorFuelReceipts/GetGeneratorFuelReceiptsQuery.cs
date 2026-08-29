@@ -9,7 +9,7 @@ public sealed record GetGeneratorFuelReceiptsQuery(
     Guid? GeneratorId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GeneratorFuelReceiptDto>>, IRequiresFeature
+) : IRequest<PagedResult<GeneratorFuelReceiptDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.generator";
 }

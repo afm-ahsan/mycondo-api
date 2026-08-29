@@ -8,7 +8,7 @@ public sealed record CreateMonthlyReconciliationCommand(
     string CylinderType,
     DateOnly PeriodMonth,
     string? Remarks
-) : IRequest<MonthlyCylinderReconciliationDto>, IRequiresFeature
+) : IRequest<MonthlyCylinderReconciliationDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

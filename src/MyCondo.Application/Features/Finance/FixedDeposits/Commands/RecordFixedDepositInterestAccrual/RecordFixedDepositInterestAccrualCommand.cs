@@ -10,7 +10,7 @@ public sealed record RecordFixedDepositInterestAccrualCommand(
     DateOnly PeriodEnd,
     DateOnly? AccountingDate,
     decimal GrossAmount,
-    string? Notes) : IRequest<FixedDepositInterestAccrualDto>, IRequiresFeature
+    string? Notes) : IRequest<FixedDepositInterestAccrualDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.fixed_deposits";
 }

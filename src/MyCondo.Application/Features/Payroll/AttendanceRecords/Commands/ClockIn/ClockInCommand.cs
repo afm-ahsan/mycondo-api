@@ -11,7 +11,7 @@ public sealed record ClockInCommand(
     DateTimeOffset? ScheduledEndUtc,
     string? WorkLocation,
     string Source
-) : IRequest<AttendanceRecordDto>, IRequiresFeature
+) : IRequest<AttendanceRecordDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.staff_attendance";
 }

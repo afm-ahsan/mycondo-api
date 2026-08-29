@@ -23,7 +23,7 @@ public sealed record RenewFixedDepositCommand(
     DateOnly NewMaturityDate,
     decimal? NewExpectedGrossInterest,
     decimal? NewExpectedDeductionRatePercent,
-    string? Notes) : IRequest<FixedDepositDto>, IRequiresFeature
+    string? Notes) : IRequest<FixedDepositDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.fixed_deposits";
 }

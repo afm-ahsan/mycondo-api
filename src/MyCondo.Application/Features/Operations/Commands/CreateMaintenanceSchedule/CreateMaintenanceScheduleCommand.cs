@@ -8,7 +8,7 @@ public sealed record CreateMaintenanceScheduleCommand(
     Guid GeneratorId,
     DateOnly? NextDueDate,
     decimal? NextDueHourMeterReading
-) : IRequest<GeneratorMaintenanceScheduleDto>, IRequiresFeature
+) : IRequest<GeneratorMaintenanceScheduleDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

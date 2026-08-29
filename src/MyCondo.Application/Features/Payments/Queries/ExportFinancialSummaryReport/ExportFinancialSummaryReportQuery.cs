@@ -8,4 +8,4 @@ public sealed record ExportFinancialSummaryReportQuery(
     DateOnly FromDate,
     DateOnly ToDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, ILifecycleReadOperation;

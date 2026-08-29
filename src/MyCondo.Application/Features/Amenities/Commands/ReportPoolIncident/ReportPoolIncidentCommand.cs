@@ -11,7 +11,7 @@ public sealed record ReportPoolIncidentCommand(
     string Description,
     string Severity,
     string? ActionTaken
-) : IRequest<PoolIncidentDto>, IRequiresFeature
+) : IRequest<PoolIncidentDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "facilities.swimming_pool";
 }

@@ -16,7 +16,7 @@ public sealed record GetAttendanceRecordsForTenantQuery(
     bool? OnlyOpen,
     int Page,
     int PageSize
-) : IRequest<PagedResult<AttendanceRegisterEntryDto>>, IRequiresFeature
+) : IRequest<PagedResult<AttendanceRegisterEntryDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.staff_attendance";
 }

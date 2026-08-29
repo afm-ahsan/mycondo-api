@@ -9,7 +9,7 @@ public sealed record CreateFlatCommand(
     string FlatNumber,
     int? FloorNumber,
     string FlatType
-) : IRequest<FlatDto>, IRequiresFeature
+) : IRequest<FlatDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "property.flats";
 }

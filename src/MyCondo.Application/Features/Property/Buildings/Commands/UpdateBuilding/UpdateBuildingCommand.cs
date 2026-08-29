@@ -9,7 +9,7 @@ public sealed record UpdateBuildingCommand(
     string Name,
     string Code,
     string? Address
-) : IRequest<BuildingDto>, IRequiresFeature
+) : IRequest<BuildingDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "property.buildings";
 }

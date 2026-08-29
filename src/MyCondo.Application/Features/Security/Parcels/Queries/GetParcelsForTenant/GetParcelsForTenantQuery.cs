@@ -11,7 +11,7 @@ public sealed record GetParcelsForTenantQuery(
     int Page,
     int PageSize,
     Guid? BuildingId = null
-) : IRequest<PagedResult<ParcelDto>>, IRequiresFeature
+) : IRequest<PagedResult<ParcelDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.parcels";
 }

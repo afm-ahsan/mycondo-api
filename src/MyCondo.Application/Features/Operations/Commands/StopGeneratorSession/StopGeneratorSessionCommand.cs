@@ -9,7 +9,7 @@ public sealed record StopGeneratorSessionCommand(
     decimal ClosingFuelLevel,
     string? OutageReason,
     decimal? HourMeterReading
-) : IRequest<GeneratorSessionDto>, IRequiresFeature
+) : IRequest<GeneratorSessionDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Residents.DTOs;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Commands.RegisterFlatOwner;
@@ -36,6 +37,6 @@ public sealed record RegisterFlatOwnerCommand(
     string? BloodGroup,
     string? Religion,
     string? Nationality
-) : IRequest<RegisterFlatOwnerResult>;
+) : IRequest<RegisterFlatOwnerResult>, ILifecycleWriteOperation;
 
 public sealed record RegisterFlatOwnerResult(Guid ResidentId, Guid FlatOwnershipId, ResidentDto Resident);

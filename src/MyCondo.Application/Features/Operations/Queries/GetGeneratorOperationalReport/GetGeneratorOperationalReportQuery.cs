@@ -8,7 +8,7 @@ public sealed record GetGeneratorOperationalReportQuery(
     Guid? GeneratorId,
     DateOnly FromDate,
     DateOnly ToDate
-) : IRequest<IReadOnlyList<GeneratorOperationalReportLineDto>>, IRequiresFeature
+) : IRequest<IReadOnlyList<GeneratorOperationalReportLineDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.generator";
 }

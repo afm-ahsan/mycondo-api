@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Auth.DTOs;
 
 namespace MyCondo.Application.Features.Auth.Commands.UploadMyAvatar;
@@ -8,4 +9,4 @@ public sealed record UploadMyAvatarCommand(
     string FileName,
     string ContentType,
     long SizeBytes
-) : IRequest<UserProfileDto>;
+) : IRequest<UserProfileDto>, ILifecycleWriteOperation;

@@ -9,7 +9,7 @@ public sealed record GetDomesticWorkerProfilesForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<DomesticWorkerProfileDto>>, IRequiresFeature
+) : IRequest<PagedResult<DomesticWorkerProfileDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.domestic_workers";
 }

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetFinancialOverview;
@@ -41,4 +42,4 @@ public sealed record FinancialOverviewReportDto(
 /// <summary>AsOfDate drives every cumulative balance (Income/Expense/Surplus/Receivables/Cash/FD
 /// principal). FromDate/ToDate independently scope the period-flow figures (collection performance,
 /// expense composition) — both default to the calendar month containing AsOfDate when omitted.</summary>
-public sealed record GetFinancialOverviewQuery(DateOnly? AsOfDate, DateOnly? FromDate, DateOnly? ToDate) : IRequest<FinancialOverviewReportDto>;
+public sealed record GetFinancialOverviewQuery(DateOnly? AsOfDate, DateOnly? FromDate, DateOnly? ToDate) : IRequest<FinancialOverviewReportDto>, ILifecycleReadOperation;

@@ -1,6 +1,7 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Residents.DTOs;
 
 namespace MyCondo.Application.Features.Residents.Queries.GetResidentById;
 
-public sealed record GetResidentByIdQuery(Guid ResidentId) : IRequest<ResidentDto>;
+public sealed record GetResidentByIdQuery(Guid ResidentId) : IRequest<ResidentDto>, ILifecycleReadOperation;

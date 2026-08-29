@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.SebaVisits.DTOs;
 
 namespace MyCondo.Application.Features.Security.SebaVisits.Commands.CheckInSebaVisitor;
@@ -12,4 +13,4 @@ public sealed record CheckInSebaVisitorCommand(
     string? RelatedReferenceType,
     Guid? RelatedReferenceId,
     Guid EntryGateId
-) : IRequest<SebaVisitDto>;
+) : IRequest<SebaVisitDto>, ILifecycleWriteOperation;

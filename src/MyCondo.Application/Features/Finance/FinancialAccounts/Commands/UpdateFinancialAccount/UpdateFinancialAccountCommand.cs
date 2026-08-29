@@ -11,7 +11,7 @@ public sealed record UpdateFinancialAccountCommand(
     string? BranchName,
     string? AccountNumber,
     Guid? FundId,
-    string? Notes) : IRequest<FinancialAccountDto>, IRequiresFeature
+    string? Notes) : IRequest<FinancialAccountDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.financial_accounts";
 }

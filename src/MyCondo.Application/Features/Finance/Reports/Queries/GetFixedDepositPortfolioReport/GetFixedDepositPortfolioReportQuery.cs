@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetFixedDepositPortfolioReport;
@@ -33,4 +34,4 @@ public sealed record FixedDepositPortfolioReportDto(
 /// corrections, never real principal, and are excluded) as of <see cref="AsOfDate"/>, each with its
 /// current accrued-but-unreceived interest (accrued-to-date minus received-to-date). Board/admin-facing,
 /// gated by <c>finance.report.view</c>.</summary>
-public sealed record GetFixedDepositPortfolioReportQuery(DateOnly? AsOfDate) : IRequest<FixedDepositPortfolioReportDto>;
+public sealed record GetFixedDepositPortfolioReportQuery(DateOnly? AsOfDate) : IRequest<FixedDepositPortfolioReportDto>, ILifecycleReadOperation;

@@ -10,7 +10,7 @@ public sealed record GetFixedDepositsForTenantQuery(
     Guid? FundId,
     Guid? FundingFinancialAccountId,
     int Page = 1,
-    int PageSize = 20) : IRequest<PagedResult<FixedDepositDto>>, IRequiresFeature
+    int PageSize = 20) : IRequest<PagedResult<FixedDepositDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "finance.fixed_deposits";
 }

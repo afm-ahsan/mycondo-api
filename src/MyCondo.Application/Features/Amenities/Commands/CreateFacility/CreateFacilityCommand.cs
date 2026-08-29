@@ -20,7 +20,7 @@ public sealed record CreateFacilityCommand(
     int? MinimumAgeUnaccompanied,
     bool RequiresSafetyAcknowledgement,
     bool BlocksEntryIfAccountOverdue
-) : IRequest<FacilityDto>, IRequiresFeature
+) : IRequest<FacilityDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     // FacilityType is required at creation (unlike the nullable filter on GetFacilitiesQuery), so the
     // feature this call actually uses is determinate from the request itself — no DB lookup needed.

@@ -9,7 +9,7 @@ public sealed record GetGuestProfilesForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GuestProfileDto>>, IRequiresFeature
+) : IRequest<PagedResult<GuestProfileDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.visitors";
 }

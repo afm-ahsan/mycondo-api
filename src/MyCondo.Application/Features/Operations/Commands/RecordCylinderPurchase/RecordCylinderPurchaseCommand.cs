@@ -14,7 +14,7 @@ public sealed record RecordCylinderPurchaseCommand(
     decimal RatePerCylinder,
     decimal DeliveryOrOtherCost,
     string? Remarks
-) : IRequest<CylinderPurchaseDto>, IRequiresFeature
+) : IRequest<CylinderPurchaseDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

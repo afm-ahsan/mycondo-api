@@ -9,7 +9,7 @@ public sealed record CreateGuestProfileCommand(
     string Phone,
     string? IdentityDocumentType,
     string? IdentityDocumentNumber
-) : IRequest<GuestProfileDto>, IRequiresFeature
+) : IRequest<GuestProfileDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.visitors";
 }

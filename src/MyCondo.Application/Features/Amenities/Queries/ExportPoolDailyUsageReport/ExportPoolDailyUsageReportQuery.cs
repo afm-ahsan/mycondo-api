@@ -7,7 +7,7 @@ public sealed record ExportPoolDailyUsageReportQuery(
     Guid FacilityId,
     DateOnly Date,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>, IRequiresFeature
+) : IRequest<ReportExportResult>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "facilities.reports";
 }

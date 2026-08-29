@@ -12,7 +12,7 @@ public sealed record RegisterDomesticWorkerCommand(
     string? IdentityDocumentNumber,
     string? EmergencyContactName,
     string? EmergencyContactPhone
-) : IRequest<DomesticWorkerProfileDto>, IRequiresFeature
+) : IRequest<DomesticWorkerProfileDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.domestic_workers";
 }

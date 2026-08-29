@@ -10,7 +10,7 @@ public sealed record GetCylinderPurchasesQuery(
     string? ApprovalStatus,
     int Page,
     int PageSize
-) : IRequest<PagedResult<CylinderPurchaseDto>>, IRequiresFeature
+) : IRequest<PagedResult<CylinderPurchaseDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

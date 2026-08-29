@@ -7,7 +7,7 @@ namespace MyCondo.Application.Features.Operations.Queries.GetSupplierComparisonR
 public sealed record GetSupplierComparisonReportQuery(
     DateOnly FromDate,
     DateOnly ToDate
-) : IRequest<IReadOnlyList<SupplierComparisonReportLineDto>>, IRequiresFeature
+) : IRequest<IReadOnlyList<SupplierComparisonReportLineDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

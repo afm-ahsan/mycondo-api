@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Utilities.DTOs;
 using MyCondo.Domain.Common;
 
@@ -10,4 +11,4 @@ public sealed record GetReadingsQuery(
     string? Status,
     int Page,
     int PageSize
-) : IRequest<PagedResult<ReadingDto>>;
+) : IRequest<PagedResult<ReadingDto>>, ILifecycleReadOperation;

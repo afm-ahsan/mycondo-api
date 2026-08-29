@@ -11,7 +11,7 @@ public sealed record RegisterServiceProviderCommand(
     string? ServiceDescription,
     string? IdentityDocumentType,
     string? IdentityDocumentNumber
-) : IRequest<ServiceProviderProfileDto>, IRequiresFeature
+) : IRequest<ServiceProviderProfileDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.service_providers";
 }

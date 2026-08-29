@@ -1,8 +1,9 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Commands.EndFlatOwnership;
 
 public sealed record EndFlatOwnershipCommand(
     Guid FlatOwnershipId,
     DateOnly EndDate
-) : IRequest;
+) : IRequest, ILifecycleWriteOperation;

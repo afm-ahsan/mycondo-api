@@ -10,7 +10,7 @@ public sealed record CheckInServiceProviderCommand(
     Guid EntryGateId,
     string? Remarks,
     string? OverrideReason
-) : IRequest<AccessSessionDto>, IRequiresFeature
+) : IRequest<AccessSessionDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.service_providers";
 }

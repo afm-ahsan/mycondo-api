@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetGasCollectionReport;
@@ -14,4 +15,4 @@ public sealed record GasCollectionReportDto(
     decimal Collected,
     decimal Waived);
 
-public sealed record GetGasCollectionReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<GasCollectionReportDto>;
+public sealed record GetGasCollectionReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<GasCollectionReportDto>, ILifecycleReadOperation;

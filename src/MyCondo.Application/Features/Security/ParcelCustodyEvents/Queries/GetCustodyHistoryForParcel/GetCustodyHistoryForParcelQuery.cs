@@ -4,7 +4,7 @@ using MyCondo.Application.Features.Security.ParcelCustodyEvents.DTOs;
 
 namespace MyCondo.Application.Features.Security.ParcelCustodyEvents.Queries.GetCustodyHistoryForParcel;
 
-public sealed record GetCustodyHistoryForParcelQuery(Guid ParcelId) : IRequest<List<ParcelCustodyEventDto>>, IRequiresFeature
+public sealed record GetCustodyHistoryForParcelQuery(Guid ParcelId) : IRequest<List<ParcelCustodyEventDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.parcels";
 }

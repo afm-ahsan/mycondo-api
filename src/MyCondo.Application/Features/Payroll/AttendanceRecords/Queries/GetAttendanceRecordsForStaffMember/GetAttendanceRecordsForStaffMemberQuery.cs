@@ -9,7 +9,7 @@ public sealed record GetAttendanceRecordsForStaffMemberQuery(
     Guid StaffMemberId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<AttendanceRecordDto>>, IRequiresFeature
+) : IRequest<PagedResult<AttendanceRecordDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "security.staff_attendance";
 }

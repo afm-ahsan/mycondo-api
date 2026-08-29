@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Domain.Common;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Queries.GetFlatOwnersForTenant;
@@ -8,4 +9,4 @@ public sealed record GetFlatOwnersForTenantQuery(
     string? Status,
     int Page = 1,
     int PageSize = 20
-) : IRequest<PagedResult<FlatOwnerRegisterDto>>;
+) : IRequest<PagedResult<FlatOwnerRegisterDto>>, ILifecycleReadOperation;

@@ -9,7 +9,7 @@ public sealed record RecordBreakdownCommand(
     DateTimeOffset ReportedAtUtc,
     string Description,
     DateTimeOffset DowntimeStartUtc
-) : IRequest<GeneratorBreakdownRecordDto>, IRequiresFeature
+) : IRequest<GeneratorBreakdownRecordDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

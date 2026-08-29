@@ -10,4 +10,4 @@ public sealed record CreateBlackoutDateCommand(
     DateOnly DateFrom,
     DateOnly DateTo,
     string Reason
-) : IRequest<BlackoutDateDto>, IHasFacilityId, IRequiresResolvedFeature;
+) : IRequest<BlackoutDateDto>, IHasFacilityId, IRequiresResolvedFeature, ILifecycleWriteOperation;

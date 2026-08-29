@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.AccessSessions.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,4 @@ public sealed record GetCurrentlyInsideQuery(
     string? Category,
     int Page,
     int PageSize
-) : IRequest<PagedResult<AccessSessionDto>>;
+) : IRequest<PagedResult<AccessSessionDto>>, ILifecycleReadOperation;

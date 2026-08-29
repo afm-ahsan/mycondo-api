@@ -9,7 +9,7 @@ public sealed record GetMonthlyReconciliationsQuery(
     string? CylinderType,
     int Page,
     int PageSize
-) : IRequest<PagedResult<MonthlyCylinderReconciliationDto>>, IRequiresFeature
+) : IRequest<PagedResult<MonthlyCylinderReconciliationDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

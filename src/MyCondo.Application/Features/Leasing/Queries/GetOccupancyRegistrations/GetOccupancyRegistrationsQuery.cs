@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Domain.Common;
 
 namespace MyCondo.Application.Features.Leasing.Queries.GetOccupancyRegistrations;
@@ -9,4 +10,4 @@ public sealed record GetOccupancyRegistrationsQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<OccupancyRegistrationListItemDto>>;
+) : IRequest<PagedResult<OccupancyRegistrationListItemDto>>, ILifecycleReadOperation;

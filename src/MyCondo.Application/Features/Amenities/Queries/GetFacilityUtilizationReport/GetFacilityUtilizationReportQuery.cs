@@ -8,7 +8,7 @@ public sealed record GetFacilityUtilizationReportQuery(
     Guid? FacilityId,
     DateOnly FromDate,
     DateOnly ToDate
-) : IRequest<IReadOnlyList<FacilityUtilizationReportLineDto>>, IRequiresFeature
+) : IRequest<IReadOnlyList<FacilityUtilizationReportLineDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "facilities.reports";
 }

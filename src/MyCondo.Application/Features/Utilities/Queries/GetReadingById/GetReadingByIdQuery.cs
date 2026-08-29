@@ -6,4 +6,4 @@ using MyCondo.Application.Features.Utilities.DTOs;
 namespace MyCondo.Application.Features.Utilities.Queries.GetReadingById;
 
 public sealed record GetReadingByIdQuery(Guid ReadingId)
-    : IRequest<ReadingDto>, IHasReadingId, IRequiresResolvedFeature;
+    : IRequest<ReadingDto>, IHasReadingId, IRequiresResolvedFeature, ILifecycleReadOperation;

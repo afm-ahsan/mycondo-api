@@ -10,7 +10,7 @@ public sealed record GetFlatsForBuildingQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<FlatDto>>, IRequiresFeature
+) : IRequest<PagedResult<FlatDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "property.flats";
 }

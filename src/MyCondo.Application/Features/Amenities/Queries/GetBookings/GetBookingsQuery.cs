@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Domain.Common;
 
@@ -15,4 +16,4 @@ public sealed record GetBookingsQuery(
     DateTimeOffset? ToDate,
     int Page,
     int PageSize
-) : IRequest<PagedResult<BookingDto>>;
+) : IRequest<PagedResult<BookingDto>>, ILifecycleReadOperation;

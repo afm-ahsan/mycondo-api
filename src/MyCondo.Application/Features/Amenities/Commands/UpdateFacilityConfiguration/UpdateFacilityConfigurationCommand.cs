@@ -20,4 +20,4 @@ public sealed record UpdateFacilityConfigurationCommand(
     int? MinimumAgeUnaccompanied,
     bool RequiresSafetyAcknowledgement,
     bool BlocksEntryIfAccountOverdue
-) : IRequest<FacilityDto>, IHasFacilityId, IRequiresResolvedFeature;
+) : IRequest<FacilityDto>, IHasFacilityId, IRequiresResolvedFeature, ILifecycleWriteOperation;

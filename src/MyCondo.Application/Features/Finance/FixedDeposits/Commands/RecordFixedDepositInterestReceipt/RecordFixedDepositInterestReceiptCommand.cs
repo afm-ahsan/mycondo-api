@@ -11,7 +11,7 @@ public sealed record RecordFixedDepositInterestReceiptCommand(
     decimal DeductionAmount,
     Guid ReceivingFinancialAccountId,
     string? ReferenceNumber,
-    string? Notes) : IRequest<FixedDepositInterestReceiptDto>, IRequiresFeature
+    string? Notes) : IRequest<FixedDepositInterestReceiptDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "finance.fixed_deposits";
 }

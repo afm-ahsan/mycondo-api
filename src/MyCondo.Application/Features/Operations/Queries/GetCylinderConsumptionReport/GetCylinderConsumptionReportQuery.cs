@@ -8,7 +8,7 @@ public sealed record GetCylinderConsumptionReportQuery(
     string? CylinderType,
     DateOnly FromDate,
     DateOnly ToDate
-) : IRequest<IReadOnlyList<CylinderConsumptionReportLineDto>>, IRequiresFeature
+) : IRequest<IReadOnlyList<CylinderConsumptionReportLineDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.gas_cylinders";
 }

@@ -11,4 +11,4 @@ public sealed record ExportAccountLedgerQuery(
     DateOnly? FromDate,
     DateOnly? ToDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, ILifecycleReadOperation;

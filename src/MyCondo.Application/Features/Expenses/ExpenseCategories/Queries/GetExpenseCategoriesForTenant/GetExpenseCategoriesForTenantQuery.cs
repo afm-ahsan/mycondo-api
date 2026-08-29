@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Expenses.ExpenseCategories.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,4 @@ public sealed record GetExpenseCategoriesForTenantQuery(
     bool? IsActive,
     int Page = 1,
     int PageSize = 20
-) : IRequest<PagedResult<ExpenseCategoryDto>>;
+) : IRequest<PagedResult<ExpenseCategoryDto>>, ILifecycleReadOperation;

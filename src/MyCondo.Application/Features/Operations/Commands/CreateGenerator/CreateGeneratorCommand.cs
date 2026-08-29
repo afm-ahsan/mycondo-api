@@ -10,7 +10,7 @@ public sealed record CreateGeneratorCommand(
     string? Model,
     decimal? CapacityKva,
     string? Location
-) : IRequest<GeneratorDto>, IRequiresFeature
+) : IRequest<GeneratorDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "operations.generator";
 }

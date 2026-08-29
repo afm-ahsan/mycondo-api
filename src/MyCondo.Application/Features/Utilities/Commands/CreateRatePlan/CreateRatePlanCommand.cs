@@ -14,7 +14,7 @@ public sealed record CreateRatePlanCommand(
     decimal TaxPercentage,
     DateOnly EffectiveFrom,
     IReadOnlyList<RateSlabInputDto> Slabs
-) : IRequest<RatePlanDto>, IRequiresFeature
+) : IRequest<RatePlanDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     // UtilityType is required here (unlike the nullable filter on GetRatePlansQuery), so the feature this
     // call actually uses is determinate from the request itself — no DB lookup needed.

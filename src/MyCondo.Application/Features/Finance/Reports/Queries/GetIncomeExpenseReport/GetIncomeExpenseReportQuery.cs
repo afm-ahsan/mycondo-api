@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetIncomeExpenseReport;
@@ -13,4 +14,4 @@ public sealed record IncomeExpenseReportDto(
     decimal TotalExpense,
     decimal SurplusDeficit);
 
-public sealed record GetIncomeExpenseReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<IncomeExpenseReportDto>;
+public sealed record GetIncomeExpenseReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<IncomeExpenseReportDto>, ILifecycleReadOperation;

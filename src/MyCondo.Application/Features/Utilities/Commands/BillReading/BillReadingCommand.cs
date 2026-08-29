@@ -6,4 +6,4 @@ using MyCondo.Application.Features.Utilities.Common;
 namespace MyCondo.Application.Features.Utilities.Commands.BillReading;
 
 public sealed record BillReadingCommand(Guid ReadingId)
-    : IRequest<InvoiceDto>, IHasReadingId, IRequiresResolvedFeature;
+    : IRequest<InvoiceDto>, IHasReadingId, IRequiresResolvedFeature, ILifecycleWriteOperation;

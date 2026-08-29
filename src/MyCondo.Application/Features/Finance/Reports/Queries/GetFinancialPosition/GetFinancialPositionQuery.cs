@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetFinancialPosition;
@@ -17,4 +18,4 @@ public sealed record FinancialPositionReportDto(
     decimal RetainedSurplusDeficit,
     decimal TotalLiabilitiesAndEquity);
 
-public sealed record GetFinancialPositionQuery(DateOnly? AsOfDate) : IRequest<FinancialPositionReportDto>;
+public sealed record GetFinancialPositionQuery(DateOnly? AsOfDate) : IRequest<FinancialPositionReportDto>, ILifecycleReadOperation;

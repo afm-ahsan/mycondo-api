@@ -13,4 +13,4 @@ public sealed record ExportGeneralLedgerQuery(
     Guid? FundId,
     string? ReferenceType,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, ILifecycleReadOperation;

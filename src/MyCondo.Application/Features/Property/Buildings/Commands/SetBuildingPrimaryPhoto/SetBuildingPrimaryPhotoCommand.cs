@@ -6,7 +6,7 @@ namespace MyCondo.Application.Features.Property.Buildings.Commands.SetBuildingPr
 
 public sealed record SetBuildingPrimaryPhotoCommand(
     Guid BuildingId, Guid? AttachmentId
-) : IRequest<BuildingDto>, IRequiresFeature
+) : IRequest<BuildingDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "property.buildings";
 }

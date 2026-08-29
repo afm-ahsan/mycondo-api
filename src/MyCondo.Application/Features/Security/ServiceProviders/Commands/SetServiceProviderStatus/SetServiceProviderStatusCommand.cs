@@ -8,7 +8,7 @@ public sealed record SetServiceProviderStatusCommand(
     Guid ServiceProviderProfileId,
     string Status,
     string? Reason
-) : IRequest<ServiceProviderProfileDto>, IRequiresFeature
+) : IRequest<ServiceProviderProfileDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.service_providers";
 }

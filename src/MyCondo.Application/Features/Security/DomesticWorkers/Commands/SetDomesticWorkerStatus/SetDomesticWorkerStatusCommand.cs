@@ -9,7 +9,7 @@ public sealed record SetDomesticWorkerStatusCommand(
     Guid DomesticWorkerProfileId,
     string Status,
     string? Reason
-) : IRequest<DomesticWorkerProfileDto>, IRequiresFeature
+) : IRequest<DomesticWorkerProfileDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.domestic_workers";
 }

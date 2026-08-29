@@ -9,7 +9,7 @@ public sealed record GetConsumptionSummaryReportQuery(
     string? UtilityType,
     DateOnly FromDate,
     DateOnly ToDate
-) : IRequest<IReadOnlyList<ConsumptionSummaryLineDto>>, IRequiresFeature
+) : IRequest<IReadOnlyList<ConsumptionSummaryLineDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "utilities.reports";
 }

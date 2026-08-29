@@ -4,7 +4,7 @@ using MyCondo.Application.Features.Security.AccessSessions.DTOs;
 
 namespace MyCondo.Application.Features.Security.AccessSessions.Commands.CheckOutGuest;
 
-public sealed record CheckOutGuestCommand(Guid AccessSessionId, Guid ExitGateId) : IRequest<AccessSessionDto>, IRequiresFeature
+public sealed record CheckOutGuestCommand(Guid AccessSessionId, Guid ExitGateId) : IRequest<AccessSessionDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.visitors";
 }

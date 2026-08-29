@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Billing.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,4 @@ public sealed record GetServiceChargeRulesQuery(
     string? Category,
     int Page,
     int PageSize
-) : IRequest<PagedResult<ServiceChargeRuleDto>>;
+) : IRequest<PagedResult<ServiceChargeRuleDto>>, ILifecycleReadOperation;

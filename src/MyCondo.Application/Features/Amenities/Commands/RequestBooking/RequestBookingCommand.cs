@@ -15,4 +15,4 @@ public sealed record RequestBookingCommand(
     int CleanupBufferMinutes,
     int ExpectedGuestCount,
     bool TermsAccepted
-) : IRequest<BookingDto>, IHasFacilityId, IRequiresResolvedFeature;
+) : IRequest<BookingDto>, IHasFacilityId, IRequiresResolvedFeature, ILifecycleWriteOperation;

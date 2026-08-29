@@ -9,7 +9,7 @@ public sealed record GetPoolIncidentsQuery(
     Guid? FacilityId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<PoolIncidentDto>>, IRequiresFeature
+) : IRequest<PagedResult<PoolIncidentDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "facilities.swimming_pool";
 }

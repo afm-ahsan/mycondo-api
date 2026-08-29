@@ -12,7 +12,7 @@ public sealed record CreateDomesticWorkerAssignmentCommand(
     string? AllowedDays,
     TimeOnly? AllowedStartTime,
     TimeOnly? AllowedEndTime
-) : IRequest<DomesticWorkerAssignmentDto>, IRequiresFeature
+) : IRequest<DomesticWorkerAssignmentDto>, IRequiresFeature, ILifecycleWriteOperation
 {
     public string FeatureKey => "security.domestic_workers";
 }

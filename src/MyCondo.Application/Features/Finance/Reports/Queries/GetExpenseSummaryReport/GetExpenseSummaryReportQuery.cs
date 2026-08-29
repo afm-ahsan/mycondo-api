@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetExpenseSummaryReport;
@@ -19,4 +20,4 @@ public sealed record ExpenseSummaryReportDto(
     bool IsReconciled,
     IReadOnlyList<ExpenseStatusBreakdownDto> ByStatus);
 
-public sealed record GetExpenseSummaryReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseSummaryReportDto>;
+public sealed record GetExpenseSummaryReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseSummaryReportDto>, ILifecycleReadOperation;

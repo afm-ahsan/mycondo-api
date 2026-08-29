@@ -9,7 +9,7 @@ public sealed record GetGeneratorServiceRecordsQuery(
     Guid? GeneratorId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GeneratorServiceRecordDto>>, IRequiresFeature
+) : IRequest<PagedResult<GeneratorServiceRecordDto>>, IRequiresFeature, ILifecycleReadOperation
 {
     public string FeatureKey => "operations.generator";
 }

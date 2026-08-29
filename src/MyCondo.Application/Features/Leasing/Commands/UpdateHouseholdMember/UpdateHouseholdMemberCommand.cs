@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Leasing.DTOs;
 
 namespace MyCondo.Application.Features.Leasing.Commands.UpdateHouseholdMember;
@@ -16,4 +17,4 @@ public sealed record UpdateHouseholdMemberCommand(
     string? Religion,
     string? Nationality,
     string? Occupation
-) : IRequest<HouseholdMemberDto>;
+) : IRequest<HouseholdMemberDto>, ILifecycleWriteOperation;
