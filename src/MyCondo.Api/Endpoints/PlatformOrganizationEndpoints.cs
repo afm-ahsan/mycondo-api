@@ -1,13 +1,18 @@
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Platform.Commands.CancelOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.ChangeOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
 using MyCondo.Application.Features.Platform.Commands.CreateTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.Commands.EndTenantFeatureOverride;
+using MyCondo.Application.Features.Platform.Commands.ExpireOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.MarkOrganizationSubscriptionPastDue;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
+using MyCondo.Application.Features.Platform.Commands.ReactivateOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
+using MyCondo.Application.Features.Platform.Commands.RestrictOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.UpdateOrganization;
 using MyCondo.Application.Features.Platform.Commands.UpdateTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.DTOs;
@@ -94,6 +99,131 @@ public static class PlatformOrganizationEndpoints
                     clock.UtcNow,
                     actorPlatformUserId: currentUser.PlatformUserId,
                     action: "platform.subscription.changed",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/mark-past-due", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new MarkOrganizationSubscriptionPastDueCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.marked-past-due",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/reactivate", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new ReactivateOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.reactivated",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/restrict", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new RestrictOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.restricted",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/cancel", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new CancelOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.canceled",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/expire", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await sender.Send(new ExpireOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.expired",
                     targetType: "OrganizationSubscription",
                     targetId: id.ToString(),
                     tenantId: id));
