@@ -6,16 +6,28 @@ using MyCondo.Application.Features.Auth.Commands.Login;
 using MyCondo.Application.Features.Auth.Commands.Logout;
 using MyCondo.Application.Features.Auth.Commands.RefreshToken;
 using MyCondo.Application.Features.Auth.Commands.Register;
+using MyCondo.Application.Features.Platform.Commands.CancelOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.ChangeOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
+using MyCondo.Application.Features.Platform.Commands.CreateTenantFeatureOverride;
+using MyCondo.Application.Features.Platform.Commands.EndTenantFeatureOverride;
+using MyCondo.Application.Features.Platform.Commands.ExpireOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.MarkOrganizationSubscriptionPastDue;
 using MyCondo.Application.Features.Platform.Commands.PlatformLogin;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
+using MyCondo.Application.Features.Platform.Commands.ReactivateOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.RefreshPlatformToken;
 using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
+using MyCondo.Application.Features.Platform.Commands.RestrictOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.RevokePlatformToken;
 using MyCondo.Application.Features.Platform.Commands.UpdateOrganization;
+using MyCondo.Application.Features.Platform.Commands.UpdateTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationById;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationFeatureOverrides;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationSummaryStats;
+using MyCondo.Application.Features.Platform.Queries.GetSubscriptionPackageOptions;
 using MyCondo.Application.Features.Platform.Queries.ListOrganizations;
 using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
 using MyCondo.Application.Features.Tenancy.Commands.SuspendTenant;
@@ -58,10 +70,26 @@ public class LifecycleClassificationCatalogueTests
         typeof(GetOrganizationByIdQuery),
         typeof(GetOrganizationSummaryStatsQuery),
         typeof(ListOrganizationsQuery),
+        typeof(GetSubscriptionPackageOptionsQuery),
         typeof(CloseOrganizationCommand),
         typeof(ReactivateOrganizationCommand),
         typeof(ReplaceOrganizationModulesCommand),
         typeof(UpdateOrganizationCommand),
+
+        // Platform subscription/entitlement administration (ADR-033 Tasks 13A-13D): platform.subscription.*
+        // and platform.support.access permissions, authenticated exclusively via RequirePlatformPermission —
+        // same Platform-scheme/no-TenantId-claim reasoning as the rest of this group.
+        typeof(GetOrganizationSubscriptionQuery),
+        typeof(GetOrganizationFeatureOverridesQuery),
+        typeof(ChangeOrganizationSubscriptionCommand),
+        typeof(CancelOrganizationSubscriptionCommand),
+        typeof(ExpireOrganizationSubscriptionCommand),
+        typeof(MarkOrganizationSubscriptionPastDueCommand),
+        typeof(ReactivateOrganizationSubscriptionCommand),
+        typeof(RestrictOrganizationSubscriptionCommand),
+        typeof(CreateTenantFeatureOverrideCommand),
+        typeof(UpdateTenantFeatureOverrideCommand),
+        typeof(EndTenantFeatureOverrideCommand),
 
         // Organization lifecycle control itself (sets the TenantStatus TenantLifecycleBehavior reads) —
         // a platform-administered action, not a tenant-scoped business operation.
