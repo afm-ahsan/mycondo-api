@@ -122,7 +122,11 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>, 
         administratorPassword = "Correct-Horse-Battery-9",
         enabledModuleKeys = new[] { "billing", "payments" },
         subscriptionPackageVersionId = _subscriptionPackageVersionId,
-        billingCycle = "Monthly",
+        // ProvisionOrganizationWithAdminCommand.BillingCycle binds directly from the request body as a
+        // raw enum with no JsonStringEnumConverter configured (confirmed against the OpenAPI contract:
+        // BillingCycle is "type": "integer") — mycondo-web's provisioning wizard already submits the
+        // numeric ordinal for this reason, so the test must match rather than send the enum's string name.
+        billingCycle = (int)BillingCycle.Monthly,
         autoRenew = true,
     };
 
@@ -338,7 +342,11 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>, 
         string accessToken = loginBody.RootElement.GetProperty("accessToken").GetString()!;
         tenantClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        HttpResponseMessage gatesResponse = await tenantClient.GetAsync("/api/v1/properties/gates");
+        // GetGatesForTenantQuery's activeOnly is a required non-nullable bool query parameter (no
+        // default) — GetGatesEndpoints binds it via minimal-API model binding, which runs before the
+        // permission/entitlement filters, so omitting it would 400 on binding rather than exercising
+        // the entitlement check this test targets.
+        HttpResponseMessage gatesResponse = await tenantClient.GetAsync("/api/v1/properties/gates?activeOnly=false");
 
         gatesResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         JsonDocument problem = JsonDocument.Parse(await gatesResponse.Content.ReadAsStringAsync());
@@ -376,11 +384,15 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>, 
         dto.Subscription.AutoRenew.Should().BeTrue();
 
         // The seeded test package (InitializeAsync) grants zero features — every non-core feature must
-        // therefore resolve to DefaultDisabled, and every core feature to Core, proving this endpoint
-        // reuses ITenantEntitlementService's precedence rather than a second entitlement engine.
+        // therefore resolve to either DefaultDisabled (catalogue-active but not granted by the package)
+        // or Reserved (FeatureCatalogueStatus.Reserved — a legacy catalogue entry with no current
+        // frontend surface per ADR-033 §24 step 2, never enabled by any package), and every core feature
+        // to Core, proving this endpoint reuses ITenantEntitlementService's precedence rather than a
+        // second entitlement engine. Either way none of them may be Enabled.
         dto.Features.Should().NotBeEmpty();
         dto.Features.Should().Contain(f => f.Source == "Core" && f.Enabled);
-        dto.Features.Where(f => f.Source != "Core").Should().OnlyContain(f => f.Source == "DefaultDisabled" && !f.Enabled);
+        dto.Features.Where(f => f.Source != "Core").Should().OnlyContain(f =>
+            (f.Source == "DefaultDisabled" || f.Source == "Reserved") && !f.Enabled);
     }
 
     [Fact]
