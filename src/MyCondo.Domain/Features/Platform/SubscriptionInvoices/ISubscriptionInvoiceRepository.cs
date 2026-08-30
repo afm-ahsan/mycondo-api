@@ -35,6 +35,14 @@ public interface ISubscriptionInvoiceRepository
     /// aggregates over. Never includes Paid/Void/Canceled rows.</summary>
     Task<IReadOnlyList<SubscriptionInvoice>> GetOutstandingAsync(Guid? tenantId, CancellationToken cancellationToken);
 
+    /// <summary>Invoices issued within [<paramref name="issueDateFrom"/>, <paramref name="issueDateTo"/>]
+    /// (either bound optional), optionally scoped to one organization — every status is included
+    /// (Issued/Paid/Void/Canceled); the caller decides which statuses count toward a KPI (ADR-034 Task
+    /// 14L, see <c>GetPlatformBillingSummaryQueryHandler</c>). Also the invoice side of
+    /// <c>GetOrganizationBillingHistoryQueryHandler</c>'s merged invoice/payment timeline.</summary>
+    Task<IReadOnlyList<SubscriptionInvoice>> GetIssuedInRangeAsync(
+        Guid? tenantId, DateOnly? issueDateFrom, DateOnly? issueDateTo, CancellationToken cancellationToken);
+
     /// <summary>The charge line(s) for one invoice, oldest first — <see cref="SubscriptionInvoiceLine"/>
     /// has no navigation collection on <see cref="SubscriptionInvoice"/> itself (see that type's doc
     /// comment), so invoice-detail reads fetch lines separately through this method.</summary>

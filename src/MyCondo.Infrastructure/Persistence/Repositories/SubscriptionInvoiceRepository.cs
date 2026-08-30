@@ -82,6 +82,29 @@ public sealed class SubscriptionInvoiceRepository(MyCondoDbContext db) : ISubscr
         return await query.OrderBy(x => x.DueDate).ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<SubscriptionInvoice>> GetIssuedInRangeAsync(
+        Guid? tenantId, DateOnly? issueDateFrom, DateOnly? issueDateTo, CancellationToken cancellationToken)
+    {
+        IQueryable<SubscriptionInvoice> query = db.Set<SubscriptionInvoice>().AsNoTracking();
+
+        if (tenantId is not null)
+        {
+            query = query.Where(x => x.TenantId == tenantId.Value);
+        }
+
+        if (issueDateFrom is not null)
+        {
+            query = query.Where(x => x.IssueDate >= issueDateFrom.Value);
+        }
+
+        if (issueDateTo is not null)
+        {
+            query = query.Where(x => x.IssueDate <= issueDateTo.Value);
+        }
+
+        return await query.OrderByDescending(x => x.IssueDate).ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<SubscriptionInvoiceLine>> GetLinesAsync(
         SubscriptionInvoiceId subscriptionInvoiceId, CancellationToken cancellationToken) =>
         await db.Set<SubscriptionInvoiceLine>().AsNoTracking()

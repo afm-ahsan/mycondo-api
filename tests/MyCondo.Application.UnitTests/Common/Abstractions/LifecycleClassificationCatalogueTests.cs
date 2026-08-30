@@ -27,6 +27,10 @@ using MyCondo.Application.Features.Platform.Queries.GetOrganizationById;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationFeatureOverrides;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationSummaryStats;
+using MyCondo.Application.Features.Platform.Queries.ExportOrganizationBillingHistory;
+using MyCondo.Application.Features.Platform.Queries.ExportPlatformBillingSummary;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationBillingHistory;
+using MyCondo.Application.Features.Platform.Queries.GetPlatformBillingSummary;
 using MyCondo.Application.Features.Platform.Queries.GetSubscriptionPackageOptions;
 using MyCondo.Application.Features.Platform.Queries.ListOrganizations;
 using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
@@ -90,6 +94,13 @@ public class LifecycleClassificationCatalogueTests
         typeof(CreateTenantFeatureOverrideCommand),
         typeof(UpdateTenantFeatureOverrideCommand),
         typeof(EndTenantFeatureOverrideCommand),
+
+        // Platform billing reporting (ADR-034 Task 14L): platform.subscription.read-gated, same
+        // Platform-scheme/no-TenantId-claim reasoning as the rest of this group.
+        typeof(GetPlatformBillingSummaryQuery),
+        typeof(GetOrganizationBillingHistoryQuery),
+        typeof(ExportPlatformBillingSummaryQuery),
+        typeof(ExportOrganizationBillingHistoryQuery),
 
         // Organization lifecycle control itself (sets the TenantStatus TenantLifecycleBehavior reads) —
         // a platform-administered action, not a tenant-scoped business operation.

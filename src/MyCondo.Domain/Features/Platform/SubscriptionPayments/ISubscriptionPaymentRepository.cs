@@ -18,5 +18,12 @@ public interface ISubscriptionPaymentRepository
     Task<IReadOnlyList<SubscriptionPayment>> GetForInvoiceAsync(
         SubscriptionInvoiceId subscriptionInvoiceId, CancellationToken cancellationToken);
 
+    /// <summary>Payments recorded within [<paramref name="paymentDateFrom"/>, <paramref name="paymentDateTo"/>]
+    /// (either bound optional), optionally scoped to one organization — the Billing Summary "Collected
+    /// Amount" KPI source (ADR-034 Task 14L) and the payment side of
+    /// <c>GetOrganizationBillingHistoryQueryHandler</c>'s merged invoice/payment timeline.</summary>
+    Task<IReadOnlyList<SubscriptionPayment>> SearchAsync(
+        Guid? tenantId, DateOnly? paymentDateFrom, DateOnly? paymentDateTo, CancellationToken cancellationToken);
+
     void Add(SubscriptionPayment payment);
 }

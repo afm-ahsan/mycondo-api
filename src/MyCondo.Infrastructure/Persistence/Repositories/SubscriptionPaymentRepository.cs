@@ -20,5 +20,28 @@ public sealed class SubscriptionPaymentRepository(MyCondoDbContext db) : ISubscr
             .OrderBy(x => x.RecordedAtUtc)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SubscriptionPayment>> SearchAsync(
+        Guid? tenantId, DateOnly? paymentDateFrom, DateOnly? paymentDateTo, CancellationToken cancellationToken)
+    {
+        IQueryable<SubscriptionPayment> query = db.Set<SubscriptionPayment>().AsNoTracking();
+
+        if (tenantId is not null)
+        {
+            query = query.Where(x => x.TenantId == tenantId.Value);
+        }
+
+        if (paymentDateFrom is not null)
+        {
+            query = query.Where(x => x.PaymentDate >= paymentDateFrom.Value);
+        }
+
+        if (paymentDateTo is not null)
+        {
+            query = query.Where(x => x.PaymentDate <= paymentDateTo.Value);
+        }
+
+        return await query.OrderByDescending(x => x.PaymentDate).ToListAsync(cancellationToken);
+    }
+
     public void Add(SubscriptionPayment payment) => db.Set<SubscriptionPayment>().Add(payment);
 }
