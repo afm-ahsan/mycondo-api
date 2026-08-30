@@ -31,9 +31,12 @@ public class PlatformSchemeIsolationTests : IClassFixture<MyCondoWebApplicationF
 {
     // Matches appsettings.json's base Jwt section — MyCondoWebApplicationFactory only overrides
     // Jwt:SigningKey, so these real, non-secret configured values still apply under "Testing".
-    private const string Issuer = "https://api.mycondo.app";
-    private const string TenantAudience = "https://app.mycondo.app";
-    private const string PlatformAudience = "https://platform.mycondo.app";
+    // Audience/PlatformAudience must be the actual distinct configured values (ADR-033 Task 13H.1) —
+    // an invented/mismatched pair would make every token fail on issuer/audience generically, proving
+    // nothing about scheme-based audience isolation specifically.
+    private const string Issuer = "https://api.condobd.com";
+    private const string TenantAudience = "https://api.condobd.com";
+    private const string PlatformAudience = "https://platform.condobd.com";
     private const string SigningKey = "test-only-signing-key-not-for-any-real-environment";
 
     private readonly MyCondoWebApplicationFactory _factory;

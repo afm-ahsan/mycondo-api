@@ -30,8 +30,8 @@ namespace MyCondo.Api.IntegrationTests;
 /// </summary>
 public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>, IAsyncLifetime
 {
-    private const string Issuer = "https://api.mycondo.app";
-    private const string PlatformAudience = "https://platform.mycondo.app";
+    private const string Issuer = "https://api.condobd.com";
+    private const string PlatformAudience = "https://platform.condobd.com";
     private const string SigningKey = "test-only-signing-key-not-for-any-real-environment";
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 

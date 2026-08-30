@@ -21,15 +21,13 @@ namespace MyCondo.Api.IntegrationTests;
 /// </summary>
 public class PlatformSubscriptionAuthorizationSeparationTests : IClassFixture<MyCondoWebApplicationFactory>
 {
-    // NOTE: matches the *actual* checked-in appsettings.json Jwt section (Issuer/Audience/PlatformAudience
-    // are currently all "https://api.condobd.com" — see this task's Completion Report "Important Findings":
-    // PlatformAudience is not actually distinct from the tenant Audience in the committed config, unlike
-    // what PlatformSchemeIsolationTests's own constants and JwtBearerSetup's doc comment assume). Using the
-    // real configured value here (not an invented one) is required for these tokens to authenticate at all
-    // under either scheme, so the 403s these tests assert are proven by the permission filter, not by an
-    // audience mismatch.
+    // Matches the actual checked-in appsettings.json Jwt section (ADR-033 Task 13H.1 restored
+    // Jwt:PlatformAudience as genuinely distinct from the tenant Jwt:Audience). Using the real
+    // configured Platform audience here — not an invented one — is required for these tokens to
+    // authenticate under the Platform scheme at all, so the 403s these tests assert are proven by the
+    // permission filter, not by an audience mismatch.
     private const string Issuer = "https://api.condobd.com";
-    private const string PlatformAudience = "https://api.condobd.com";
+    private const string PlatformAudience = "https://platform.condobd.com";
     private const string SigningKey = "test-only-signing-key-not-for-any-real-environment";
 
     private readonly MyCondoWebApplicationFactory _factory;
