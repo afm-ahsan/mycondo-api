@@ -1,6 +1,4 @@
 using Mediator;
-using MyCondo.Application.Features.Platform.Services.BillingLifecycleDecision;
-using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
 
 namespace MyCondo.Application.Features.Platform.Commands.ApplyOrganizationSubscriptionBillingDecision;
 
@@ -13,12 +11,20 @@ namespace MyCondo.Application.Features.Platform.Commands.ApplyOrganizationSubscr
 public sealed record ApplyOrganizationSubscriptionBillingDecisionCommand(Guid OrganizationId)
     : IRequest<ApplyOrganizationSubscriptionBillingDecisionResult>;
 
+/// <summary>
+/// <see cref="PreviousStatus"/>, <see cref="ResultingStatus"/>, and <see cref="Recommendation"/> are
+/// serialized as their enum <c>string</c> name (via <c>.ToString()</c> in the handler), matching every
+/// other status-shaped field in the Platform/subscription billing API contract (e.g.
+/// <c>OrganizationSubscriptionDto.TenantStatus</c>, <c>PlatformSubscriptionInvoiceDetailDto.Status</c>,
+/// <c>TenantBillingResolutionDto.SubscriptionStatus</c>) — no field here should ever go back to a raw
+/// enum type, which would serialize as an unstable ordinal integer (ADR-034 Task 14M closure).
+/// </summary>
 public sealed record ApplyOrganizationSubscriptionBillingDecisionResult(
     Guid OrganizationId,
     Guid SubscriptionId,
-    OrganizationSubscriptionStatus PreviousStatus,
-    OrganizationSubscriptionStatus ResultingStatus,
-    BillingLifecycleRecommendedAction Recommendation,
+    string PreviousStatus,
+    string ResultingStatus,
+    string Recommendation,
     bool TransitionApplied,
     int MaxDaysOverdue,
     string Reason);

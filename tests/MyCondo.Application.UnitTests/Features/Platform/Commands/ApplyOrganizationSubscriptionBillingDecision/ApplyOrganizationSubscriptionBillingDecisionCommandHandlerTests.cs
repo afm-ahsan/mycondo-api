@@ -113,9 +113,9 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeTrue();
-        result.PreviousStatus.Should().Be(OrganizationSubscriptionStatus.Active);
-        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue);
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.MarkPastDue);
+        result.PreviousStatus.Should().Be(OrganizationSubscriptionStatus.Active.ToString());
+        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue.ToString());
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.MarkPastDue.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.PastDue);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -132,8 +132,8 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeTrue();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.Reactivate);
-        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.Active);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.Reactivate.ToString());
+        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.Active.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.Active);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -150,8 +150,8 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeFalse();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction);
-        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction.ToString());
+        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.PastDue);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -168,8 +168,8 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeTrue();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.Restrict);
-        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.Restricted);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.Restrict.ToString());
+        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.Restricted.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.Restricted);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -186,7 +186,7 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeFalse();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.Restricted);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -203,8 +203,8 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeTrue();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.Expire);
-        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.Expired);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.Expire.ToString());
+        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.Expired.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.Expired);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -221,7 +221,7 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeFalse();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.Expired);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -238,7 +238,7 @@ public class ApplyOrganizationSubscriptionBillingDecisionCommandHandlerTests
             new ApplyOrganizationSubscriptionBillingDecisionCommand(tenant.Id.Value), CancellationToken.None);
 
         result.TransitionApplied.Should().BeFalse();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction.ToString());
         subscription.Status.Should().Be(OrganizationSubscriptionStatus.Canceled);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }

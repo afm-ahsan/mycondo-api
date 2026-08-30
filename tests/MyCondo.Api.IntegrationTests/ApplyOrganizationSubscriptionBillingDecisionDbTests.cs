@@ -1,13 +1,24 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using AwesomeAssertions;
 using Mediator;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using MyCondo.Application.Features.Platform.Commands.ApplyOrganizationSubscriptionBillingDecision;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Services.BillingLifecycleDecision;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
+using MyCondo.Domain.Features.Platform.PlatformAudit;
 using MyCondo.Domain.Features.Platform.SubscriptionInvoices;
 using MyCondo.Domain.Features.Platform.SubscriptionPackages;
+using MyCondo.Infrastructure.Persistence;
 
 namespace MyCondo.Api.IntegrationTests;
 
@@ -22,6 +33,13 @@ namespace MyCondo.Api.IntegrationTests;
 /// </summary>
 public class ApplyOrganizationSubscriptionBillingDecisionDbTests : IClassFixture<PostgresApiFactory>
 {
+    // Matches the real appsettings.json Jwt:Issuer/Jwt:PlatformAudience — same technique
+    // OrganizationManagementDbTests already proves works against PostgresApiFactory over real HTTP.
+    private const string Issuer = "https://api.condobd.com";
+    private const string PlatformAudience = "https://platform.condobd.com";
+    private const string SigningKey = "test-only-signing-key-not-for-any-real-environment";
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private readonly PostgresApiFactory _factory;
 
     public ApplyOrganizationSubscriptionBillingDecisionDbTests(PostgresApiFactory factory)
@@ -30,6 +48,33 @@ public class ApplyOrganizationSubscriptionBillingDecisionDbTests : IClassFixture
     }
 
     private static readonly DateOnly EffectiveFrom = new(2026, 1, 1);
+
+    private static string CreatePlatformToken(params string[] permissions)
+    {
+        SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(SigningKey));
+        SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha256);
+
+        List<Claim> claims = [new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString())];
+        claims.AddRange(permissions.Select(p => new Claim("perm", p)));
+
+        SecurityTokenDescriptor descriptor = new()
+        {
+            Issuer = Issuer,
+            Audience = PlatformAudience,
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddMinutes(15),
+            SigningCredentials = creds,
+        };
+
+        return new JsonWebTokenHandler().CreateToken(descriptor);
+    }
+
+    private HttpClient CreatePlatformClient(params string[] permissions)
+    {
+        HttpClient client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreatePlatformToken(permissions));
+        return client;
+    }
 
     private static async Task<SubscriptionPackageVersion> CreateAssignablePackageVersionAsync(IServiceScope scope)
     {
@@ -120,9 +165,9 @@ public class ApplyOrganizationSubscriptionBillingDecisionDbTests : IClassFixture
             .Send(new ApplyOrganizationSubscriptionBillingDecisionCommand(tenantId), CancellationToken.None);
 
         result.TransitionApplied.Should().BeTrue();
-        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.MarkPastDue);
-        result.PreviousStatus.Should().Be(OrganizationSubscriptionStatus.Active);
-        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue);
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.MarkPastDue.ToString());
+        result.PreviousStatus.Should().Be(OrganizationSubscriptionStatus.Active.ToString());
+        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue.ToString());
 
         using IServiceScope readScope = _factory.Services.CreateScope();
         OrganizationSubscription reloaded = (await readScope.ServiceProvider
@@ -153,7 +198,7 @@ public class ApplyOrganizationSubscriptionBillingDecisionDbTests : IClassFixture
             ApplyOrganizationSubscriptionBillingDecisionResult first = await firstApplyScope.ServiceProvider
                 .GetRequiredService<ISender>()
                 .Send(new ApplyOrganizationSubscriptionBillingDecisionCommand(tenantId), CancellationToken.None);
-            first.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue);
+            first.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue.ToString());
         }
 
         using IServiceScope secondApplyScope = _factory.Services.CreateScope();
@@ -162,14 +207,93 @@ public class ApplyOrganizationSubscriptionBillingDecisionDbTests : IClassFixture
             .Send(new ApplyOrganizationSubscriptionBillingDecisionCommand(tenantId), CancellationToken.None);
 
         second.TransitionApplied.Should().BeFalse();
-        second.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction);
-        second.PreviousStatus.Should().Be(OrganizationSubscriptionStatus.PastDue);
-        second.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue);
+        second.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction.ToString());
+        second.PreviousStatus.Should().Be(OrganizationSubscriptionStatus.PastDue.ToString());
+        second.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue.ToString());
 
         using IServiceScope readScope = _factory.Services.CreateScope();
         OrganizationSubscription reloaded = (await readScope.ServiceProvider
             .GetRequiredService<IOrganizationSubscriptionRepository>()
             .GetByIdAsync(subscription.Id, CancellationToken.None))!;
         reloaded.Status.Should().Be(OrganizationSubscriptionStatus.PastDue);
+    }
+
+    /// <summary>
+    /// ADR-034 Task 14M closure: the two tests above prove the command handler's own persistence
+    /// (via the <see cref="ISender"/>-in-a-scope technique); this one goes the rest of the way — real
+    /// HTTP through the platform organization endpoints, real Platform-scheme authentication, and a
+    /// durable assertion that the endpoint's separate audit-log write actually lands in Postgres with
+    /// the expected action/target/metadata for a transition that was actually applied.
+    /// </summary>
+    [Fact]
+    public async Task Applying_A_Real_Transition_Over_Http_Writes_The_Expected_Platform_Audit_Record()
+    {
+        using IServiceScope setupScope = _factory.Services.CreateScope();
+        SubscriptionPackageVersion version = await CreateAssignablePackageVersionAsync(setupScope);
+        Guid tenantId = await ProvisionOrganizationAsync(setupScope, version.Id.Value, "audit-pastdue");
+
+        using IServiceScope subscriptionScope = _factory.Services.CreateScope();
+        OrganizationSubscription subscription = (await subscriptionScope.ServiceProvider
+            .GetRequiredService<IOrganizationSubscriptionRepository>()
+            .GetCurrentForTenantAsync(tenantId, CancellationToken.None))!;
+
+        using IServiceScope invoiceScope = _factory.Services.CreateScope();
+        await IssueOverdueInvoiceAsync(invoiceScope, tenantId, subscription.Id, subscription.EffectivePrice, subscription.Currency, daysOverdue: 5);
+
+        using HttpClient client = CreatePlatformClient("platform.subscription.manage");
+        HttpResponseMessage response = await client.PostAsync(
+            $"/api/v1/platform/organizations/{tenantId}/subscription/apply-billing-decision", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        ApplyOrganizationSubscriptionBillingDecisionResult? result =
+            await response.Content.ReadFromJsonAsync<ApplyOrganizationSubscriptionBillingDecisionResult>(JsonOptions);
+        result.Should().NotBeNull();
+        result!.TransitionApplied.Should().BeTrue();
+        result.ResultingStatus.Should().Be(OrganizationSubscriptionStatus.PastDue.ToString());
+
+        using IServiceScope auditScope = _factory.Services.CreateScope();
+        List<PlatformAuditLogEntry> auditEntries = await auditScope.ServiceProvider
+            .GetRequiredService<MyCondoDbContext>()
+            .Set<PlatformAuditLogEntry>()
+            .Where(e => e.TenantId == tenantId && e.Action == "platform.subscription.billing-decision.applied")
+            .ToListAsync();
+
+        auditEntries.Should().ContainSingle();
+        auditEntries[0].TargetType.Should().Be("OrganizationSubscription");
+        auditEntries[0].TargetId.Should().Be(subscription.Id.Value.ToString());
+        auditEntries[0].Metadata.Should().Contain("PastDue");
+    }
+
+    /// <summary>
+    /// ADR-034 Task 14M closure: proves the endpoint's <c>if (result.TransitionApplied)</c> audit-skip
+    /// guard actually holds end-to-end for a NoAction outcome — no misleading
+    /// "billing-decision.applied" audit row is written when nothing changed.
+    /// </summary>
+    [Fact]
+    public async Task Applying_A_NoAction_Decision_Over_Http_Writes_No_Misleading_Audit_Record()
+    {
+        using IServiceScope setupScope = _factory.Services.CreateScope();
+        SubscriptionPackageVersion version = await CreateAssignablePackageVersionAsync(setupScope);
+        Guid tenantId = await ProvisionOrganizationAsync(setupScope, version.Id.Value, "audit-noaction");
+
+        using HttpClient client = CreatePlatformClient("platform.subscription.manage");
+        HttpResponseMessage response = await client.PostAsync(
+            $"/api/v1/platform/organizations/{tenantId}/subscription/apply-billing-decision", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        ApplyOrganizationSubscriptionBillingDecisionResult? result =
+            await response.Content.ReadFromJsonAsync<ApplyOrganizationSubscriptionBillingDecisionResult>(JsonOptions);
+        result.Should().NotBeNull();
+        result!.TransitionApplied.Should().BeFalse();
+        result.Recommendation.Should().Be(BillingLifecycleRecommendedAction.NoAction.ToString());
+
+        using IServiceScope auditScope = _factory.Services.CreateScope();
+        List<PlatformAuditLogEntry> auditEntries = await auditScope.ServiceProvider
+            .GetRequiredService<MyCondoDbContext>()
+            .Set<PlatformAuditLogEntry>()
+            .Where(e => e.TenantId == tenantId && e.Action == "platform.subscription.billing-decision.applied")
+            .ToListAsync();
+
+        auditEntries.Should().BeEmpty();
     }
 }

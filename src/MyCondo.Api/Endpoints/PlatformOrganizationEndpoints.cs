@@ -261,9 +261,9 @@ public static class PlatformOrganizationEndpoints
                         tenantId: id,
                         metadata: JsonSerializer.Serialize(new
                         {
-                            previousStatus = result.PreviousStatus.ToString(),
-                            resultingStatus = result.ResultingStatus.ToString(),
-                            recommendation = result.Recommendation.ToString(),
+                            previousStatus = result.PreviousStatus,
+                            resultingStatus = result.ResultingStatus,
+                            recommendation = result.Recommendation,
                             maxDaysOverdue = result.MaxDaysOverdue
                         })));
                     await unitOfWork.SaveChangesAsync(ct);

@@ -6,17 +6,20 @@ using MyCondo.Application.Features.Auth.Commands.Login;
 using MyCondo.Application.Features.Auth.Commands.Logout;
 using MyCondo.Application.Features.Auth.Commands.RefreshToken;
 using MyCondo.Application.Features.Auth.Commands.Register;
+using MyCondo.Application.Features.Platform.Commands.ApplyOrganizationSubscriptionBillingDecision;
 using MyCondo.Application.Features.Platform.Commands.CancelOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.ChangeOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
 using MyCondo.Application.Features.Platform.Commands.CreateTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.Commands.EndTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.Commands.ExpireOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.GenerateSubscriptionInvoice;
 using MyCondo.Application.Features.Platform.Commands.MarkOrganizationSubscriptionPastDue;
 using MyCondo.Application.Features.Platform.Commands.PlatformLogin;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.RecordSubscriptionPayment;
 using MyCondo.Application.Features.Platform.Commands.RefreshPlatformToken;
 using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
 using MyCondo.Application.Features.Platform.Commands.RestrictOrganizationSubscription;
@@ -30,9 +33,13 @@ using MyCondo.Application.Features.Platform.Queries.GetOrganizationSummaryStats;
 using MyCondo.Application.Features.Platform.Queries.ExportOrganizationBillingHistory;
 using MyCondo.Application.Features.Platform.Queries.ExportPlatformBillingSummary;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationBillingHistory;
+using MyCondo.Application.Features.Platform.Queries.GetOutstandingDues;
 using MyCondo.Application.Features.Platform.Queries.GetPlatformBillingSummary;
+using MyCondo.Application.Features.Platform.Queries.GetSubscriptionInvoiceById;
+using MyCondo.Application.Features.Platform.Queries.GetSubscriptionInvoicePayments;
 using MyCondo.Application.Features.Platform.Queries.GetSubscriptionPackageOptions;
 using MyCondo.Application.Features.Platform.Queries.ListOrganizations;
+using MyCondo.Application.Features.Platform.Queries.ListSubscriptionInvoices;
 using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
 using MyCondo.Application.Features.Tenancy.Commands.SuspendTenant;
 using MyCondo.Application.Features.Tenancy.Queries.GetTenantBySlug;
@@ -101,6 +108,18 @@ public class LifecycleClassificationCatalogueTests
         typeof(GetOrganizationBillingHistoryQuery),
         typeof(ExportPlatformBillingSummaryQuery),
         typeof(ExportOrganizationBillingHistoryQuery),
+
+        // Platform subscription invoice/payment administration (ADR-034 Task 14A-14D, 14F):
+        // platform.subscription.read/manage-gated, same Platform-scheme/no-TenantId-claim reasoning as
+        // the rest of this group — never revisited when these requests were added (ADR-034 Task 14M
+        // closure finding).
+        typeof(GenerateSubscriptionInvoiceCommand),
+        typeof(RecordSubscriptionPaymentCommand),
+        typeof(ApplyOrganizationSubscriptionBillingDecisionCommand),
+        typeof(ListSubscriptionInvoicesQuery),
+        typeof(GetOutstandingDuesQuery),
+        typeof(GetSubscriptionInvoiceByIdQuery),
+        typeof(GetSubscriptionInvoicePaymentsQuery),
 
         // Organization lifecycle control itself (sets the TenantStatus TenantLifecycleBehavior reads) —
         // a platform-administered action, not a tenant-scoped business operation.

@@ -83,9 +83,9 @@ public sealed class ApplyOrganizationSubscriptionBillingDecisionCommandHandler(
         return new ApplyOrganizationSubscriptionBillingDecisionResult(
             tenant.Id.Value,
             subscription.Id.Value,
-            previousStatus,
-            subscription.Status,
-            decision.RecommendedAction,
+            previousStatus.ToString(),
+            subscription.Status.ToString(),
+            decision.RecommendedAction.ToString(),
             transitionApplied,
             decision.MaxDaysOverdue,
             decision.Reason);
