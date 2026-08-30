@@ -317,15 +317,21 @@ New schema changes create new migrations.
 
 Do not rewrite migration history unless explicitly performing an approved baseline/cutover operation.
 
-Migration names should describe structural intent, for example:
+Migration class names use strict PascalCase (no underscores) in the form `<Verb><Subject><Purpose>`, describing structural intent, for example:
 
 ```text
-Create...
-Add...
-Alter...
-Rename...
-Drop...
+AddOrganizationSubscriptions
+AddSubscriptionFeatureAssignments
+BackfillOrganizationSlugs
+RenameTenantNameToOrganizationName
+RemoveLegacyResidentColumns
 ```
+
+Prefer explicit verbs: `Create`, `Add`, `Remove`, `Rename`, `Alter`, `Backfill`, `Normalize`.
+
+Avoid vague names such as `UpdateDatabase`, `SchemaChanges`, `Changes`, `Migration1`, `FixMigration`.
+
+Name a corrective migration after the actual correction (e.g. `AddUniqueOrganizationSubscriptionConstraint`), not after the fact that it fixes something (e.g. `FixPreviousMigration`).
 
 Do not create `Seed_*`, `*Seed`, or permission-catalogue migrations.
 
