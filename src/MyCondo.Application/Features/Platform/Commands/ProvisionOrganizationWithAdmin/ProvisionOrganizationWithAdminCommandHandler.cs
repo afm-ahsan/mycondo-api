@@ -6,6 +6,7 @@ using MyCondo.Application.Common.Services;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Identity.Users;
 using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
+using MyCondo.Domain.Features.Platform.PlatformAudit;
 using MyCondo.Domain.Features.Platform.SubscriptionPackages;
 using MyCondo.Domain.Features.Tenancy;
 
@@ -25,6 +26,14 @@ namespace MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWi
 /// own id as that context, which is legitimate here because this operation is the one creating that
 /// tenant. <see cref="ITenantRepository"/> reads (slug/code uniqueness) still use the ambient,
 /// DI-injected repository since <c>tenancy.tenants</c> carries no RLS policy at all.
+///
+/// <para><b>Audit atomicity (ADR-034 Task H-01):</b> the "platform.organization.created" audit record
+/// is written here, through <see cref="ITenantScopedUnitOfWork.PlatformAuditLog"/>, and committed by
+/// this handler's own final <see cref="ITenantScopedUnitOfWork.SaveChangesAsync"/> call — not by the
+/// endpoint through the ambient <see cref="IUnitOfWork"/>. The tenant/admin mutation happens on this
+/// handler's own tenant-scoped connection (see above), a different connection than the ambient one;
+/// an endpoint-level audit write after this handler returns would commit on a separate connection and
+/// could not be made atomic with the mutation without a distributed transaction.</para>
 /// </summary>
 public sealed class ProvisionOrganizationWithAdminCommandHandler(
     ITenantRepository tenants,
@@ -123,6 +132,18 @@ public sealed class ProvisionOrganizationWithAdminCommandHandler(
 
         await uow.TenantModules.ReplaceForTenantAsync(
             tenant.Id.Value, command.EnabledModuleKeys, nowUtc, currentPlatformUser.PlatformUserId, cancellationToken);
+
+        // Written through this same tenant-scoped uow, not the ambient IUnitOfWork the endpoint layer
+        // uses for every other Platform mutation, so it commits atomically with the tenant/admin rows
+        // above in this call rather than on a separate connection after this handler returns — see the
+        // class doc comment (ADR-034 Task H-01).
+        uow.PlatformAuditLog.Add(PlatformAuditLogEntry.Record(
+            nowUtc,
+            actorPlatformUserId: currentPlatformUser.PlatformUserId,
+            action: "platform.organization.created",
+            targetType: "Tenant",
+            targetId: tenant.Id.Value.ToString(),
+            tenantId: tenant.Id.Value));
 
         await uow.SaveChangesAsync(cancellationToken);
 

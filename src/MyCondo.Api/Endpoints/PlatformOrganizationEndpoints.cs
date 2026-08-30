@@ -94,6 +94,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(
                     new ChangeOrganizationSubscriptionCommand(
                         id, request.SubscriptionPackageVersionId, request.BillingCycle, request.AutoRenew),
@@ -107,6 +109,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -122,6 +125,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new MarkOrganizationSubscriptionPastDueCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -132,6 +137,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -147,6 +153,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ReactivateOrganizationSubscriptionCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -157,6 +165,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -172,6 +181,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new RestrictOrganizationSubscriptionCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -182,6 +193,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -197,6 +209,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new CancelOrganizationSubscriptionCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -207,6 +221,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -222,6 +237,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ExpireOrganizationSubscriptionCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -232,6 +249,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -247,6 +265,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 ApplyOrganizationSubscriptionBillingDecisionResult result = await sender.Send(
                     new ApplyOrganizationSubscriptionBillingDecisionCommand(id), ct);
 
@@ -269,6 +289,8 @@ public static class PlatformOrganizationEndpoints
                     await unitOfWork.SaveChangesAsync(ct);
                 }
 
+                await transaction.CommitAsync(ct);
+
                 return Results.Ok(result);
             })
             .RequirePlatformPermission("platform.subscription.manage")
@@ -284,6 +306,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 Guid invoiceId = await sender.Send(
                     new GenerateSubscriptionInvoiceCommand(id, request.BillingPeriodStart), ct);
 
@@ -295,6 +319,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: invoiceId.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.Ok(new GenerateSubscriptionInvoiceResponse(invoiceId));
             })
@@ -312,6 +337,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 Guid paymentId = await sender.Send(
                     new RecordSubscriptionPaymentCommand(
                         id, invoiceId, request.Amount, request.Currency, request.PaymentDate,
@@ -326,6 +353,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: paymentId.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.Ok(new RecordSubscriptionPaymentResponse(paymentId));
             })
@@ -335,23 +363,14 @@ public static class PlatformOrganizationEndpoints
         group.MapPost("/", async (
                 ProvisionOrganizationWithAdminCommand command,
                 ISender sender,
-                ICurrentPlatformUserProvider currentUser,
-                IPlatformAuditLogRepository auditLog,
-                IUnitOfWork unitOfWork,
-                IClock clock,
                 CancellationToken ct) =>
             {
+                // The "platform.organization.created" audit record is written inside the handler
+                // itself, atomically with the tenant/admin mutation on its own tenant-scoped
+                // connection — see ProvisionOrganizationWithAdminCommandHandler's class doc comment
+                // (ADR-034 Task H-01). It cannot be written here through the ambient IUnitOfWork: that
+                // is a different connection than the one this mutation commits on.
                 ProvisionOrganizationResult result = await sender.Send(command, ct);
-
-                auditLog.Add(PlatformAuditLogEntry.Record(
-                    clock.UtcNow,
-                    actorPlatformUserId: currentUser.PlatformUserId,
-                    action: "platform.organization.created",
-                    targetType: "Tenant",
-                    targetId: result.TenantId.ToString(),
-                    tenantId: result.TenantId));
-                await unitOfWork.SaveChangesAsync(ct);
-
                 return Results.Ok(result);
             })
             .RequirePlatformPermission("platform.organization.create")
@@ -367,6 +386,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new UpdateOrganizationCommand(id, request.Name, request.Code), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -377,6 +398,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -392,6 +414,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new SuspendTenantCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -402,6 +426,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -417,6 +442,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ActivateTenantCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -427,6 +454,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -442,6 +470,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ReactivateOrganizationCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -452,6 +482,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -467,6 +498,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new CloseOrganizationCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -477,6 +510,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -493,6 +527,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ReplaceOrganizationModulesCommand(id, request.ModuleKeys), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -503,6 +539,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -529,6 +566,8 @@ public static class PlatformOrganizationEndpoints
             {
                 Guid actorId = currentUser.PlatformUserId ?? throw new UnauthorizedAccessException();
 
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 Guid overrideId = await sender.Send(
                     new CreateTenantFeatureOverrideCommand(
                         id, request.FeatureKey, request.Enabled, request.EffectiveFrom, request.EffectiveUntil,
@@ -543,6 +582,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: overrideId.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.Ok(new CreateTenantFeatureOverrideResponse(overrideId));
             })
@@ -560,6 +600,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(
                     new UpdateTenantFeatureOverrideCommand(
                         id, overrideId, request.Enabled, request.EffectiveFrom, request.EffectiveUntil, request.Reason),
@@ -573,6 +615,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: overrideId.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -590,6 +633,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new EndTenantFeatureOverrideCommand(id, overrideId, request.EffectiveUntil), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -600,6 +645,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: overrideId.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
