@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Platform.Commands.ApplyOrganizationSubscriptionBillingDecision;
 using MyCondo.Application.Features.Platform.Commands.CancelOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.ChangeOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
@@ -235,6 +237,42 @@ public static class PlatformOrganizationEndpoints
             })
             .RequirePlatformPermission("platform.subscription.manage")
             .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/apply-billing-decision", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                ApplyOrganizationSubscriptionBillingDecisionResult result = await sender.Send(
+                    new ApplyOrganizationSubscriptionBillingDecisionCommand(id), ct);
+
+                if (result.TransitionApplied)
+                {
+                    auditLog.Add(PlatformAuditLogEntry.Record(
+                        clock.UtcNow,
+                        actorPlatformUserId: currentUser.PlatformUserId,
+                        action: "platform.subscription.billing-decision.applied",
+                        targetType: "OrganizationSubscription",
+                        targetId: result.SubscriptionId.ToString(),
+                        tenantId: id,
+                        metadata: JsonSerializer.Serialize(new
+                        {
+                            previousStatus = result.PreviousStatus.ToString(),
+                            resultingStatus = result.ResultingStatus.ToString(),
+                            recommendation = result.Recommendation.ToString(),
+                            maxDaysOverdue = result.MaxDaysOverdue
+                        })));
+                    await unitOfWork.SaveChangesAsync(ct);
+                }
+
+                return Results.Ok(result);
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces<ApplyOrganizationSubscriptionBillingDecisionResult>(StatusCodes.Status200OK);
 
         group.MapPost("/{id:guid}/subscription/invoices", async (
                 Guid id,

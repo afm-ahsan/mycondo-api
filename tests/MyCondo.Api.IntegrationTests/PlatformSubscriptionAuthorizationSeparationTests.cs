@@ -83,6 +83,7 @@ public class PlatformSubscriptionAuthorizationSeparationTests : IClassFixture<My
     [InlineData("restrict")]
     [InlineData("cancel")]
     [InlineData("expire")]
+    [InlineData("apply-billing-decision")]
     public async Task Subscription_Read_Permission_Alone_Cannot_Perform_Lifecycle_Transitions(string action)
     {
         using HttpClient client = CreateAuthorizedClient("platform.subscription.read");
