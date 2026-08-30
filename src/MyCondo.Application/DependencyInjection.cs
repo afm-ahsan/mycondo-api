@@ -11,6 +11,7 @@ using MyCondo.Application.Features.Billing.Services;
 using MyCondo.Application.Features.Finance.FinancialStatements.Notes;
 using MyCondo.Application.Features.Finance.FinancialStatements.Services;
 using MyCondo.Application.Features.Finance.Services;
+using MyCondo.Application.Features.Platform.Services.BillingLifecycleDecision;
 using MyCondo.Application.Features.Utilities.Common;
 
 namespace MyCondo.Application;
@@ -80,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IFinancialStatementReportingService, FinancialStatementReportingService>();
         services.AddScoped<IFinancialStatementNoteService, FinancialStatementNoteService>();
         services.AddScoped<IResponsiblePartyResolver, ResponsiblePartyResolver>();
+        services.AddSingleton<IBillingLifecycleDecisionService, BillingLifecycleDecisionService>();
 
         // Domain-event dispatch bypasses Mediator (see IDomainEventHandler comment for why).
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
