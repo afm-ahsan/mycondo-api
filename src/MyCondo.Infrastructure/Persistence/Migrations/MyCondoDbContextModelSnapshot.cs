@@ -5012,6 +5012,63 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.ToTable("subscription_package_versions", "platform");
                 });
 
+            modelBuilder.Entity("MyCondo.Domain.Features.Platform.SubscriptionPayments.SubscriptionPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateOnly>("PaymentDate")
+                        .HasColumnType("date")
+                        .HasColumnName("payment_date");
+
+                    b.Property<DateTimeOffset>("RecordedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at_utc");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<Guid>("SubscriptionInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subscription_invoice_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscription_payments");
+
+                    b.HasIndex("SubscriptionInvoiceId")
+                        .HasDatabaseName("ix_subscription_payments_subscription_invoice_id");
+
+                    b.HasIndex("TenantId", "ReferenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_subscription_payments_tenant_id_reference_number");
+
+                    b.ToTable("subscription_payments", "platform");
+                });
+
             modelBuilder.Entity("MyCondo.Domain.Features.Platform.TenantFeatureOverrides.TenantFeatureOverride", b =>
                 {
                     b.Property<Guid>("Id")

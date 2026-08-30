@@ -10,16 +10,21 @@ public sealed class MyCondoDbContext(
     DbContextOptions<MyCondoDbContext> options
 ) : DbContext(options), IUnitOfWork
 {
-    // The two Task 14A subscription-invoice uniqueness constraints are the durable idempotency backstop
-    // for manual invoice generation (ADR-034 Task 14B) — translated here, at the one place every save
+    // Platform SaaS billing's uniqueness constraints (Task 14A/14B subscription-invoice constraints,
+    // plus the Task 14C subscription-payment reference constraint) are the durable idempotency backstop
+    // for manual invoice generation and payment recording — translated here, at the one place every save
     // path already funnels through, so callers get ConflictException instead of a raw PostgreSQL
     // unique-violation. Scoped to exactly these constraint names so every other unique-index violation
     // in the app keeps its existing (untranslated) behavior.
-    private static readonly HashSet<string> DuplicateSubscriptionInvoiceConstraints =
-    [
-        "ux_subscription_invoices_subscription_id_period",
-        "ux_subscription_invoices_tenant_id_invoice_number"
-    ];
+    private static readonly Dictionary<string, string> DuplicatePlatformBillingConstraints = new()
+    {
+        ["ux_subscription_invoices_subscription_id_period"] =
+            "A subscription invoice already exists for this organization subscription and billing period, or this invoice number is already in use.",
+        ["ux_subscription_invoices_tenant_id_invoice_number"] =
+            "A subscription invoice already exists for this organization subscription and billing period, or this invoice number is already in use.",
+        ["ux_subscription_payments_tenant_id_reference_number"] =
+            "A subscription payment with this reference number has already been recorded for this organization."
+    };
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,10 +45,9 @@ public sealed class MyCondoDbContext(
                 SqlState: PostgresErrorCodes.UniqueViolation
             } pg
             && pg.ConstraintName is not null
-            && DuplicateSubscriptionInvoiceConstraints.Contains(pg.ConstraintName))
+            && DuplicatePlatformBillingConstraints.TryGetValue(pg.ConstraintName, out string? message))
         {
-            throw new ConflictException(
-                "A subscription invoice already exists for this organization subscription and billing period, or this invoice number is already in use.");
+            throw new ConflictException(message);
         }
     }
 

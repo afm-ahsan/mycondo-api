@@ -108,6 +108,20 @@ public class PlatformSubscriptionAuthorizationSeparationTests : IClassFixture<My
     }
 
     [Fact]
+    public async Task Subscription_Read_Permission_Alone_Cannot_Record_A_Payment()
+    {
+        using HttpClient client = CreateAuthorizedClient("platform.subscription.read");
+        Guid organizationId = Guid.NewGuid();
+        Guid invoiceId = Guid.NewGuid();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            $"/api/v1/platform/organizations/{organizationId}/subscription/invoices/{invoiceId}/payments",
+            new { Amount = 1000m, Currency = "BDT", PaymentDate = new DateOnly(2026, 3, 5), ReferenceNumber = "BANK-REF-001", Notes = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Subscription_Manage_Permission_Alone_Cannot_Read_Or_Write_Feature_Overrides()
     {
         using HttpClient client = CreateAuthorizedClient("platform.subscription.manage");

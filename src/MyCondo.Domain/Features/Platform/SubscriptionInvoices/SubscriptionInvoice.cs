@@ -20,8 +20,11 @@ namespace MyCondo.Domain.Features.Platform.SubscriptionInvoices;
 /// <para><b>Lifecycle</b> is intentionally the smallest model appropriate for manual SaaS billing:
 /// <see cref="SubscriptionInvoiceStatus.Issued"/> is the only state <see cref="Issue"/> can produce,
 /// and <see cref="MarkPaid"/>/<see cref="Void"/>/<see cref="Cancel"/> are mutually exclusive terminal
-/// transitions out of it — no accounting posting states, no partial-payment tracking (that belongs to a
-/// later Task 14 slice once payment recording exists).</para>
+/// transitions out of it — no accounting posting states. <see cref="ApplyPayment"/> (ADR-034 Task 14C)
+/// is the one exception: it can reduce <see cref="OutstandingAmount"/> without leaving
+/// <see cref="SubscriptionInvoiceStatus.Issued"/> (a partial payment) or transition straight to
+/// <see cref="SubscriptionInvoiceStatus.Paid"/> itself once the balance reaches zero — <see cref="MarkPaid"/>
+/// remains the only way to mark an invoice paid without going through a recorded payment at all.</para>
 /// </summary>
 public sealed class SubscriptionInvoice : AggregateRoot<SubscriptionInvoiceId>
 {
@@ -153,6 +156,46 @@ public sealed class SubscriptionInvoice : AggregateRoot<SubscriptionInvoiceId>
         Status = SubscriptionInvoiceStatus.Paid;
         OutstandingAmount = 0m;
         PaidAtUtc = paidAtUtc;
+    }
+
+    /// <summary>
+    /// Applies one payment amount toward the invoice's <see cref="OutstandingAmount"/> (ADR-034 Task
+    /// 14C). Only an <see cref="SubscriptionInvoiceStatus.Issued"/> invoice can accept payment; the
+    /// payment's currency must match <see cref="Currency"/> exactly (no cross-currency conversion), and
+    /// the amount can never exceed the current outstanding balance — no unapplied credit/overpayment
+    /// allocation exists at this stage. Reaching a zero balance transitions the invoice to
+    /// <see cref="SubscriptionInvoiceStatus.Paid"/> in the same call; anything less leaves it
+    /// <see cref="SubscriptionInvoiceStatus.Issued"/> (a partial payment).
+    /// </summary>
+    public void ApplyPayment(decimal amount, string currency, DateTimeOffset paidAtUtc)
+    {
+        if (Status != SubscriptionInvoiceStatus.Issued)
+        {
+            throw new SubscriptionInvoiceNotPayableException(Id, Status);
+        }
+
+        if (amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Payment amount must be positive.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(currency);
+        if (!string.Equals(currency.Trim(), Currency, StringComparison.Ordinal))
+        {
+            throw new SubscriptionInvoiceCurrencyMismatchException(Id, Currency, currency.Trim());
+        }
+
+        if (amount > OutstandingAmount)
+        {
+            throw new SubscriptionInvoicePaymentExceedsOutstandingException(Id, OutstandingAmount, amount);
+        }
+
+        OutstandingAmount -= amount;
+        if (OutstandingAmount == 0m)
+        {
+            Status = SubscriptionInvoiceStatus.Paid;
+            PaidAtUtc = paidAtUtc;
+        }
     }
 
     /// <summary>Issued → Void — the invoice itself was wrong (e.g. billed against the wrong

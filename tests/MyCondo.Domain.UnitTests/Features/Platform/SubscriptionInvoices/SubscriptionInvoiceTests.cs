@@ -171,4 +171,96 @@ public class SubscriptionInvoiceTests
 
         act.Should().Throw<SubscriptionInvoiceInvalidTransitionException>();
     }
+
+    [Fact]
+    public void ApplyPayment_Partial_Reduces_Outstanding_And_Leaves_Issued()
+    {
+        (SubscriptionInvoice invoice, _) = IssueInvoice(OneLine(8000m));
+
+        invoice.ApplyPayment(3000m, "BDT", Now.AddDays(5));
+
+        invoice.OutstandingAmount.Should().Be(5000m);
+        invoice.Status.Should().Be(SubscriptionInvoiceStatus.Issued);
+        invoice.PaidAtUtc.Should().BeNull();
+    }
+
+    [Fact]
+    public void ApplyPayment_Full_Zeroes_Outstanding_And_Transitions_To_Paid()
+    {
+        (SubscriptionInvoice invoice, _) = IssueInvoice(OneLine(8000m));
+        DateTimeOffset paidAt = Now.AddDays(5);
+
+        invoice.ApplyPayment(8000m, "BDT", paidAt);
+
+        invoice.OutstandingAmount.Should().Be(0m);
+        invoice.Status.Should().Be(SubscriptionInvoiceStatus.Paid);
+        invoice.PaidAtUtc.Should().Be(paidAt);
+    }
+
+    [Fact]
+    public void ApplyPayment_Two_Partial_Payments_Settle_The_Invoice()
+    {
+        (SubscriptionInvoice invoice, _) = IssueInvoice(OneLine(8000m));
+
+        invoice.ApplyPayment(5000m, "BDT", Now.AddDays(3));
+        invoice.ApplyPayment(3000m, "BDT", Now.AddDays(6));
+
+        invoice.OutstandingAmount.Should().Be(0m);
+        invoice.Status.Should().Be(SubscriptionInvoiceStatus.Paid);
+    }
+
+    [Fact]
+    public void ApplyPayment_Throws_When_Amount_Is_Not_Positive()
+    {
+        (SubscriptionInvoice invoice, _) = IssueInvoice(OneLine(8000m));
+
+        Action act = () => invoice.ApplyPayment(0m, "BDT", Now.AddDays(1));
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void ApplyPayment_Throws_When_Amount_Exceeds_Outstanding()
+    {
+        (SubscriptionInvoice invoice, _) = IssueInvoice(OneLine(8000m));
+
+        Action act = () => invoice.ApplyPayment(8000.01m, "BDT", Now.AddDays(1));
+
+        act.Should().Throw<SubscriptionInvoicePaymentExceedsOutstandingException>();
+    }
+
+    [Fact]
+    public void ApplyPayment_Throws_When_Currency_Does_Not_Match_The_Invoice()
+    {
+        (SubscriptionInvoice invoice, _) = IssueInvoice(OneLine(8000m));
+
+        Action act = () => invoice.ApplyPayment(1000m, "USD", Now.AddDays(1));
+
+        act.Should().Throw<SubscriptionInvoiceCurrencyMismatchException>();
+    }
+
+    [Theory]
+    [InlineData(SubscriptionInvoiceStatus.Paid)]
+    [InlineData(SubscriptionInvoiceStatus.Void)]
+    [InlineData(SubscriptionInvoiceStatus.Canceled)]
+    public void ApplyPayment_Throws_When_Invoice_Is_Not_Issued(SubscriptionInvoiceStatus status)
+    {
+        (SubscriptionInvoice invoice, _) = IssueInvoice(OneLine(8000m));
+        switch (status)
+        {
+            case SubscriptionInvoiceStatus.Paid:
+                invoice.MarkPaid(Now.AddDays(1));
+                break;
+            case SubscriptionInvoiceStatus.Void:
+                invoice.Void("wrong subscription", Now.AddDays(1));
+                break;
+            case SubscriptionInvoiceStatus.Canceled:
+                invoice.Cancel("commercial waiver", Now.AddDays(1));
+                break;
+        }
+
+        Action act = () => invoice.ApplyPayment(1000m, "BDT", Now.AddDays(2));
+
+        act.Should().Throw<SubscriptionInvoiceNotPayableException>();
+    }
 }
