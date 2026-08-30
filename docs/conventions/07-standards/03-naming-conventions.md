@@ -103,7 +103,7 @@ A consolidated reference for all naming rules. Each layer's deeper file has the 
 | Check constraint       | `ck_<table>_<rule>`              | `ck_invoice_amount_positive`             |
 | Exclusion constraint   | `ex_<table>_<rule>`              | `ex_amc_no_overlap`                      |
 | Index (b-tree)         | `ix_<table>_<columns>`           | `ix_invoice_customer_status_date`        |
-| Unique index           | `uix_<table>_<columns>`          | `uix_customer_email`                     |
+| Unique index           | `ux_<table>_<columns>`           | `ux_customer_email`                      |
 | Partial index          | `ix_<table>_<columns>__<predicate>` | `ix_invoice_customer__unpaid`        |
 | GIN index              | `gin_<table>_<column>`           | `gin_customer_name_trgm`                 |
 | View                   | `v_<purpose>`                    | `v_active_invoice`                       |
@@ -230,6 +230,6 @@ Examples:
 | Frontend hook         | `camelCase.ts`   | `useCustomerActions.ts`                        |
 | Test file (.NET)      | matches subject  | `CustomerTests.cs`                             |
 | Test file (FE)        | colocated        | `CustomerForm.test.tsx`                        |
-| SQL migration         | EF auto + name   | `20260502_Add_Customer_Table.cs`               |
+| SQL migration         | EF auto + name   | `20260502120000_AddCustomerTable.cs`           |
 | Markdown docs         | `kebab-case.md`  | `solution-overview.md`                         |
 | ADR                   | `adr-NNN-...md`  | `adr-001-clean-architecture.md`                |
