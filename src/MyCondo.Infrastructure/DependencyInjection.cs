@@ -63,6 +63,7 @@ using MyCondo.Domain.Features.Platform.PlatformRolePermissions;
 using MyCondo.Domain.Features.Platform.PlatformRoles;
 using MyCondo.Domain.Features.Platform.PlatformUserRoleAssignments;
 using MyCondo.Domain.Features.Platform.PlatformUsers;
+using MyCondo.Domain.Features.Platform.SubscriptionInvoices;
 using MyCondo.Domain.Features.Platform.SubscriptionPackages;
 using MyCondo.Domain.Features.Platform.TenantFeatureOverrides;
 using MyCondo.Domain.Features.Property.Buildings;
@@ -196,6 +197,7 @@ public static class DependencyInjection
         services.AddScoped<ISubscriptionPackageVersionRepository, SubscriptionPackageVersionRepository>();
         services.AddScoped<ISubscriptionPackageFeatureRepository, SubscriptionPackageFeatureRepository>();
         services.AddScoped<IOrganizationSubscriptionRepository, OrganizationSubscriptionRepository>();
+        services.AddScoped<ISubscriptionInvoiceRepository, SubscriptionInvoiceRepository>();
         services.AddScoped<ITenantFeatureOverrideRepository, TenantFeatureOverrideRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
