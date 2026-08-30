@@ -68,6 +68,8 @@ public static class DependencyInjection
         services.AddScoped<ITenantLifecycleAccessService, TenantLifecycleAccessService>();
         services.AddScoped<ISubscriptionLifecycleAccessService, SubscriptionLifecycleAccessService>();
         services.AddScoped<IOrganizationAdminBootstrapper, OrganizationAdminBootstrapper>();
+        services.AddScoped<ITenantAdminProtectionService, TenantAdminProtectionService>();
+        services.AddScoped<IPlatformSuperAdminProtectionService, PlatformSuperAdminProtectionService>();
         services.AddScoped<IDefaultRoleCatalogueSeeder, DefaultRoleCatalogueSeeder>();
         services.AddScoped<ICondominiumRoleCatalogueSeeder, CondominiumRoleCatalogueSeeder>();
         services.AddScoped<IResidentRoleCatalogueSeeder, ResidentRoleCatalogueSeeder>();

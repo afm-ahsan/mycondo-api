@@ -41,6 +41,20 @@ public sealed class RoleAssignmentRepository(MyCondoDbContext db) : IRoleAssignm
           .Distinct()
           .CountAsync(cancellationToken);
 
+    public async Task<int> LockAndCountTenantWideHoldersAsync(
+        Guid tenantId, RoleId roleId, CancellationToken cancellationToken)
+    {
+        List<Guid> holderUserIds = await db.Database
+            .SqlQuery<Guid>($"""
+                SELECT user_id AS "Value" FROM identity.role_assignments
+                WHERE tenant_id = {tenantId} AND role_id = {roleId.Value} AND building_id IS NULL
+                FOR UPDATE
+                """)
+            .ToListAsync(cancellationToken);
+
+        return holderUserIds.Distinct().Count();
+    }
+
     public Task<List<RoleAssignment>> GetForRoleAsync(
         Guid tenantId, RoleId roleId, CancellationToken cancellationToken) =>
         db.Set<RoleAssignment>()
