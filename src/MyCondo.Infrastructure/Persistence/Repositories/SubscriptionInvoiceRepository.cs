@@ -17,4 +17,6 @@ public sealed class SubscriptionInvoiceRepository(MyCondoDbContext db) : ISubscr
             .ToListAsync(cancellationToken);
 
     public void Add(SubscriptionInvoice invoice) => db.Set<SubscriptionInvoice>().Add(invoice);
+
+    public void AddLines(IEnumerable<SubscriptionInvoiceLine> lines) => db.Set<SubscriptionInvoiceLine>().AddRange(lines);
 }

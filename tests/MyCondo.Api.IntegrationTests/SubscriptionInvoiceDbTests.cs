@@ -1,6 +1,6 @@
 using AwesomeAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MyCondo.Application.Common.Exceptions;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
 using MyCondo.Domain.Features.Platform.SubscriptionInvoices;
@@ -94,7 +94,7 @@ public class SubscriptionInvoiceDbTests : IClassFixture<PostgresApiFactory>
         secondInvoices.Add(second);
 
         Func<Task> act = () => secondUnitOfWork.SaveChangesAsync(CancellationToken.None);
-        await act.Should().ThrowAsync<DbUpdateException>();
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -124,6 +124,6 @@ public class SubscriptionInvoiceDbTests : IClassFixture<PostgresApiFactory>
         secondInvoices.Add(second);
 
         Func<Task> act = () => secondUnitOfWork.SaveChangesAsync(CancellationToken.None);
-        await act.Should().ThrowAsync<DbUpdateException>();
+        await act.Should().ThrowAsync<ConflictException>();
     }
 }

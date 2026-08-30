@@ -95,6 +95,19 @@ public class PlatformSubscriptionAuthorizationSeparationTests : IClassFixture<My
     }
 
     [Fact]
+    public async Task Subscription_Read_Permission_Alone_Cannot_Generate_An_Invoice()
+    {
+        using HttpClient client = CreateAuthorizedClient("platform.subscription.read");
+        Guid organizationId = Guid.NewGuid();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            $"/api/v1/platform/organizations/{organizationId}/subscription/invoices",
+            new { BillingPeriodStart = new DateOnly(2026, 3, 1) });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Subscription_Manage_Permission_Alone_Cannot_Read_Or_Write_Feature_Overrides()
     {
         using HttpClient client = CreateAuthorizedClient("platform.subscription.manage");

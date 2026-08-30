@@ -13,4 +13,6 @@ public interface ISubscriptionInvoiceRepository
         OrganizationSubscriptionId organizationSubscriptionId, CancellationToken cancellationToken);
 
     void Add(SubscriptionInvoice invoice);
+
+    void AddLines(IEnumerable<SubscriptionInvoiceLine> lines);
 }

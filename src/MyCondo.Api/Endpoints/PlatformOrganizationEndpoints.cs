@@ -7,6 +7,7 @@ using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
 using MyCondo.Application.Features.Platform.Commands.CreateTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.Commands.EndTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.Commands.ExpireOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.GenerateSubscriptionInvoice;
 using MyCondo.Application.Features.Platform.Commands.MarkOrganizationSubscriptionPastDue;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
@@ -233,6 +234,33 @@ public static class PlatformOrganizationEndpoints
             })
             .RequirePlatformPermission("platform.subscription.manage")
             .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/invoices", async (
+                Guid id,
+                GenerateSubscriptionInvoiceRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                Guid invoiceId = await sender.Send(
+                    new GenerateSubscriptionInvoiceCommand(id, request.BillingPeriodStart), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.invoice.generated",
+                    targetType: "SubscriptionInvoice",
+                    targetId: invoiceId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+
+                return Results.Ok(new GenerateSubscriptionInvoiceResponse(invoiceId));
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces<GenerateSubscriptionInvoiceResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/", async (
                 ProvisionOrganizationWithAdminCommand command,
@@ -518,6 +546,10 @@ public sealed record ReplaceOrganizationModulesRequest(IReadOnlyList<string> Mod
 
 public sealed record ChangeOrganizationSubscriptionRequest(
     Guid SubscriptionPackageVersionId, BillingCycle BillingCycle, bool AutoRenew);
+
+public sealed record GenerateSubscriptionInvoiceRequest(DateOnly BillingPeriodStart);
+
+public sealed record GenerateSubscriptionInvoiceResponse(Guid InvoiceId);
 
 public sealed record CreateTenantFeatureOverrideRequest(
     string FeatureKey, bool Enabled, DateTimeOffset EffectiveFrom, DateTimeOffset? EffectiveUntil, string? Reason);
