@@ -59,5 +59,22 @@ public sealed class TenantRepository(MyCondoDbContext db) : ITenantRepository
     public Task<List<Tenant>> GetAllAsync(CancellationToken cancellationToken) =>
         db.Set<Tenant>().OrderBy(t => t.Name).ToListAsync(cancellationToken);
 
+    public async Task<Dictionary<Guid, string>> GetNamesByIdsAsync(
+        IReadOnlyCollection<Guid> tenantIds, CancellationToken cancellationToken)
+    {
+        if (tenantIds.Count == 0)
+        {
+            return [];
+        }
+
+        List<TenantId> ids = tenantIds.Select(id => new TenantId(id)).ToList();
+
+        List<Tenant> tenants = await db.Set<Tenant>().AsNoTracking()
+            .Where(t => ids.Contains(t.Id))
+            .ToListAsync(cancellationToken);
+
+        return tenants.ToDictionary(t => t.Id.Value, t => t.Name);
+    }
+
     public void Add(Tenant tenant) => db.Set<Tenant>().Add(tenant);
 }

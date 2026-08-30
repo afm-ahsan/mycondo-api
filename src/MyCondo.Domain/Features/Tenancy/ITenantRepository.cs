@@ -27,5 +27,12 @@ public interface ITenantRepository
     /// not RLS-filtered, since <c>tenancy.tenants</c> itself has no tenant_id/RLS policy.</summary>
     Task<List<Tenant>> GetAllAsync(CancellationToken cancellationToken);
 
+    /// <summary>Display-name lookup for a batch of tenant ids, keyed by id — avoids N+1 organization-name
+    /// joins when projecting a page of platform read-model rows (e.g. Task 14D subscription invoice/
+    /// outstanding-dues lists) that each reference a <c>TenantId</c> but hold no navigation to
+    /// <see cref="Tenant"/>. Mirrors <see cref="ITenantModuleRepository.GetEnabledCountsAsync"/>'s
+    /// batch-by-ids shape.</summary>
+    Task<Dictionary<Guid, string>> GetNamesByIdsAsync(IReadOnlyCollection<Guid> tenantIds, CancellationToken cancellationToken);
+
     void Add(Tenant tenant);
 }
