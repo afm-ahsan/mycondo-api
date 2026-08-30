@@ -77,4 +77,44 @@ public class UpdateUserCommandHandlerTests
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    [Fact]
+    public async Task Allows_A_Tenant_Admin_To_Edit_Its_Own_Profile_Without_ManageTenantAdmins()
+    {
+        Guid actorId = Guid.NewGuid();
+        User user = RegisterUser(TenantId);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _currentUser.UserId.Returns(actorId);
+        _tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(TenantId, user.Id, Arg.Any<CancellationToken>()).Returns(true);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanEditAdminTarget(user.Id.Value, actorId, Arg.Any<bool>()))
+            .Do(_ => { });
+
+        UpdateUserCommand command = new(user.Id.Value, "Self Updated", null);
+
+        await CreateHandler().Handle(command, CancellationToken.None);
+
+        user.FullName.Should().Be("Self Updated");
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_Forbidden_When_Lower_Privileged_Actor_Edits_A_Tenant_Admin()
+    {
+        User user = RegisterUser(TenantId);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _currentUser.UserId.Returns(Guid.NewGuid());
+        _tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(TenantId, user.Id, Arg.Any<CancellationToken>()).Returns(true);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanEditAdminTarget(user.Id.Value, Arg.Any<Guid>(), false))
+            .Do(_ => throw new ForbiddenException("Only a Tenant Admin can manage another Tenant Admin's account."));
+
+        UpdateUserCommand command = new(user.Id.Value, "Attempted Update", null);
+
+        Func<Task> act = () => CreateHandler().Handle(command, CancellationToken.None).AsTask();
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        user.FullName.Should().Be("Original Name");
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
 }
