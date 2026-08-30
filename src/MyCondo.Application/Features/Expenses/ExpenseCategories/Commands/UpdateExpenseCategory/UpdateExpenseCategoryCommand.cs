@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Expenses.ExpenseCategories.DTOs;
 
 namespace MyCondo.Application.Features.Expenses.ExpenseCategories.Commands.UpdateExpenseCategory;
@@ -9,4 +10,4 @@ public sealed record UpdateExpenseCategoryCommand(
     string Code,
     string? Description,
     int DisplayOrder
-) : IRequest<ExpenseCategoryDto>;
+) : IRequest<ExpenseCategoryDto>, ILifecycleWriteOperation;

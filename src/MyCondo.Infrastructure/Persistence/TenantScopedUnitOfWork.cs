@@ -8,6 +8,8 @@ using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
+using MyCondo.Domain.Features.Platform.PlatformAudit;
 using MyCondo.Domain.Features.Tenancy;
 using MyCondo.Infrastructure.Persistence.Repositories;
 
@@ -26,6 +28,8 @@ public sealed class TenantScopedUnitOfWork(MyCondoDbContext db) : ITenantScopedU
     public IExpenseTypeRepository ExpenseTypes { get; } = new ExpenseTypeRepository(db);
     public IChartOfAccountRepository ChartOfAccounts { get; } = new ChartOfAccountRepository(db);
     public IAccountMappingRepository AccountMappings { get; } = new AccountMappingRepository(db);
+    public IOrganizationSubscriptionRepository OrganizationSubscriptions { get; } = new OrganizationSubscriptionRepository(db);
+    public IPlatformAuditLogRepository PlatformAuditLog { get; } = new PlatformAuditLogRepository(db);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 

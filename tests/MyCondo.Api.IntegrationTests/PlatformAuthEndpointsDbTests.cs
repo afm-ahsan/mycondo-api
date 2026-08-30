@@ -66,7 +66,7 @@ public class PlatformAuthEndpointsDbTests : IClassFixture<PostgresApiFactory>
         JwtClaims claims = JwtTestHelper.Decode(tokens.AccessToken);
         claims.ContainsClaim("tenant_id").Should().BeFalse("a Platform token must never carry a tenant_id claim");
         claims.GetClaimValue("identity_scope").Should().Be("platform");
-        claims.GetAudience().Should().Be("https://platform.mycondo.app");
+        claims.GetAudience().Should().Be("https://platform.condobd.com");
     }
 
     [Fact]

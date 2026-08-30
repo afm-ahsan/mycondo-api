@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetTrialBalance;
@@ -18,4 +19,4 @@ public sealed record TrialBalanceReportDto(
     decimal TotalDebit,
     decimal TotalCredit);
 
-public sealed record GetTrialBalanceQuery(DateOnly? AsOfDate) : IRequest<TrialBalanceReportDto>;
+public sealed record GetTrialBalanceQuery(DateOnly? AsOfDate) : IRequest<TrialBalanceReportDto>, ILifecycleReadOperation;

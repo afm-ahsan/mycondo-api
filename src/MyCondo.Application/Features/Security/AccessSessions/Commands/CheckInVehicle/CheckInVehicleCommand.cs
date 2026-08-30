@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.AccessSessions.DTOs;
 
 namespace MyCondo.Application.Features.Security.AccessSessions.Commands.CheckInVehicle;
@@ -9,4 +10,7 @@ public sealed record CheckInVehicleCommand(
     Guid EntryGateId,
     string? Remarks,
     string? OverrideReason
-) : IRequest<AccessSessionDto>;
+) : IRequest<AccessSessionDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "security.vehicles";
+}

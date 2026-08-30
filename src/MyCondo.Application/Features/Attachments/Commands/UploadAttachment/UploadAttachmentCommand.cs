@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Attachments.DTOs;
 
 namespace MyCondo.Application.Features.Attachments.Commands.UploadAttachment;
@@ -10,4 +11,4 @@ public sealed record UploadAttachmentCommand(
     string FileName,
     string ContentType,
     long SizeBytes
-) : IRequest<AttachmentDto>;
+) : IRequest<AttachmentDto>, ILifecycleWriteOperation;

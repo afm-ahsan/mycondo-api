@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.FixedDeposits.DTOs;
 
 namespace MyCondo.Application.Features.Finance.FixedDeposits.Commands.RenewFixedDeposit;
@@ -22,4 +23,7 @@ public sealed record RenewFixedDepositCommand(
     DateOnly NewMaturityDate,
     decimal? NewExpectedGrossInterest,
     decimal? NewExpectedDeductionRatePercent,
-    string? Notes) : IRequest<FixedDepositDto>;
+    string? Notes) : IRequest<FixedDepositDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "finance.fixed_deposits";
+}

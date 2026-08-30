@@ -1,8 +1,9 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Leasing.DTOs;
 
 namespace MyCondo.Application.Features.Leasing.Queries.GetVehicleAssignmentsForRegistration;
 
 public sealed record GetVehicleAssignmentsForRegistrationQuery(
     Guid OccupancyRegistrationId
-) : IRequest<IReadOnlyList<OccupancyRegistrationVehicleAssignmentDto>>;
+) : IRequest<IReadOnlyList<OccupancyRegistrationVehicleAssignmentDto>>, ILifecycleReadOperation;

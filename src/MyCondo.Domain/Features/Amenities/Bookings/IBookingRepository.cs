@@ -9,6 +9,11 @@ public interface IBookingRepository
 {
     Task<Booking?> GetByIdAsync(BookingId id, CancellationToken cancellationToken);
 
+    /// <summary>Thin projection backing ADR-033 Task 09A resource-derived feature resolution — returns
+    /// null (never the booking) when the id does not exist or is not owned by <paramref name="tenantId"/>,
+    /// so a cross-tenant id yields the same not-found outcome as a genuinely missing one.</summary>
+    Task<FacilityId?> GetFacilityIdAsync(Guid tenantId, BookingId id, CancellationToken cancellationToken);
+
     /// <summary><paramref name="fromDate"/>/<paramref name="toDate"/> bound <see cref="Booking.StartAtUtc"/>
     /// as <c>[fromDate, toDate)</c>, same semantics as <see cref="GetForPeriodAsync"/> — filtering happens
     /// in this query, before pagination, never in application code. <paramref name="eventType"/> is a

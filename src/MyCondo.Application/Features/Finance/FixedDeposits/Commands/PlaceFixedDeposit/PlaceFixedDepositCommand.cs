@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.FixedDeposits.DTOs;
 
 namespace MyCondo.Application.Features.Finance.FixedDeposits.Commands.PlaceFixedDeposit;
@@ -17,4 +18,7 @@ public sealed record PlaceFixedDepositCommand(
     DateOnly MaturityDate,
     decimal? ExpectedGrossInterest,
     decimal? ExpectedDeductionRatePercent,
-    string? Notes) : IRequest<FixedDepositDto>;
+    string? Notes) : IRequest<FixedDepositDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "finance.fixed_deposits";
+}

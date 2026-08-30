@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Expenses.ExpenseTypes.DTOs;
 
 namespace MyCondo.Application.Features.Expenses.ExpenseTypes.Commands.CreateExpenseType;
@@ -9,4 +10,4 @@ public sealed record CreateExpenseTypeCommand(
     string Code,
     string? Description,
     int DisplayOrder
-) : IRequest<ExpenseTypeDto>;
+) : IRequest<ExpenseTypeDto>, ILifecycleWriteOperation;

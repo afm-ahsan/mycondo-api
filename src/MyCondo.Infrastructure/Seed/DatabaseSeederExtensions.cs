@@ -63,6 +63,12 @@ public static class DatabaseSeederExtensions
             await sp.GetRequiredService<IPermissionSeeder>().SeedAsync(cancellationToken);
             await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync(cancellationToken);
 
+            // 01b Feature Catalogue (ADR-033 §3/§5) — global platform-schema catalogue, every
+            // environment, independent of tenants. Runs after Permissions since FeaturePermission rows
+            // reference permission codes by natural key (no FK, but ordering keeps intent clear).
+            await sp.GetRequiredService<IFeatureCatalogueSeeder>().SeedAsync(cancellationToken);
+            await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync(cancellationToken);
+
             if (environment.IsDevelopment())
             {
                 // 02 Platform bootstrap (Platform SuperAdmin — no tenant concept involved).
@@ -105,6 +111,23 @@ public static class DatabaseSeederExtensions
             // system accounts via step 05 above (FinanceChartOfAccountSeeder's set), and this step's own
             // category/type reconciliation. See ExpenseCategoryCatalogueBackfillSeeder's doc comment.
             await sp.GetRequiredService<ExpenseCategoryCatalogueBackfillSeeder>().SeedAsync(cancellationToken);
+
+            // 07 Legacy TenantModule → OrganizationSubscription compatibility backfill (ADR-033 §24
+            // steps 3-4, Task 04) — every environment: every existing tenant (including one provisioned
+            // moments ago in step 03, this same startup) gets a grandfathered OrganizationSubscription if
+            // it doesn't already have a current one. Runs after every other backfill step so the Feature
+            // Catalogue (01b) is fully seeded and every tenant (Development-only step 03 included) already
+            // exists. Does not touch or read TenantRoleCatalogueBackfillSeeder's/FinanceChartOfAccountBackfillSeeder's/
+            // ExpenseCategoryCatalogueBackfillSeeder's data — independent concern, ordered last only for
+            // startup-log readability.
+            //
+            // Task 04B: "no current subscription" is eligibility on its own (Task 04A's CreatedAtUtc
+            // cutoff was found to have no operational basis — see the seeder's own doc comment — and was
+            // removed). This stays safe to leave registered as an ordinary every-startup seeder only for
+            // as long as this seeder remains the sole caller of OrganizationSubscription.Create in the
+            // codebase; once ADR-034/035 introduces a second, subscription-aware provisioning path, this
+            // registration must be re-examined alongside that work.
+            await sp.GetRequiredService<LegacyMigrationSubscriptionBackfillSeeder>().SeedAsync(cancellationToken);
         }
         finally
         {

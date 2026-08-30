@@ -55,12 +55,18 @@ using MyCondo.Domain.Features.Payments.Payments;
 using MyCondo.Domain.Features.Payments.ResidentAccounts;
 using MyCondo.Domain.Features.Payroll.AttendanceRecords;
 using MyCondo.Domain.Features.Payroll.StaffMembers;
+using MyCondo.Domain.Features.Platform.FeatureCatalogue;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
 using MyCondo.Domain.Features.Platform.PlatformAudit;
 using MyCondo.Domain.Features.Platform.PlatformRefreshTokens;
 using MyCondo.Domain.Features.Platform.PlatformRolePermissions;
 using MyCondo.Domain.Features.Platform.PlatformRoles;
 using MyCondo.Domain.Features.Platform.PlatformUserRoleAssignments;
 using MyCondo.Domain.Features.Platform.PlatformUsers;
+using MyCondo.Domain.Features.Platform.SubscriptionInvoices;
+using MyCondo.Domain.Features.Platform.SubscriptionPayments;
+using MyCondo.Domain.Features.Platform.SubscriptionPackages;
+using MyCondo.Domain.Features.Platform.TenantFeatureOverrides;
 using MyCondo.Domain.Features.Property.Buildings;
 using MyCondo.Domain.Features.Property.FlatOwnerships;
 using MyCondo.Domain.Features.Property.Flats;
@@ -177,6 +183,7 @@ public static class DependencyInjection
         services.AddScoped<Seed.FinanceChartOfAccountBackfillSeeder>();
         services.AddScoped<Seed.TenantRoleCatalogueBackfillSeeder>();
         services.AddScoped<Seed.ExpenseCategoryCatalogueBackfillSeeder>();
+        services.AddScoped<Seed.LegacyMigrationSubscriptionBackfillSeeder>();
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
@@ -185,6 +192,15 @@ public static class DependencyInjection
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantModuleRepository, TenantModuleRepository>();
         services.AddScoped<IPermissionRepository, PermissionRepository>();
+        services.AddScoped<IFeatureDefinitionRepository, FeatureDefinitionRepository>();
+        services.AddScoped<IFeaturePermissionRepository, FeaturePermissionRepository>();
+        services.AddScoped<ISubscriptionPackageRepository, SubscriptionPackageRepository>();
+        services.AddScoped<ISubscriptionPackageVersionRepository, SubscriptionPackageVersionRepository>();
+        services.AddScoped<ISubscriptionPackageFeatureRepository, SubscriptionPackageFeatureRepository>();
+        services.AddScoped<IOrganizationSubscriptionRepository, OrganizationSubscriptionRepository>();
+        services.AddScoped<ISubscriptionInvoiceRepository, SubscriptionInvoiceRepository>();
+        services.AddScoped<ISubscriptionPaymentRepository, SubscriptionPaymentRepository>();
+        services.AddScoped<ITenantFeatureOverrideRepository, TenantFeatureOverrideRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
         services.AddScoped<IPlatformUserRepository, PlatformUserRepository>();

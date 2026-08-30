@@ -12,4 +12,4 @@ public sealed record ExportResidentLedgerQuery(
     DateOnly? ToDate,
     string? ReferenceType,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, ILifecycleReadOperation;

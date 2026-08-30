@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 
@@ -46,4 +47,4 @@ public sealed record IncomeExpenditureStatementDto(
 /// <summary>Period Income &amp; Expenditure Statement. <see cref="StartDate"/>/<see cref="EndDate"/> are
 /// both inclusive; <see cref="FundId"/> omitted means "All Funds".</summary>
 public sealed record GetIncomeExpenditureStatementQuery(DateOnly StartDate, DateOnly EndDate, Guid? FundId)
-    : IRequest<IncomeExpenditureStatementDto>;
+    : IRequest<IncomeExpenditureStatementDto>, ILifecycleReadOperation;

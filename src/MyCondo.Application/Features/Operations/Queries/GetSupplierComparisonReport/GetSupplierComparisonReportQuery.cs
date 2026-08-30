@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Queries.GetSupplierComparisonReport;
@@ -6,4 +7,7 @@ namespace MyCondo.Application.Features.Operations.Queries.GetSupplierComparisonR
 public sealed record GetSupplierComparisonReportQuery(
     DateOnly FromDate,
     DateOnly ToDate
-) : IRequest<IReadOnlyList<SupplierComparisonReportLineDto>>;
+) : IRequest<IReadOnlyList<SupplierComparisonReportLineDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "operations.gas_cylinders";
+}

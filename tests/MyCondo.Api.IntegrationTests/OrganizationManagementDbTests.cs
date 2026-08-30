@@ -8,9 +8,14 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.DependencyInjection;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.DTOs;
+using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
+using MyCondo.Domain.Features.Platform.SubscriptionPackages;
 using MyCondo.Domain.Features.Tenancy;
 
 namespace MyCondo.Api.IntegrationTests;
@@ -23,19 +28,61 @@ namespace MyCondo.Api.IntegrationTests;
 /// rather than seeding a full PlatformUser/PlatformRole/assignment chain per test, since
 /// PlatformCurrentUserProvider reads permission claims directly off the token.
 /// </summary>
-public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>
+public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>, IAsyncLifetime
 {
-    private const string Issuer = "https://api.mycondo.app";
-    private const string PlatformAudience = "https://platform.mycondo.app";
+    private const string Issuer = "https://api.condobd.com";
+    private const string PlatformAudience = "https://platform.condobd.com";
     private const string SigningKey = "test-only-signing-key-not-for-any-real-environment";
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly PostgresApiFactory _factory;
+    private Guid _subscriptionPackageVersionId;
 
     public OrganizationManagementDbTests(PostgresApiFactory factory)
     {
         _factory = factory;
     }
+
+    // Task 12A (ADR-033) requires provisioning to reference a real, explicitly active/current/effective
+    // SubscriptionPackageVersion — there is no package-administration endpoint yet (out of this task's
+    // scope), so this seeds one directly through the ambient repositories/domain factory, the same
+    // pattern GateFeatureEntitlementDbTests.SeedPackageVersionAsync already uses. Re-seeded per test
+    // method (xUnit constructs a fresh class instance per [Fact]) with a unique Code each time — cheap,
+    // and avoids any cross-test coupling through shared package state. This package intentionally has
+    // zero SubscriptionPackageFeature rows, so a tenant provisioned against it resolves to "not entitled"
+    // for every feature — the opposite of the legacy grandfathered package's full-catalogue grant,
+    // proving a newly provisioned tenant no longer depends on "no subscription -> Full".
+    public async Task InitializeAsync()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ISubscriptionPackageRepository packages = scope.ServiceProvider.GetRequiredService<ISubscriptionPackageRepository>();
+        ISubscriptionPackageVersionRepository versions = scope.ServiceProvider.GetRequiredService<ISubscriptionPackageVersionRepository>();
+        IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        SubscriptionPackage package = SubscriptionPackage.Create(
+            $"IT-{Guid.NewGuid():N}"[..20], "Integration Test Package", description: null);
+        SubscriptionPackageVersion version = SubscriptionPackageVersion.Create(
+            package.Id,
+            version: 1,
+            effectiveFrom: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1),
+            effectiveUntil: null,
+            monthlyPrice: 1000m,
+            quarterlyPrice: null,
+            semiAnnualPrice: null,
+            annualPrice: null,
+            currency: "BDT");
+        version.Activate();
+        package.Activate();
+        package.SetCurrentVersion(version.Id);
+
+        packages.Add(package);
+        versions.Add(version);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        _subscriptionPackageVersionId = version.Id.Value;
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
 
     private HttpClient CreatePlatformClient(params string[] permissions)
     {
@@ -65,7 +112,7 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>
         return new JsonWebTokenHandler().CreateToken(descriptor);
     }
 
-    private static object NewOrganizationBody(string code, string slug, string adminEmail) => new
+    private object NewOrganizationBody(string code, string slug, string adminEmail) => new
     {
         name = "Integration Test Org",
         code,
@@ -74,6 +121,13 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>
         administratorEmail = adminEmail,
         administratorPassword = "Correct-Horse-Battery-9",
         enabledModuleKeys = new[] { "billing", "payments" },
+        subscriptionPackageVersionId = _subscriptionPackageVersionId,
+        // ProvisionOrganizationWithAdminCommand.BillingCycle binds directly from the request body as a
+        // raw enum with no JsonStringEnumConverter configured (confirmed against the OpenAPI contract:
+        // BillingCycle is "type": "integer") — mycondo-web's provisioning wizard already submits the
+        // numeric ordinal for this reason, so the test must match rather than send the enum's string name.
+        billingCycle = (int)BillingCycle.Monthly,
+        autoRenew = true,
     };
 
     [Fact]
@@ -218,5 +272,142 @@ public class OrganizationManagementDbTests : IClassFixture<PostgresApiFactory>
             "/api/v1/platform/organizations", NewOrganizationBody("NOPE", "nope-org", "admin@nope.test"));
 
         createAttempt.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Provisioning_Creates_Exactly_One_Current_OrganizationSubscription_Referencing_The_Selected_Package_Version()
+    {
+        using HttpClient client = CreatePlatformClient("platform.organization.create");
+
+        HttpResponseMessage createResponse = await client.PostAsJsonAsync(
+            "/api/v1/platform/organizations", NewOrganizationBody("E2E7", "e2e-org-7", "admin@e2e-org-7.test"));
+        ProvisionOrganizationResult result =
+            (await createResponse.Content.ReadFromJsonAsync<ProvisionOrganizationResult>(JsonOptions))!;
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IOrganizationSubscriptionRepository subscriptions =
+            scope.ServiceProvider.GetRequiredService<IOrganizationSubscriptionRepository>();
+        OrganizationSubscription? subscription =
+            await subscriptions.GetCurrentForTenantAsync(result.TenantId, CancellationToken.None);
+
+        subscription.Should().NotBeNull();
+        subscription!.PackageVersionId.Value.Should().Be(_subscriptionPackageVersionId);
+        subscription.Status.Should().Be(OrganizationSubscriptionStatus.Active);
+    }
+
+    [Fact]
+    public async Task Provisioning_Rejects_An_Unknown_SubscriptionPackageVersionId()
+    {
+        using HttpClient client = CreatePlatformClient("platform.organization.create");
+
+        object body = new
+        {
+            name = "Integration Test Org",
+            code = "E2E8",
+            slug = "e2e-org-8",
+            administratorFullName = "Test Admin",
+            administratorEmail = "admin@e2e-org-8.test",
+            administratorPassword = "Correct-Horse-Battery-9",
+            enabledModuleKeys = new[] { "billing", "payments" },
+            subscriptionPackageVersionId = Guid.NewGuid(),
+        };
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/platform/organizations", body);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Newly_Provisioned_Tenant_Is_Not_Entitled_To_A_Feature_Its_Package_Does_Not_Grant()
+    {
+        // The seeded test package (InitializeAsync) has zero SubscriptionPackageFeature rows — if
+        // provisioning still fell back to the legacy "no subscription -> Full" compatibility rule, this
+        // request would incorrectly succeed. It must instead be blocked by the entitlement resolver
+        // (403 feature_not_entitled), proving the new tenant resolves entitlements through its explicit
+        // OrganizationSubscription rather than the legacy grandfathering path.
+        using HttpClient platformClient = CreatePlatformClient("platform.organization.create");
+        HttpResponseMessage createResponse = await platformClient.PostAsJsonAsync(
+            "/api/v1/platform/organizations", NewOrganizationBody("E2E9", "e2e-org-9", "admin@e2e-org-9.test"));
+        ProvisionOrganizationResult result =
+            (await createResponse.Content.ReadFromJsonAsync<ProvisionOrganizationResult>(JsonOptions))!;
+
+        using HttpClient tenantClient = _factory.CreateClient();
+        HttpResponseMessage loginResponse = await tenantClient.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            tenantId = result.TenantId,
+            email = "admin@e2e-org-9.test",
+            password = "Correct-Horse-Battery-9",
+        });
+        JsonDocument loginBody = JsonDocument.Parse(await loginResponse.Content.ReadAsStringAsync());
+        string accessToken = loginBody.RootElement.GetProperty("accessToken").GetString()!;
+        tenantClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        // GetGatesForTenantQuery's activeOnly is a required non-nullable bool query parameter (no
+        // default) — GetGatesEndpoints binds it via minimal-API model binding, which runs before the
+        // permission/entitlement filters, so omitting it would 400 on binding rather than exercising
+        // the entitlement check this test targets.
+        HttpResponseMessage gatesResponse = await tenantClient.GetAsync("/api/v1/properties/gates?activeOnly=false");
+
+        gatesResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        JsonDocument problem = JsonDocument.Parse(await gatesResponse.Content.ReadAsStringAsync());
+        problem.RootElement.GetProperty("code").GetString().Should().Be("feature_not_entitled");
+    }
+
+    [Fact]
+    public async Task Get_Subscription_Returns_Exact_Package_Version_Lifecycle_And_Commercial_Snapshot()
+    {
+        using HttpClient client = CreatePlatformClient("platform.organization.create", "platform.subscription.read");
+
+        HttpResponseMessage createResponse = await client.PostAsJsonAsync(
+            "/api/v1/platform/organizations", NewOrganizationBody("E2E10", "e2e-org-10", "admin@e2e-org-10.test"));
+        ProvisionOrganizationResult result =
+            (await createResponse.Content.ReadFromJsonAsync<ProvisionOrganizationResult>(JsonOptions))!;
+
+        HttpResponseMessage subscriptionResponse =
+            await client.GetAsync($"/api/v1/platform/organizations/{result.TenantId}/subscription");
+
+        subscriptionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        OrganizationSubscriptionDto dto =
+            (await subscriptionResponse.Content.ReadFromJsonAsync<OrganizationSubscriptionDto>(JsonOptions))!;
+
+        dto.TenantId.Should().Be(result.TenantId);
+        dto.HasSubscription.Should().BeTrue();
+        dto.Subscription.Should().NotBeNull();
+        dto.Subscription!.PackageVersionId.Should().Be(_subscriptionPackageVersionId);
+        dto.Subscription.PackageVersion.Should().Be(1);
+        dto.Subscription.Status.Should().Be(nameof(OrganizationSubscriptionStatus.Active));
+        dto.Subscription.BillingCycle.Should().Be(nameof(BillingCycle.Monthly));
+        dto.Subscription.Currency.Should().Be("BDT");
+        dto.Subscription.BasePrice.Should().Be(1000m);
+        dto.Subscription.Discount.Should().Be(0m);
+        dto.Subscription.EffectivePrice.Should().Be(1000m);
+        dto.Subscription.AutoRenew.Should().BeTrue();
+
+        // The seeded test package (InitializeAsync) grants zero features — every non-core feature must
+        // therefore resolve to either DefaultDisabled (catalogue-active but not granted by the package)
+        // or Reserved (FeatureCatalogueStatus.Reserved — a legacy catalogue entry with no current
+        // frontend surface per ADR-033 §24 step 2, never enabled by any package), and every core feature
+        // to Core, proving this endpoint reuses ITenantEntitlementService's precedence rather than a
+        // second entitlement engine. Either way none of them may be Enabled.
+        dto.Features.Should().NotBeEmpty();
+        dto.Features.Should().Contain(f => f.Source == "Core" && f.Enabled);
+        dto.Features.Where(f => f.Source != "Core").Should().OnlyContain(f =>
+            (f.Source == "DefaultDisabled" || f.Source == "Reserved") && !f.Enabled);
+    }
+
+    [Fact]
+    public async Task Get_Subscription_Requires_Its_Own_Permission_Not_Organization_Read()
+    {
+        using HttpClient createClient = CreatePlatformClient("platform.organization.create");
+        HttpResponseMessage createResponse = await createClient.PostAsJsonAsync(
+            "/api/v1/platform/organizations", NewOrganizationBody("E2E11", "e2e-org-11", "admin@e2e-org-11.test"));
+        ProvisionOrganizationResult result =
+            (await createResponse.Content.ReadFromJsonAsync<ProvisionOrganizationResult>(JsonOptions))!;
+
+        using HttpClient organizationReadOnlyClient = CreatePlatformClient("platform.organization.read");
+        HttpResponseMessage forbiddenResponse =
+            await organizationReadOnlyClient.GetAsync($"/api/v1/platform/organizations/{result.TenantId}/subscription");
+
+        forbiddenResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }

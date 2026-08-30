@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Expenses.Expenses.DTOs;
 
 namespace MyCondo.Application.Features.Expenses.Expenses.Commands.CreateExpense;
@@ -16,4 +17,4 @@ public sealed record CreateExpenseCommand(
     bool IsPaid,
     string PaymentMethod,
     string? Notes
-) : IRequest<ExpenseDto>;
+) : IRequest<ExpenseDto>, ILifecycleWriteOperation;

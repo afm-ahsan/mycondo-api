@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,7 @@ public sealed record GetCylinderPurchasesQuery(
     string? ApprovalStatus,
     int Page,
     int PageSize
-) : IRequest<PagedResult<CylinderPurchaseDto>>;
+) : IRequest<PagedResult<CylinderPurchaseDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "operations.gas_cylinders";
+}

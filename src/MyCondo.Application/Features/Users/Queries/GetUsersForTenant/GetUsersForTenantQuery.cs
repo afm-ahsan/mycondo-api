@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Domain.Common;
 
 namespace MyCondo.Application.Features.Users.Queries.GetUsersForTenant;
@@ -9,4 +10,4 @@ public sealed record GetUsersForTenantQuery(
     bool? IsActive,
     int Page = 1,
     int PageSize = 20
-) : IRequest<PagedResult<UserSummaryDto>>;
+) : IRequest<PagedResult<UserSummaryDto>>, ILifecycleReadOperation;

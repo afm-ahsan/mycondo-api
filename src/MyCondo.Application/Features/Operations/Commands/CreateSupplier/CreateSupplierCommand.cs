@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.CreateSupplier;
@@ -8,4 +9,7 @@ public sealed record CreateSupplierCommand(
     string? ContactPhone,
     string? ContactEmail,
     string? Address
-) : IRequest<GasCylinderSupplierDto>;
+) : IRequest<GasCylinderSupplierDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "operations.gas_cylinders";
+}

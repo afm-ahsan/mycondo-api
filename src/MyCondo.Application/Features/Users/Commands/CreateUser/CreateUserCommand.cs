@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 
 namespace MyCondo.Application.Features.Users.Commands.CreateUser;
 
@@ -13,4 +14,4 @@ public sealed record CreateUserCommand(
     string? PhoneNumber,
     string Password,
     bool IsActive
-) : IRequest<CreateUserResult>;
+) : IRequest<CreateUserResult>, ILifecycleWriteOperation;

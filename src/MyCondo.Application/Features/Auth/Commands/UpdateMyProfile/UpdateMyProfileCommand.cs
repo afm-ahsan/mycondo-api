@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Auth.DTOs;
 
 namespace MyCondo.Application.Features.Auth.Commands.UpdateMyProfile;
@@ -6,4 +7,4 @@ namespace MyCondo.Application.Features.Auth.Commands.UpdateMyProfile;
 public sealed record UpdateMyProfileCommand(
     string FullName,
     string? PhoneNumber
-) : IRequest<UserProfileDto>;
+) : IRequest<UserProfileDto>, ILifecycleWriteOperation;

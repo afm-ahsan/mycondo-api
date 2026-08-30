@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Payments.DTOs;
 using MyCondo.Domain.Common;
 
@@ -12,4 +13,4 @@ public sealed record GetPaymentsQuery(
     DateOnly? ToDate,
     int Page,
     int PageSize
-) : IRequest<PagedResult<PaymentDto>>;
+) : IRequest<PagedResult<PaymentDto>>, ILifecycleReadOperation;

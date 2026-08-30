@@ -1,6 +1,7 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Leasing.DTOs;
 
 namespace MyCondo.Application.Features.Leasing.Commands.DeactivateHouseholdMember;
 
-public sealed record DeactivateHouseholdMemberCommand(Guid HouseholdMemberId) : IRequest<HouseholdMemberDto>;
+public sealed record DeactivateHouseholdMemberCommand(Guid HouseholdMemberId) : IRequest<HouseholdMemberDto>, ILifecycleWriteOperation;

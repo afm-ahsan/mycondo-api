@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.Guests.DTOs;
 
 namespace MyCondo.Application.Features.Security.Guests.Commands.CreateGuestProfile;
@@ -8,4 +9,7 @@ public sealed record CreateGuestProfileCommand(
     string Phone,
     string? IdentityDocumentType,
     string? IdentityDocumentNumber
-) : IRequest<GuestProfileDto>;
+) : IRequest<GuestProfileDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "security.visitors";
+}

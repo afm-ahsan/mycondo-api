@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,7 @@ public sealed record GetGeneratorSessionsQuery(
     string? Status,
     int Page,
     int PageSize
-) : IRequest<PagedResult<GeneratorSessionDto>>;
+) : IRequest<PagedResult<GeneratorSessionDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "operations.generator";
+}

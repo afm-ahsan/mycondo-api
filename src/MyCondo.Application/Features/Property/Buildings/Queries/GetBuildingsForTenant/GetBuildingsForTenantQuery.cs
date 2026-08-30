@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Property.Buildings.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,7 @@ public sealed record GetBuildingsForTenantQuery(
     string? Search,
     int Page,
     int PageSize
-) : IRequest<PagedResult<BuildingDto>>;
+) : IRequest<PagedResult<BuildingDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "property.buildings";
+}

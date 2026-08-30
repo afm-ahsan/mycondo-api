@@ -9,6 +9,13 @@ public sealed class BlackoutDateRepository(MyCondoDbContext db) : IBlackoutDateR
     public Task<BlackoutDate?> GetByIdAsync(BlackoutDateId id, CancellationToken cancellationToken) =>
         db.Set<BlackoutDate>().FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
+    public Task<FacilityId?> GetFacilityIdAsync(Guid tenantId, BlackoutDateId id, CancellationToken cancellationToken) =>
+        db.Set<BlackoutDate>()
+            .AsNoTracking()
+            .Where(b => b.Id == id && b.TenantId == tenantId)
+            .Select(b => (FacilityId?)b.FacilityId)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<BlackoutDate>> GetActiveForFacilityAsync(
         Guid tenantId, FacilityId facilityId, CancellationToken cancellationToken) =>
         await db.Set<BlackoutDate>()

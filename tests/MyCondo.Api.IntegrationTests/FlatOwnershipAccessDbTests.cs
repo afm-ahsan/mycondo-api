@@ -49,7 +49,7 @@ public class FlatOwnershipAccessDbTests : IClassFixture<PostgresApiFactory>
         return tenant.Id.Value;
     }
 
-    private static async Task<AuthTokensDto> RegisterAsync(HttpClient client, Guid tenantId, string email)
+    private async Task<AuthTokensDto> RegisterAsync(HttpClient client, Guid tenantId, string email)
     {
         HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
@@ -60,6 +60,7 @@ public class FlatOwnershipAccessDbTests : IClassFixture<PostgresApiFactory>
             phoneNumber = (string?)null,
         });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        await _factory.GrantFullEntitlementToAllTenantsAsync();
 
         AuthTokensDto? tokens = await response.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
         tokens.Should().NotBeNull();

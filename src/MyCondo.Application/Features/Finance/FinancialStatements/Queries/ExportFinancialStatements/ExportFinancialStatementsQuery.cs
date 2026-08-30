@@ -9,4 +9,4 @@ namespace MyCondo.Application.Features.Finance.FinancialStatements.Queries.Expor
 /// is explicitly out of scope for this task (see the Task 8 spec §3/§10) — this is always a
 /// current-period, non-comparative document.</summary>
 public sealed record ExportFinancialStatementsQuery(
-    DateOnly StartDate, DateOnly EndDate, Guid? FundId, ReportExportFormat Format) : IRequest<ReportExportResult>;
+    DateOnly StartDate, DateOnly EndDate, Guid? FundId, ReportExportFormat Format) : IRequest<ReportExportResult>, ILifecycleReadOperation;

@@ -7,4 +7,7 @@ public sealed record ExportBookingRevenueReportQuery(
     DateOnly FromDate,
     DateOnly ToDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "facilities.reports";
+}

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetFundPosition;
@@ -10,4 +11,4 @@ public sealed record FundPositionReportDto(
     IReadOnlyList<FundPositionLineDto> Funds,
     decimal TotalBalance);
 
-public sealed record GetFundPositionQuery(DateOnly? AsOfDate) : IRequest<FundPositionReportDto>;
+public sealed record GetFundPositionQuery(DateOnly? AsOfDate) : IRequest<FundPositionReportDto>, ILifecycleReadOperation;

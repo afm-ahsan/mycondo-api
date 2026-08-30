@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Security.DomesticWorkers.DTOs;
 
 namespace MyCondo.Application.Features.Security.DomesticWorkers.Commands.SetDomesticWorkerStatus;
@@ -8,4 +9,7 @@ public sealed record SetDomesticWorkerStatusCommand(
     Guid DomesticWorkerProfileId,
     string Status,
     string? Reason
-) : IRequest<DomesticWorkerProfileDto>;
+) : IRequest<DomesticWorkerProfileDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "security.domestic_workers";
+}

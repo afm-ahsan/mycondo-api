@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Residents.DTOs;
 
 namespace MyCondo.Application.Features.Property.FlatOwnerships.Commands.SaveOwnerResidentProfile;
@@ -37,4 +38,4 @@ public sealed record SaveOwnerResidentProfileCommand(
     string? BloodGroup,
     string? Religion,
     string? Nationality
-) : IRequest<ResidentDto>;
+) : IRequest<ResidentDto>, ILifecycleWriteOperation;

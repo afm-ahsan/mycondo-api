@@ -10,6 +10,13 @@ public sealed class FacilityRepository(MyCondoDbContext db) : IFacilityRepositor
     public Task<Facility?> GetByIdAsync(FacilityId id, CancellationToken cancellationToken) =>
         db.Set<Facility>().FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
 
+    public Task<FacilityType?> GetFacilityTypeAsync(Guid tenantId, FacilityId id, CancellationToken cancellationToken) =>
+        db.Set<Facility>()
+            .AsNoTracking()
+            .Where(f => f.Id == id && f.TenantId == tenantId)
+            .Select(f => (FacilityType?)f.FacilityType)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<PagedResult<Facility>> SearchAsync(
         Guid tenantId, BuildingId? buildingId, FacilityType? facilityType, int page, int pageSize, CancellationToken cancellationToken)
     {

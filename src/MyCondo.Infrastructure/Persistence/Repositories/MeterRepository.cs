@@ -11,6 +11,13 @@ public sealed class MeterRepository(MyCondoDbContext db) : IMeterRepository
     public Task<Meter?> GetByIdAsync(MeterId id, CancellationToken cancellationToken) =>
         db.Set<Meter>().FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
 
+    public Task<UtilityType?> GetUtilityTypeAsync(Guid tenantId, MeterId id, CancellationToken cancellationToken) =>
+        db.Set<Meter>()
+            .AsNoTracking()
+            .Where(m => m.Id == id && m.TenantId == tenantId)
+            .Select(m => (UtilityType?)m.UtilityType)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public Task<Meter?> GetByMeterNumberAsync(
         Guid tenantId, UtilityType utilityType, string meterNumber, CancellationToken cancellationToken) =>
         db.Set<Meter>().FirstOrDefaultAsync(

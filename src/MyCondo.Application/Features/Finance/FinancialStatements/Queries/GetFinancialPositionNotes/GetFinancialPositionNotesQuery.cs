@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.FinancialStatements.Notes;
 
 namespace MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetFinancialPositionNotes;
@@ -11,4 +12,4 @@ namespace MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetFi
 public sealed record GetFinancialPositionNotesQuery(
     DateOnly? AsOfDate,
     Guid? FundId,
-    IReadOnlyList<FinancialStatementNoteKey>? Notes) : IRequest<FinancialStatementNotesDto>;
+    IReadOnlyList<FinancialStatementNoteKey>? Notes) : IRequest<FinancialStatementNotesDto>, ILifecycleReadOperation;

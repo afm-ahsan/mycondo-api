@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 
 namespace MyCondo.Application.Features.Property.Buildings.Commands.CreateBuilding;
 
@@ -6,4 +7,7 @@ public sealed record CreateBuildingCommand(
     string Name,
     string Code,
     string? Address
-) : IRequest<CreateBuildingResult>;
+) : IRequest<CreateBuildingResult>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "property.buildings";
+}

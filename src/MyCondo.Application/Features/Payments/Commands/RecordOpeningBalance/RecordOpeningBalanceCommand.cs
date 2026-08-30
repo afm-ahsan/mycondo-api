@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Payments.DTOs;
 
 namespace MyCondo.Application.Features.Payments.Commands.RecordOpeningBalance;
@@ -8,4 +9,4 @@ public sealed record RecordOpeningBalanceCommand(
     decimal Amount,
     DateOnly BusinessDate,
     string? Description
-) : IRequest<IReadOnlyList<LedgerEntryDto>>;
+) : IRequest<IReadOnlyList<LedgerEntryDto>>, ILifecycleWriteOperation;

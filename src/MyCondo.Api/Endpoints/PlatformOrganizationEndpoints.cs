@@ -1,18 +1,35 @@
+using System.Text.Json;
 using Mediator;
 using MyCondo.Api.Authorization;
 using MyCondo.Application.Common.Abstractions;
+using MyCondo.Application.Features.Platform.Commands.ApplyOrganizationSubscriptionBillingDecision;
+using MyCondo.Application.Features.Platform.Commands.CancelOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.ChangeOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.CloseOrganization;
+using MyCondo.Application.Features.Platform.Commands.CreateTenantFeatureOverride;
+using MyCondo.Application.Features.Platform.Commands.EndTenantFeatureOverride;
+using MyCondo.Application.Features.Platform.Commands.ExpireOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.GenerateSubscriptionInvoice;
+using MyCondo.Application.Features.Platform.Commands.MarkOrganizationSubscriptionPastDue;
 using MyCondo.Application.Features.Platform.Commands.ProvisionOrganizationWithAdmin;
 using MyCondo.Application.Features.Platform.Commands.ReactivateOrganization;
+using MyCondo.Application.Features.Platform.Commands.ReactivateOrganizationSubscription;
+using MyCondo.Application.Features.Platform.Commands.RecordSubscriptionPayment;
 using MyCondo.Application.Features.Platform.Commands.ReplaceOrganizationModules;
+using MyCondo.Application.Features.Platform.Commands.RestrictOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Commands.UpdateOrganization;
+using MyCondo.Application.Features.Platform.Commands.UpdateTenantFeatureOverride;
 using MyCondo.Application.Features.Platform.DTOs;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationById;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationFeatureOverrides;
+using MyCondo.Application.Features.Platform.Queries.GetOrganizationSubscription;
 using MyCondo.Application.Features.Platform.Queries.GetOrganizationSummaryStats;
 using MyCondo.Application.Features.Platform.Queries.ListOrganizations;
 using MyCondo.Application.Features.Tenancy.Commands.ActivateTenant;
 using MyCondo.Application.Features.Tenancy.Commands.SuspendTenant;
 using MyCondo.Domain.Abstractions;
 using MyCondo.Domain.Common;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
 using MyCondo.Domain.Features.Platform.PlatformAudit;
 
 namespace MyCondo.Api.Endpoints;
@@ -59,8 +76,17 @@ public static class PlatformOrganizationEndpoints
             .RequirePlatformPermission("platform.organization.read")
             .Produces<OrganizationDetailDto>(StatusCodes.Status200OK);
 
-        group.MapPost("/", async (
-                ProvisionOrganizationWithAdminCommand command,
+        group.MapGet("/{id:guid}/subscription", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                OrganizationSubscriptionDto result = await sender.Send(new GetOrganizationSubscriptionQuery(id), ct);
+                return Results.Ok(result);
+            })
+            .RequirePlatformPermission("platform.subscription.read")
+            .Produces<OrganizationSubscriptionDto>(StatusCodes.Status200OK);
+
+        group.MapPatch("/{id:guid}/subscription", async (
+                Guid id,
+                ChangeOrganizationSubscriptionRequest request,
                 ISender sender,
                 ICurrentPlatformUserProvider currentUser,
                 IPlatformAuditLogRepository auditLog,
@@ -68,17 +94,283 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
-                ProvisionOrganizationResult result = await sender.Send(command, ct);
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(
+                    new ChangeOrganizationSubscriptionCommand(
+                        id, request.SubscriptionPackageVersionId, request.BillingCycle, request.AutoRenew),
+                    ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
                     clock.UtcNow,
                     actorPlatformUserId: currentUser.PlatformUserId,
-                    action: "platform.organization.created",
-                    targetType: "Tenant",
-                    targetId: result.TenantId.ToString(),
-                    tenantId: result.TenantId));
+                    action: "platform.subscription.changed",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/mark-past-due", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(new MarkOrganizationSubscriptionPastDueCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.marked-past-due",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/reactivate", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(new ReactivateOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.reactivated",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/restrict", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(new RestrictOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.restricted",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/cancel", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(new CancelOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.canceled",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/expire", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(new ExpireOrganizationSubscriptionCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.expired",
+                    targetType: "OrganizationSubscription",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/subscription/apply-billing-decision", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                ApplyOrganizationSubscriptionBillingDecisionResult result = await sender.Send(
+                    new ApplyOrganizationSubscriptionBillingDecisionCommand(id), ct);
+
+                if (result.TransitionApplied)
+                {
+                    auditLog.Add(PlatformAuditLogEntry.Record(
+                        clock.UtcNow,
+                        actorPlatformUserId: currentUser.PlatformUserId,
+                        action: "platform.subscription.billing-decision.applied",
+                        targetType: "OrganizationSubscription",
+                        targetId: result.SubscriptionId.ToString(),
+                        tenantId: id,
+                        metadata: JsonSerializer.Serialize(new
+                        {
+                            previousStatus = result.PreviousStatus,
+                            resultingStatus = result.ResultingStatus,
+                            recommendation = result.Recommendation,
+                            maxDaysOverdue = result.MaxDaysOverdue
+                        })));
+                    await unitOfWork.SaveChangesAsync(ct);
+                }
+
+                await transaction.CommitAsync(ct);
+
+                return Results.Ok(result);
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces<ApplyOrganizationSubscriptionBillingDecisionResult>(StatusCodes.Status200OK);
+
+        group.MapPost("/{id:guid}/subscription/invoices", async (
+                Guid id,
+                GenerateSubscriptionInvoiceRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                Guid invoiceId = await sender.Send(
+                    new GenerateSubscriptionInvoiceCommand(id, request.BillingPeriodStart), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.invoice.generated",
+                    targetType: "SubscriptionInvoice",
+                    targetId: invoiceId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.Ok(new GenerateSubscriptionInvoiceResponse(invoiceId));
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces<GenerateSubscriptionInvoiceResponse>(StatusCodes.Status200OK);
+
+        group.MapPost("/{id:guid}/subscription/invoices/{invoiceId:guid}/payments", async (
+                Guid id,
+                Guid invoiceId,
+                RecordSubscriptionPaymentRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                Guid paymentId = await sender.Send(
+                    new RecordSubscriptionPaymentCommand(
+                        id, invoiceId, request.Amount, request.Currency, request.PaymentDate,
+                        request.ReferenceNumber, request.Notes),
+                    ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.subscription.invoice.payment_recorded",
+                    targetType: "SubscriptionPayment",
+                    targetId: paymentId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.Ok(new RecordSubscriptionPaymentResponse(paymentId));
+            })
+            .RequirePlatformPermission("platform.subscription.manage")
+            .Produces<RecordSubscriptionPaymentResponse>(StatusCodes.Status200OK);
+
+        group.MapPost("/", async (
+                ProvisionOrganizationWithAdminCommand command,
+                ISender sender,
+                CancellationToken ct) =>
+            {
+                // The "platform.organization.created" audit record is written inside the handler
+                // itself, atomically with the tenant/admin mutation on its own tenant-scoped
+                // connection — see ProvisionOrganizationWithAdminCommandHandler's class doc comment
+                // (ADR-034 Task H-01). It cannot be written here through the ambient IUnitOfWork: that
+                // is a different connection than the one this mutation commits on.
+                ProvisionOrganizationResult result = await sender.Send(command, ct);
                 return Results.Ok(result);
             })
             .RequirePlatformPermission("platform.organization.create")
@@ -94,6 +386,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new UpdateOrganizationCommand(id, request.Name, request.Code), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -104,6 +398,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -119,6 +414,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new SuspendTenantCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -129,6 +426,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -144,6 +442,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ActivateTenantCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -154,6 +454,7 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
@@ -169,6 +470,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ReactivateOrganizationCommand(id), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -179,10 +482,39 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
             .RequirePlatformPermission("platform.organization.reactivate")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/close", async (
+                Guid id,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(new CloseOrganizationCommand(id), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.organization.closed",
+                    targetType: "Tenant",
+                    targetId: id.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.organization.close")
             .Produces(StatusCodes.Status204NoContent);
 
         group.MapPut("/{id:guid}/modules", async (
@@ -195,6 +527,8 @@ public static class PlatformOrganizationEndpoints
                 IClock clock,
                 CancellationToken ct) =>
             {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
                 await sender.Send(new ReplaceOrganizationModulesCommand(id, request.ModuleKeys), ct);
 
                 auditLog.Add(PlatformAuditLogEntry.Record(
@@ -205,10 +539,117 @@ public static class PlatformOrganizationEndpoints
                     targetId: id.ToString(),
                     tenantId: id));
                 await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 return Results.NoContent();
             })
             .RequirePlatformPermission("platform.organization.features.manage")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapGet("/{id:guid}/feature-overrides", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                List<TenantFeatureOverrideDto> result = await sender.Send(new GetOrganizationFeatureOverridesQuery(id), ct);
+                return Results.Ok(result);
+            })
+            .RequirePlatformPermission("platform.support.access")
+            .Produces<List<TenantFeatureOverrideDto>>(StatusCodes.Status200OK);
+
+        group.MapPost("/{id:guid}/feature-overrides", async (
+                Guid id,
+                CreateTenantFeatureOverrideRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                Guid actorId = currentUser.PlatformUserId ?? throw new UnauthorizedAccessException();
+
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                Guid overrideId = await sender.Send(
+                    new CreateTenantFeatureOverrideCommand(
+                        id, request.FeatureKey, request.Enabled, request.EffectiveFrom, request.EffectiveUntil,
+                        request.Reason, actorId),
+                    ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: actorId,
+                    action: "platform.feature-override.created",
+                    targetType: "TenantFeatureOverride",
+                    targetId: overrideId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.Ok(new CreateTenantFeatureOverrideResponse(overrideId));
+            })
+            .RequirePlatformPermission("platform.support.access")
+            .Produces<CreateTenantFeatureOverrideResponse>(StatusCodes.Status200OK);
+
+        group.MapPatch("/{id:guid}/feature-overrides/{overrideId:guid}", async (
+                Guid id,
+                Guid overrideId,
+                UpdateTenantFeatureOverrideRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(
+                    new UpdateTenantFeatureOverrideCommand(
+                        id, overrideId, request.Enabled, request.EffectiveFrom, request.EffectiveUntil, request.Reason),
+                    ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.feature-override.updated",
+                    targetType: "TenantFeatureOverride",
+                    targetId: overrideId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.support.access")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapPost("/{id:guid}/feature-overrides/{overrideId:guid}/end", async (
+                Guid id,
+                Guid overrideId,
+                EndTenantFeatureOverrideRequest request,
+                ISender sender,
+                ICurrentPlatformUserProvider currentUser,
+                IPlatformAuditLogRepository auditLog,
+                IUnitOfWork unitOfWork,
+                IClock clock,
+                CancellationToken ct) =>
+            {
+                await using IUnitOfWorkTransaction transaction = await unitOfWork.BeginTransactionAsync(ct);
+
+                await sender.Send(new EndTenantFeatureOverrideCommand(id, overrideId, request.EffectiveUntil), ct);
+
+                auditLog.Add(PlatformAuditLogEntry.Record(
+                    clock.UtcNow,
+                    actorPlatformUserId: currentUser.PlatformUserId,
+                    action: "platform.feature-override.ended",
+                    targetType: "TenantFeatureOverride",
+                    targetId: overrideId.ToString(),
+                    tenantId: id));
+                await unitOfWork.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Results.NoContent();
+            })
+            .RequirePlatformPermission("platform.support.access")
             .Produces(StatusCodes.Status204NoContent);
 
         return app;
@@ -218,3 +659,25 @@ public static class PlatformOrganizationEndpoints
 public sealed record UpdateOrganizationRequest(string Name, string? Code);
 
 public sealed record ReplaceOrganizationModulesRequest(IReadOnlyList<string> ModuleKeys);
+
+public sealed record ChangeOrganizationSubscriptionRequest(
+    Guid SubscriptionPackageVersionId, BillingCycle BillingCycle, bool AutoRenew);
+
+public sealed record GenerateSubscriptionInvoiceRequest(DateOnly BillingPeriodStart);
+
+public sealed record GenerateSubscriptionInvoiceResponse(Guid InvoiceId);
+
+public sealed record RecordSubscriptionPaymentRequest(
+    decimal Amount, string Currency, DateOnly PaymentDate, string ReferenceNumber, string? Notes);
+
+public sealed record RecordSubscriptionPaymentResponse(Guid PaymentId);
+
+public sealed record CreateTenantFeatureOverrideRequest(
+    string FeatureKey, bool Enabled, DateTimeOffset EffectiveFrom, DateTimeOffset? EffectiveUntil, string? Reason);
+
+public sealed record CreateTenantFeatureOverrideResponse(Guid Id);
+
+public sealed record UpdateTenantFeatureOverrideRequest(
+    bool Enabled, DateTimeOffset EffectiveFrom, DateTimeOffset? EffectiveUntil, string? Reason);
+
+public sealed record EndTenantFeatureOverrideRequest(DateTimeOffset EffectiveUntil);

@@ -1,8 +1,9 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 
 namespace MyCondo.Application.Features.Me.Queries.GetMyFlats;
 
-public sealed record GetMyFlatsQuery : IRequest<List<MyFlatDto>>;
+public sealed record GetMyFlatsQuery : IRequest<List<MyFlatDto>>, ILifecycleReadOperation;
 
 public sealed record MyFlatDto(
     Guid FlatId,

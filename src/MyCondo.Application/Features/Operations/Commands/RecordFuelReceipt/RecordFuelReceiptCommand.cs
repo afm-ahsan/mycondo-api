@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.RecordFuelReceipt;
@@ -10,4 +11,7 @@ public sealed record RecordFuelReceiptCommand(
     decimal? Cost,
     string? Supplier,
     string? Remarks
-) : IRequest<GeneratorFuelReceiptDto>;
+) : IRequest<GeneratorFuelReceiptDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "operations.generator";
+}

@@ -58,6 +58,7 @@ public class Mvp1ReportExportRolloutSmokeTests : IClassFixture<PostgresApiFactor
             phoneNumber = (string?)null,
         });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        await _factory.GrantFullEntitlementToAllTenantsAsync();
 
         AuthTokensDto? tokens = await response.Content.ReadFromJsonAsync<AuthTokensDto>(JsonOptions);
         tokens.Should().NotBeNull();

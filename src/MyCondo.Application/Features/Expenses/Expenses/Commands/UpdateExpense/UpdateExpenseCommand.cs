@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Expenses.Expenses.DTOs;
 
 namespace MyCondo.Application.Features.Expenses.Expenses.Commands.UpdateExpense;
@@ -17,4 +18,4 @@ public sealed record UpdateExpenseCommand(
     bool IsPaid,
     string PaymentMethod,
     string? Notes
-) : IRequest<ExpenseDto>;
+) : IRequest<ExpenseDto>, ILifecycleWriteOperation;

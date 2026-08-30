@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Residents.DTOs;
 
 namespace MyCondo.Application.Features.Residents.Commands.UpdateResident;
@@ -8,4 +9,4 @@ public sealed record UpdateResidentCommand(
     string FullName,
     string? Phone,
     string? Email
-) : IRequest<ResidentDto>;
+) : IRequest<ResidentDto>, ILifecycleWriteOperation;

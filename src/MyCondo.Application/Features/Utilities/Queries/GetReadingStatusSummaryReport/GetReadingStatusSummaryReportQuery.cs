@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Utilities.DTOs;
 
 namespace MyCondo.Application.Features.Utilities.Queries.GetReadingStatusSummaryReport;
@@ -6,4 +7,7 @@ namespace MyCondo.Application.Features.Utilities.Queries.GetReadingStatusSummary
 public sealed record GetReadingStatusSummaryReportQuery(
     Guid? BuildingId,
     string? UtilityType
-) : IRequest<IReadOnlyList<ReadingStatusSummaryLineDto>>;
+) : IRequest<IReadOnlyList<ReadingStatusSummaryLineDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "utilities.reports";
+}

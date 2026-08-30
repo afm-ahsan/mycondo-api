@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.ChartOfAccounts.DTOs;
 
 namespace MyCondo.Application.Features.Finance.ChartOfAccounts.Commands.CreateChartOfAccount;
@@ -10,4 +11,4 @@ public sealed record CreateChartOfAccountCommand(
     string NormalBalance,
     Guid? ParentAccountId,
     string? StatementGroup = null
-) : IRequest<ChartOfAccountDto>;
+) : IRequest<ChartOfAccountDto>, ILifecycleWriteOperation;

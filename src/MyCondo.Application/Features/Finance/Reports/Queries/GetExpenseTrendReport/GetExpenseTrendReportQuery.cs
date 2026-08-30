@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetExpenseTrendReport;
@@ -13,4 +14,4 @@ public sealed record ExpenseTrendReportDto(
 /// Trend needs no per-Expense dimension, so it is computed purely from ledger activity (no join back to
 /// the source Expense aggregate) via <c>IFinanceReportRepository.GetAccountMonthlyActivityAsync</c>, with
 /// the month-bucketing itself pushed to SQL.</summary>
-public sealed record GetExpenseTrendReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseTrendReportDto>;
+public sealed record GetExpenseTrendReportQuery(DateOnly FromDate, DateOnly ToDate) : IRequest<ExpenseTrendReportDto>, ILifecycleReadOperation;

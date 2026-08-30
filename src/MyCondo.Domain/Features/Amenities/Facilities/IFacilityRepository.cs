@@ -7,6 +7,11 @@ public interface IFacilityRepository
 {
     Task<Facility?> GetByIdAsync(FacilityId id, CancellationToken cancellationToken);
 
+    /// <summary>Thin projection backing ADR-033 Task 09A resource-derived feature resolution — returns
+    /// null (never the facility) when the id does not exist or is not owned by <paramref name="tenantId"/>,
+    /// so a cross-tenant id yields the same not-found outcome as a genuinely missing one.</summary>
+    Task<FacilityType?> GetFacilityTypeAsync(Guid tenantId, FacilityId id, CancellationToken cancellationToken);
+
     Task<PagedResult<Facility>> SearchAsync(
         Guid tenantId, BuildingId? buildingId, FacilityType? facilityType, int page, int pageSize, CancellationToken cancellationToken);
 

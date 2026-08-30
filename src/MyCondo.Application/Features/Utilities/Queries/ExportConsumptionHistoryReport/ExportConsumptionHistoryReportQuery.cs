@@ -6,4 +6,4 @@ namespace MyCondo.Application.Features.Utilities.Queries.ExportConsumptionHistor
 public sealed record ExportConsumptionHistoryReportQuery(
     Guid MeterId,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, ILifecycleReadOperation;

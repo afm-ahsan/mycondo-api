@@ -7,4 +7,4 @@ public sealed record ExportReceivablesAgeingReportQuery(
     Guid? BuildingId,
     DateOnly? AsOfDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, ILifecycleReadOperation;

@@ -13,4 +13,4 @@ public sealed record ExportFlatFinancialStatementQuery(
     DateOnly? FromDate,
     DateOnly? ToDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, ILifecycleReadOperation;

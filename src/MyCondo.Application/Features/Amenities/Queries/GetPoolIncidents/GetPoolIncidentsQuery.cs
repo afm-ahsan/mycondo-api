@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,7 @@ public sealed record GetPoolIncidentsQuery(
     Guid? FacilityId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<PoolIncidentDto>>;
+) : IRequest<PagedResult<PoolIncidentDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "facilities.swimming_pool";
+}

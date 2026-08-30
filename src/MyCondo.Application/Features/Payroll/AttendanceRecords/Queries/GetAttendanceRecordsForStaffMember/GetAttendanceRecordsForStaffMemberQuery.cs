@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Payroll.AttendanceRecords.DTOs;
 using MyCondo.Domain.Common;
 
@@ -8,4 +9,7 @@ public sealed record GetAttendanceRecordsForStaffMemberQuery(
     Guid StaffMemberId,
     int Page,
     int PageSize
-) : IRequest<PagedResult<AttendanceRecordDto>>;
+) : IRequest<PagedResult<AttendanceRecordDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "security.staff_attendance";
+}

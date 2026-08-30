@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.FinancialStatements.Notes;
 
 namespace MyCondo.Application.Features.Finance.FinancialStatements.Queries.GetIncomeExpenditureNotes;
@@ -12,4 +13,4 @@ public sealed record GetIncomeExpenditureNotesQuery(
     DateOnly StartDate,
     DateOnly EndDate,
     Guid? FundId,
-    IReadOnlyList<FinancialStatementNoteKey>? Notes) : IRequest<FinancialStatementNotesDto>;
+    IReadOnlyList<FinancialStatementNoteKey>? Notes) : IRequest<FinancialStatementNotesDto>, ILifecycleReadOperation;

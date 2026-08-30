@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Amenities.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,4 @@ public sealed record GetFacilitiesQuery(
     string? FacilityType,
     int Page,
     int PageSize
-) : IRequest<PagedResult<FacilityDto>>;
+) : IRequest<PagedResult<FacilityDto>>, ILifecycleReadOperation;

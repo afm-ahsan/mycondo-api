@@ -6,6 +6,8 @@ using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.RolePermissions;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
+using MyCondo.Domain.Features.Platform.FeatureCatalogue;
+using MyCondo.Domain.Features.Platform.OrganizationSubscriptions;
 using MyCondo.Domain.Features.Tenancy;
 using MyCondo.Infrastructure.Persistence;
 
@@ -20,11 +22,26 @@ namespace MyCondo.Infrastructure.Identity;
 /// building-scoped assignment contributes only to that building's set. A role held both ways
 /// contributes to both — that's correct, not a duplicate to dedupe away. See ADR-014.
 /// </summary>
-public sealed class UserContextResolver(MyCondoDbContext db, ITenantRepository tenants) : IUserContextResolver
+public sealed class UserContextResolver(
+    MyCondoDbContext db,
+    ITenantRepository tenants,
+    ITenantEntitlementService entitlements,
+    ITenantLifecycleAccessService tenantLifecycle,
+    ISubscriptionLifecycleAccessService subscriptionLifecycle
+) : IUserContextResolver
 {
     public async Task<AuthenticatedUserDto> ResolveAsync(User user, CancellationToken cancellationToken)
     {
         ResolvedContext context = await ResolveCoreAsync(user, cancellationToken);
+
+        IReadOnlyList<EffectiveEntitlement> effective =
+            await entitlements.GetEffectiveEntitlementDetails(user.TenantId, cancellationToken);
+        List<FeatureEntitlementDto> entitlementDtos = effective
+            .Select(e => new FeatureEntitlementDto(e.FeatureKey, e.Enabled, e.LimitValue))
+            .ToList();
+
+        (string lifecycleAccessMode, string? lifecycleReason) =
+            await ResolveLifecycleAccessAsync(user.TenantId, cancellationToken);
 
         return new AuthenticatedUserDto(
             UserId: user.Id.Value,
@@ -36,7 +53,37 @@ public sealed class UserContextResolver(MyCondoDbContext db, ITenantRepository t
             Permissions: context.TenantWidePermissions,
             BuildingIds: context.BuildingIds,
             BuildingPermissions: context.BuildingPermissions,
+            Entitlements: entitlementDtos,
+            LifecycleAccessMode: lifecycleAccessMode,
+            LifecycleReason: lifecycleReason,
             AvatarUrl: ResolveAvatarUrl(user));
+    }
+
+    // Reuses the same OrganizationLifecyclePolicy/SubscriptionLifecyclePolicy that
+    // TenantLifecycleBehavior applies per-request (ADR-032 Task 10), so the session carries the
+    // identical outcome instead of a second, divergent implementation (ADR-032 Task 11 §7). Called on
+    // every login and every refresh (both funnel through ResolveAsync), so a session established while
+    // Suspended/Closed/Restricted/Expired is always resolved fresh — never inherited stale from a prior
+    // token (ADR-032 Task 11 §34).
+    private async Task<(string Mode, string? Reason)> ResolveLifecycleAccessAsync(
+        Guid tenantId, CancellationToken ct)
+    {
+        TenantStatus organizationStatus = await tenantLifecycle.GetTenantStatusAsync(tenantId, ct);
+        if (!OrganizationLifecyclePolicy.AllowsAccess(organizationStatus))
+        {
+            return ("Denied", organizationStatus == TenantStatus.Closed ? "tenant_closed" : "tenant_suspended");
+        }
+
+        SubscriptionLifecycleAccess subscriptionAccess = await subscriptionLifecycle.GetAccessAsync(tenantId, ct);
+        if (subscriptionAccess.Mode == TenantAccessMode.Full)
+        {
+            return ("Full", null);
+        }
+
+        string reason = subscriptionAccess.SourceStatus == OrganizationSubscriptionStatus.Restricted
+            ? "subscription_restricted"
+            : "subscription_expired";
+        return ("ReadOnly", reason);
     }
 
     public async Task<UserProfileDto> ResolveProfileAsync(User user, CancellationToken cancellationToken)

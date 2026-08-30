@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.BankReconciliations.DTOs;
 
 namespace MyCondo.Application.Features.Finance.BankReconciliations.Commands.AddReconciliationAdjustment;
@@ -9,4 +10,7 @@ namespace MyCondo.Application.Features.Finance.BankReconciliations.Commands.AddR
 /// finite role vocabulary every other posting call site already uses; no new account types are
 /// introduced by this feature.</summary>
 public sealed record AddReconciliationAdjustmentCommand(
-    Guid BankStatementLineId, string OtherSideRole, string Description) : IRequest<BankStatementLineDto>;
+    Guid BankStatementLineId, string OtherSideRole, string Description) : IRequest<BankStatementLineDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "finance.bank_reconciliation";
+}

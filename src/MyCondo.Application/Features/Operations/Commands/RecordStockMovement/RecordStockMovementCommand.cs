@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Operations.DTOs;
 
 namespace MyCondo.Application.Features.Operations.Commands.RecordStockMovement;
@@ -12,4 +13,7 @@ public sealed record RecordStockMovementCommand(
     int Quantity,
     DateTimeOffset OccurredAtUtc,
     Guid? CylinderPurchaseId
-) : IRequest<CylinderStockMovementDto>;
+) : IRequest<CylinderStockMovementDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "operations.gas_cylinders";
+}

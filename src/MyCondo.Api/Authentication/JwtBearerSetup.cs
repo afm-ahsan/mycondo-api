@@ -15,6 +15,9 @@ public static class JwtBearerSetup
         services.AddOptions<JwtSettings>()
             .BindConfiguration(JwtSettings.SectionName)
             .ValidateDataAnnotations()
+            .Validate(
+                settings => settings.Audience != settings.PlatformAudience,
+                "Jwt:Audience and Jwt:PlatformAudience must be distinct — see mycondo-docs ADR-019.")
             .ValidateOnStart();
 
         // The tenant scheme stays the DEFAULT (JwtBearerDefaults.AuthenticationScheme, "Bearer") —

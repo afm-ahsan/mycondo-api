@@ -9,4 +9,7 @@ public sealed record ExportConsumptionSummaryReportQuery(
     DateOnly FromDate,
     DateOnly ToDate,
     ReportExportFormat Format
-) : IRequest<ReportExportResult>;
+) : IRequest<ReportExportResult>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "utilities.reports";
+}

@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 
 namespace MyCondo.Application.Features.Finance.Reports.Queries.GetResidentFinancialStatementReport;
@@ -35,4 +36,4 @@ public sealed record GetResidentFinancialStatementReportQuery(
     DateOnly? ToDate,
     int Page,
     int PageSize
-) : IRequest<ResidentFinancialStatementReportDto>;
+) : IRequest<ResidentFinancialStatementReportDto>, ILifecycleReadOperation;

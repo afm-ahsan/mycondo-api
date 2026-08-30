@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.FixedDeposits.DTOs;
 using MyCondo.Domain.Common;
 
@@ -9,4 +10,7 @@ public sealed record GetFixedDepositsForTenantQuery(
     Guid? FundId,
     Guid? FundingFinancialAccountId,
     int Page = 1,
-    int PageSize = 20) : IRequest<PagedResult<FixedDepositDto>>;
+    int PageSize = 20) : IRequest<PagedResult<FixedDepositDto>>, IRequiresFeature, ILifecycleReadOperation
+{
+    public string FeatureKey => "finance.fixed_deposits";
+}

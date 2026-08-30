@@ -10,6 +10,11 @@ public interface IReadingRepository
 {
     Task<Reading?> GetByIdAsync(ReadingId id, CancellationToken cancellationToken);
 
+    /// <summary>Thin projection backing ADR-033 Task 09A resource-derived feature resolution — returns
+    /// null (never the reading) when the id does not exist or is not owned by <paramref name="tenantId"/>,
+    /// so a cross-tenant id yields the same not-found outcome as a genuinely missing one.</summary>
+    Task<UtilityType?> GetUtilityTypeAsync(Guid tenantId, ReadingId id, CancellationToken cancellationToken);
+
     Task<PagedResult<Reading>> SearchAsync(
         Guid tenantId, MeterId? meterId, FlatId? flatId, ReadingStatus? status, int page, int pageSize,
         CancellationToken cancellationToken);

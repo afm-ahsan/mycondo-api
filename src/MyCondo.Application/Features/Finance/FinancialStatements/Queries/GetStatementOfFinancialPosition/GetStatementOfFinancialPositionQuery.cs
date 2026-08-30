@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Finance.Reports.Contracts;
 using MyCondo.Domain.Features.Finance.ChartOfAccounts;
 
@@ -52,4 +53,4 @@ public sealed record StatementOfFinancialPositionDto(
 /// <summary>As-of-date Balance Sheet. <see cref="AsOfDate"/> defaults to today (tenant clock) when
 /// omitted; <see cref="FundId"/> omitted means "All Funds".</summary>
 public sealed record GetStatementOfFinancialPositionQuery(DateOnly? AsOfDate, Guid? FundId)
-    : IRequest<StatementOfFinancialPositionDto>;
+    : IRequest<StatementOfFinancialPositionDto>, ILifecycleReadOperation;

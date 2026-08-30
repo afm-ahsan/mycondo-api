@@ -1,4 +1,5 @@
 using Mediator;
+using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Features.Amenities.DTOs;
 
 namespace MyCondo.Application.Features.Amenities.Commands.CheckInPoolSession;
@@ -11,4 +12,7 @@ public sealed record CheckInPoolSessionCommand(
     Guid? AccompaniedBySessionId,
     bool SafetyAcknowledged,
     string? OverrideReason
-) : IRequest<PoolSessionDto>;
+) : IRequest<PoolSessionDto>, IRequiresFeature, ILifecycleWriteOperation
+{
+    public string FeatureKey => "facilities.swimming_pool";
+}
