@@ -70,6 +70,7 @@ app.MapExpenseCategoryEndpoints();
 app.MapExpenseTypeEndpoints();
 app.MapExpenseEndpoints();
 app.MapMeEndpoints();
+app.MapSubscriptionEndpoints();
 app.MapAttachmentEndpoints();
 app.MapGuestEndpoints();
 app.MapVehicleEndpoints();
