@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Users;
 
 namespace MyCondo.Application.Features.Users.Commands.EnableUser;
@@ -11,6 +12,8 @@ public sealed class EnableUserCommandHandler(
     IUserRepository users,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
+    ITenantAdminProtectionService tenantAdminProtection,
+    IIdentityAuditLogRepository identityAuditLog,
     IClock clock,
     ILogger<EnableUserCommandHandler> logger
 ) : IRequestHandler<EnableUserCommand>
@@ -31,7 +34,18 @@ public sealed class EnableUserCommandHandler(
             throw new NotFoundException(nameof(User), command.UserId);
         }
 
-        user.Activate(clock.UtcNow);
+        // mycondo-docs ADR-035 — re-activating never reduces the tenant's active-admin count, so no
+        // last-admin check here, only the target-privilege composition (self always allowed).
+        if (await tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(tenantId, userId, cancellationToken))
+        {
+            tenantAdminProtection.EnsureCanEditAdminTarget(
+                userId.Value, currentUser.UserId ?? Guid.Empty, currentUser.HasPermission("user.manageTenantAdmins"));
+        }
+
+        DateTimeOffset nowUtc = clock.UtcNow;
+        user.Activate(nowUtc);
+        identityAuditLog.Add(IdentityAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "User.Activate", nameof(User), userId.Value.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("User {UserId} enabled for tenant {TenantId}", userId, tenantId);

@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Roles.Commands.RevokeRoleFromUser;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
@@ -27,14 +28,18 @@ public class RevokeRoleFromUserCommandHandlerTests
     private readonly IRoleAssignmentRepository _roleAssignments = Substitute.For<IRoleAssignmentRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
+    private readonly ITenantAdminProtectionService _tenantAdminProtection = Substitute.For<ITenantAdminProtectionService>();
+    private readonly IIdentityAuditLogRepository _identityAuditLog = Substitute.For<IIdentityAuditLogRepository>();
+    private readonly IClock _clock = Substitute.For<IClock>();
 
     public RevokeRoleFromUserCommandHandlerTests()
     {
         _currentUser.TenantId.Returns(TenantId);
+        _clock.UtcNow.Returns(Now);
     }
 
     private RevokeRoleFromUserCommandHandler CreateHandler() => new(
-        _roles, _users, _roleAssignments, _unitOfWork, _currentUser,
+        _roles, _users, _roleAssignments, _unitOfWork, _currentUser, _tenantAdminProtection, _identityAuditLog, _clock,
         Substitute.For<ILogger<RevokeRoleFromUserCommandHandler>>());
 
     private static Role SystemRole() => Role.CreateSystem(RoleId.New(), TenantId, "SuperAdmin", "Full access", Now);
@@ -51,7 +56,7 @@ public class RevokeRoleFromUserCommandHandlerTests
         _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
-        _roleAssignments.CountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(1);
+        _roleAssignments.LockAndCountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(1);
 
         Func<Task> act = () => CreateHandler().Handle(
             new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None).AsTask();
@@ -71,7 +76,7 @@ public class RevokeRoleFromUserCommandHandlerTests
         _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
-        _roleAssignments.CountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(2);
+        _roleAssignments.LockAndCountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(2);
 
         await CreateHandler().Handle(new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None);
 
@@ -96,6 +101,6 @@ public class RevokeRoleFromUserCommandHandlerTests
         await CreateHandler().Handle(new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, buildingId), CancellationToken.None);
 
         _roleAssignments.Received(1).Remove(assignment);
-        await _roleAssignments.DidNotReceive().CountTenantWideHoldersAsync(Arg.Any<Guid>(), Arg.Any<RoleId>(), Arg.Any<CancellationToken>());
+        await _roleAssignments.DidNotReceive().LockAndCountTenantWideHoldersAsync(Arg.Any<Guid>(), Arg.Any<RoleId>(), Arg.Any<CancellationToken>());
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Users;
 
 namespace MyCondo.Application.Features.Users.Commands.CreateUser;
@@ -12,6 +13,7 @@ public sealed class CreateUserCommandHandler(
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
     IPasswordHasher passwordHasher,
+    IIdentityAuditLogRepository identityAuditLog,
     IClock clock,
     ILogger<CreateUserCommandHandler> logger
 ) : IRequestHandler<CreateUserCommand, CreateUserResult>
@@ -48,6 +50,8 @@ public sealed class CreateUserCommandHandler(
         }
 
         users.Add(user);
+        identityAuditLog.Add(IdentityAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "User.Create", nameof(User), user.Id.Value.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("User {UserId} created by administrator for tenant {TenantId}", user.Id, tenantId);

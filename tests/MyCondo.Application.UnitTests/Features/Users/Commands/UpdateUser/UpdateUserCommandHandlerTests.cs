@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Users.Commands.UpdateUser;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Users;
 using NSubstitute;
 
@@ -18,6 +19,8 @@ public class UpdateUserCommandHandlerTests
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
+    private readonly ITenantAdminProtectionService _tenantAdminProtection = Substitute.For<ITenantAdminProtectionService>();
+    private readonly IIdentityAuditLogRepository _identityAuditLog = Substitute.For<IIdentityAuditLogRepository>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
     public UpdateUserCommandHandlerTests()
@@ -27,7 +30,8 @@ public class UpdateUserCommandHandlerTests
     }
 
     private UpdateUserCommandHandler CreateHandler() => new(
-        _users, _unitOfWork, _currentUser, _clock, Substitute.For<ILogger<UpdateUserCommandHandler>>());
+        _users, _unitOfWork, _currentUser, _tenantAdminProtection, _identityAuditLog, _clock,
+        Substitute.For<ILogger<UpdateUserCommandHandler>>());
 
     private static User RegisterUser(Guid tenantId) => User.Register(
         tenantId, "member@example.com", "hash", "Original Name", null, NowUtc);
