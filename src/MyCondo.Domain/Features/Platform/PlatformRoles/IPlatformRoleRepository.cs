@@ -6,5 +6,7 @@ public interface IPlatformRoleRepository
 
     Task<PlatformRole?> GetByNameAsync(string name, CancellationToken cancellationToken);
 
+    Task<List<PlatformRole>> GetAllAsync(CancellationToken cancellationToken);
+
     void Add(PlatformRole platformRole);
 }
