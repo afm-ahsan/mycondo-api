@@ -34,7 +34,10 @@ public class OccupancyRegistrationSearchFilterTests : IClassFixture<MultiTenancy
 
     private static async Task<FlatId> SeedFlatAsync(MyCondoDbContext db, Guid tenantId, string flatNumber)
     {
-        Building building = Building.Create(tenantId, "Tower A", "TA", null, DateTimeOffset.UtcNow);
+        // Building name and code must be tenant-unique; derive them from the flat number so tests
+        // that seed multiple flats for the same tenant don't collide on shared hardcoded values.
+        Building building = Building.Create(
+            tenantId, $"Tower {flatNumber}", $"TA-{flatNumber}", null, DateTimeOffset.UtcNow);
         Flat flat = Flat.Create(tenantId, building.Id, flatNumber, null, FlatType.Residential, DateTimeOffset.UtcNow);
         db.Set<Building>().Add(building);
         db.Set<Flat>().Add(flat);
@@ -124,7 +127,7 @@ public class OccupancyRegistrationSearchFilterTests : IClassFixture<MultiTenancy
 
         OccupancyRegistration draft = MakeRegistration(tenantId, flatId, "Karim Ahmed", null, null);
         OccupancyRegistration submitted = MakeRegistration(tenantId, flatId, "Karim Ahmed", null, null);
-        submitted.UpdateDraft("Karim Ahmed", null, null, "1234567890123", DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-30)), "Male", null, null, null, null, null, null, null, null, null, null, null);
+        submitted.UpdateDraft("Karim Ahmed", null, null, null, "1234567890123", DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-30)), "Male", null, null, null, null, null, null, null, null, null, null, null, null, null);
         submitted.Submit(null, DateTimeOffset.UtcNow);
         db.Set<OccupancyRegistration>().AddRange(draft, submitted);
         await db.SaveChangesAsync();
