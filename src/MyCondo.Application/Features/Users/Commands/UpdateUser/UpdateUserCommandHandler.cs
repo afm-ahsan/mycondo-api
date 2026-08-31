@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Users;
 
 namespace MyCondo.Application.Features.Users.Commands.UpdateUser;
@@ -11,6 +12,8 @@ public sealed class UpdateUserCommandHandler(
     IUserRepository users,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
+    ITenantAdminProtectionService tenantAdminProtection,
+    IIdentityAuditLogRepository identityAuditLog,
     IClock clock,
     ILogger<UpdateUserCommandHandler> logger
 ) : IRequestHandler<UpdateUserCommand>
@@ -31,7 +34,18 @@ public sealed class UpdateUserCommandHandler(
             throw new NotFoundException(nameof(User), command.UserId);
         }
 
-        user.UpdateProfile(command.FullName, command.PhoneNumber, clock.UtcNow);
+        // mycondo-docs ADR-036 — a Tenant Admin may always edit its own profile; a lower-privileged
+        // actor may never edit another Tenant Admin's profile.
+        if (await tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(tenantId, userId, cancellationToken))
+        {
+            tenantAdminProtection.EnsureCanEditAdminTarget(
+                userId.Value, currentUser.UserId ?? Guid.Empty, currentUser.HasPermission("user.manageTenantAdmins"));
+        }
+
+        DateTimeOffset nowUtc = clock.UtcNow;
+        user.UpdateProfile(command.FullName, command.PhoneNumber, nowUtc);
+        identityAuditLog.Add(IdentityAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "User.Update", nameof(User), userId.Value.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("User {UserId} updated for tenant {TenantId}", userId, tenantId);

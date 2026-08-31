@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Roles.Commands.RevokeRoleFromUser;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
@@ -27,14 +28,18 @@ public class RevokeRoleFromUserCommandHandlerTests
     private readonly IRoleAssignmentRepository _roleAssignments = Substitute.For<IRoleAssignmentRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
+    private readonly ITenantAdminProtectionService _tenantAdminProtection = Substitute.For<ITenantAdminProtectionService>();
+    private readonly IIdentityAuditLogRepository _identityAuditLog = Substitute.For<IIdentityAuditLogRepository>();
+    private readonly IClock _clock = Substitute.For<IClock>();
 
     public RevokeRoleFromUserCommandHandlerTests()
     {
         _currentUser.TenantId.Returns(TenantId);
+        _clock.UtcNow.Returns(Now);
     }
 
     private RevokeRoleFromUserCommandHandler CreateHandler() => new(
-        _roles, _users, _roleAssignments, _unitOfWork, _currentUser,
+        _roles, _users, _roleAssignments, _unitOfWork, _currentUser, _tenantAdminProtection, _identityAuditLog, _clock,
         Substitute.For<ILogger<RevokeRoleFromUserCommandHandler>>());
 
     private static Role SystemRole() => Role.CreateSystem(RoleId.New(), TenantId, "SuperAdmin", "Full access", Now);
@@ -51,7 +56,7 @@ public class RevokeRoleFromUserCommandHandlerTests
         _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
-        _roleAssignments.CountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(1);
+        _roleAssignments.LockAndCountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(1);
 
         Func<Task> act = () => CreateHandler().Handle(
             new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None).AsTask();
@@ -71,12 +76,105 @@ public class RevokeRoleFromUserCommandHandlerTests
         _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
-        _roleAssignments.CountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(2);
+        _roleAssignments.LockAndCountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(2);
 
         await CreateHandler().Handle(new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None);
 
         _roleAssignments.Received(1).Remove(assignment);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_Forbidden_When_Actor_Attempts_To_Self_Revoke_An_Admin_Equivalent_Role()
+    {
+        // mycondo-docs ADR-036 — revoking an admin-equivalent role from oneself is self-demotion and is
+        // always rejected via EnsureCanMutateAdminTarget's self-protection, even with manageTenantAdmins.
+        Role role = SystemRole();
+        User user = AUser();
+        RoleAssignment assignment = RoleAssignment.Grant(TenantId, user.Id, role.Id, null, Now);
+
+        _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
+        _tenantAdminProtection.IsTenantAdminEquivalent(role).Returns(true);
+        _currentUser.UserId.Returns(user.Id.Value);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanMutateAdminTarget(user.Id.Value, user.Id.Value, Arg.Any<bool>()))
+            .Do(_ => throw new ForbiddenException("You cannot perform this action on your own account."));
+
+        Func<Task> act = () => CreateHandler().Handle(
+            new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None).AsTask();
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _roleAssignments.DidNotReceive().Remove(Arg.Any<RoleAssignment>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_Forbidden_When_Lower_Privileged_Actor_Revokes_An_Admin_Equivalent_Role_From_Another_User()
+    {
+        Role role = SystemRole();
+        User user = AUser();
+        RoleAssignment assignment = RoleAssignment.Grant(TenantId, user.Id, role.Id, null, Now);
+
+        _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
+        _tenantAdminProtection.IsTenantAdminEquivalent(role).Returns(true);
+        _currentUser.UserId.Returns(Guid.NewGuid());
+        _currentUser.HasPermission("user.manageTenantAdmins").Returns(false);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanMutateAdminTarget(user.Id.Value, Arg.Any<Guid>(), false))
+            .Do(_ => throw new ForbiddenException("Only a Tenant Admin can manage another Tenant Admin's account."));
+
+        Func<Task> act = () => CreateHandler().Handle(
+            new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None).AsTask();
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _roleAssignments.DidNotReceive().Remove(Arg.Any<RoleAssignment>());
+        await _roleAssignments.DidNotReceive().LockAndCountTenantWideHoldersAsync(
+            Arg.Any<Guid>(), Arg.Any<RoleId>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Succeeds_When_Actor_With_ManageTenantAdmins_Revokes_An_Admin_Role_From_Another_User_With_A_Holder_Remaining()
+    {
+        Role role = SystemRole();
+        User user = AUser();
+        RoleAssignment assignment = RoleAssignment.Grant(TenantId, user.Id, role.Id, null, Now);
+
+        _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
+        _roleAssignments.LockAndCountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(2);
+        _tenantAdminProtection.IsTenantAdminEquivalent(role).Returns(true);
+        _currentUser.UserId.Returns(Guid.NewGuid());
+        _currentUser.HasPermission("user.manageTenantAdmins").Returns(true);
+
+        await CreateHandler().Handle(new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None);
+
+        _roleAssignments.Received(1).Remove(assignment);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Does_Not_Consult_Admin_Protection_When_Revoking_A_Non_Admin_Equivalent_Role()
+    {
+        Role role = SystemRole();
+        User user = AUser();
+        RoleAssignment assignment = RoleAssignment.Grant(TenantId, user.Id, role.Id, null, Now);
+
+        _roles.GetByIdAsync(role.Id, Arg.Any<CancellationToken>()).Returns(role);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _roleAssignments.GetAsync(TenantId, user.Id, role.Id, null, Arg.Any<CancellationToken>()).Returns(assignment);
+        _roleAssignments.LockAndCountTenantWideHoldersAsync(TenantId, role.Id, Arg.Any<CancellationToken>()).Returns(2);
+        _tenantAdminProtection.IsTenantAdminEquivalent(role).Returns(false);
+
+        await CreateHandler().Handle(new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, null), CancellationToken.None);
+
+        _tenantAdminProtection.DidNotReceive().EnsureCanMutateAdminTarget(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>());
+        _roleAssignments.Received(1).Remove(assignment);
     }
 
     [Fact]
@@ -96,6 +194,6 @@ public class RevokeRoleFromUserCommandHandlerTests
         await CreateHandler().Handle(new RevokeRoleFromUserCommand(role.Id.Value, user.Id.Value, buildingId), CancellationToken.None);
 
         _roleAssignments.Received(1).Remove(assignment);
-        await _roleAssignments.DidNotReceive().CountTenantWideHoldersAsync(Arg.Any<Guid>(), Arg.Any<RoleId>(), Arg.Any<CancellationToken>());
+        await _roleAssignments.DidNotReceive().LockAndCountTenantWideHoldersAsync(Arg.Any<Guid>(), Arg.Any<RoleId>(), Arg.Any<CancellationToken>());
     }
 }

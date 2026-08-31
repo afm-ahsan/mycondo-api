@@ -258,5 +258,23 @@ public static class PermissionCatalogue
         ("finance.reconciliation.view", "View bank reconciliations", "finance", false),
         ("finance.reconciliation.manage", "Start a bank reconciliation and add/match/exclude/adjust its statement lines", "finance", false),
         ("finance.reconciliation.reconcile", "Complete a bank reconciliation", "finance", false),
+
+        // Privileged User Visibility, Role Protection & Administrative Actions (mycondo-docs ADR-036).
+        // Platform Users — the operator-account CRUD/role-assignment slice, additive to the existing
+        // platform.organization.*/platform.subscription.*/etc. entries above. manageSuperAdmins is the
+        // privileged-target composition permission: required, in addition to the base view/create/update/
+        // deactivate action permission, whenever the target of a mutation is itself a Platform Super
+        // Admin — see PlatformSuperAdminProtectionService.
+        ("platform.user.view", "View Platform operator accounts", "platform", false),
+        ("platform.user.create", "Create Platform operator accounts", "platform", false),
+        ("platform.user.update", "Update Platform operator accounts", "platform", false),
+        ("platform.user.deactivate", "Deactivate/reactivate Platform operator accounts", "platform", false),
+        ("platform.user.manageSuperAdmins", "Create, edit, deactivate, or change role membership for a Platform Super Admin", "platform", false),
+
+        // Tenant Users — reuses the existing user.view/create/update/disable action permissions;
+        // manageTenantAdmins is the equivalent privileged-target composition permission for the tenant
+        // scope, required whenever the target of a mutation holds a tenant-wide admin-equivalent system
+        // role (legacy SuperAdmin or OrganizationAdmin) — see TenantAdminProtectionService.
+        ("user.manageTenantAdmins", "Create, edit, deactivate, or change role membership for a Tenant/Organization Admin", "user", false),
     ];
 }

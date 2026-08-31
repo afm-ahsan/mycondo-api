@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Users.Commands.UpdateUser;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Users;
 using NSubstitute;
 
@@ -18,6 +19,8 @@ public class UpdateUserCommandHandlerTests
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
+    private readonly ITenantAdminProtectionService _tenantAdminProtection = Substitute.For<ITenantAdminProtectionService>();
+    private readonly IIdentityAuditLogRepository _identityAuditLog = Substitute.For<IIdentityAuditLogRepository>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
     public UpdateUserCommandHandlerTests()
@@ -27,7 +30,8 @@ public class UpdateUserCommandHandlerTests
     }
 
     private UpdateUserCommandHandler CreateHandler() => new(
-        _users, _unitOfWork, _currentUser, _clock, Substitute.For<ILogger<UpdateUserCommandHandler>>());
+        _users, _unitOfWork, _currentUser, _tenantAdminProtection, _identityAuditLog, _clock,
+        Substitute.For<ILogger<UpdateUserCommandHandler>>());
 
     private static User RegisterUser(Guid tenantId) => User.Register(
         tenantId, "member@example.com", "hash", "Original Name", null, NowUtc);
@@ -72,5 +76,45 @@ public class UpdateUserCommandHandlerTests
         Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Allows_A_Tenant_Admin_To_Edit_Its_Own_Profile_Without_ManageTenantAdmins()
+    {
+        Guid actorId = Guid.NewGuid();
+        User user = RegisterUser(TenantId);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _currentUser.UserId.Returns(actorId);
+        _tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(TenantId, user.Id, Arg.Any<CancellationToken>()).Returns(true);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanEditAdminTarget(user.Id.Value, actorId, Arg.Any<bool>()))
+            .Do(_ => { });
+
+        UpdateUserCommand command = new(user.Id.Value, "Self Updated", null);
+
+        await CreateHandler().Handle(command, CancellationToken.None);
+
+        user.FullName.Should().Be("Self Updated");
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_Forbidden_When_Lower_Privileged_Actor_Edits_A_Tenant_Admin()
+    {
+        User user = RegisterUser(TenantId);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _currentUser.UserId.Returns(Guid.NewGuid());
+        _tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(TenantId, user.Id, Arg.Any<CancellationToken>()).Returns(true);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanEditAdminTarget(user.Id.Value, Arg.Any<Guid>(), false))
+            .Do(_ => throw new ForbiddenException("Only a Tenant Admin can manage another Tenant Admin's account."));
+
+        UpdateUserCommand command = new(user.Id.Value, "Attempted Update", null);
+
+        Func<Task> act = () => CreateHandler().Handle(command, CancellationToken.None).AsTask();
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        user.FullName.Should().Be("Original Name");
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

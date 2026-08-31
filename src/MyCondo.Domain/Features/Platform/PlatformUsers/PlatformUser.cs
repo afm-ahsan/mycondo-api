@@ -81,4 +81,43 @@ public sealed class PlatformUser : AggregateRoot<PlatformUserId>, IAuditable
         Version++;
         UpdatedAtUtc = nowUtc;
     }
+
+    public void Deactivate(DateTimeOffset nowUtc)
+    {
+        if (Status == PlatformUserStatus.Disabled)
+        {
+            return;
+        }
+
+        Status = PlatformUserStatus.Disabled;
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    public void Activate(DateTimeOffset nowUtc)
+    {
+        if (Status == PlatformUserStatus.Active)
+        {
+            return;
+        }
+
+        Status = PlatformUserStatus.Active;
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    public void ChangeDisplayName(string newDisplayName, DateTimeOffset nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newDisplayName);
+
+        string trimmed = newDisplayName.Trim();
+        if (string.Equals(DisplayName, trimmed, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        DisplayName = trimmed;
+        Version++;
+        UpdatedAtUtc = nowUtc;
+    }
 }

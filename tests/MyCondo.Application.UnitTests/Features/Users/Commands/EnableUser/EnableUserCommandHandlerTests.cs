@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Users.Commands.EnableUser;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Users;
 using NSubstitute;
 
@@ -18,6 +19,8 @@ public class EnableUserCommandHandlerTests
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
+    private readonly ITenantAdminProtectionService _tenantAdminProtection = Substitute.For<ITenantAdminProtectionService>();
+    private readonly IIdentityAuditLogRepository _identityAuditLog = Substitute.For<IIdentityAuditLogRepository>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
     public EnableUserCommandHandlerTests()
@@ -27,7 +30,8 @@ public class EnableUserCommandHandlerTests
     }
 
     private EnableUserCommandHandler CreateHandler() => new(
-        _users, _unitOfWork, _currentUser, _clock, Substitute.For<ILogger<EnableUserCommandHandler>>());
+        _users, _unitOfWork, _currentUser, _tenantAdminProtection, _identityAuditLog, _clock,
+        Substitute.For<ILogger<EnableUserCommandHandler>>());
 
     private static User RegisterDeactivatedUser(Guid tenantId)
     {
@@ -61,6 +65,44 @@ public class EnableUserCommandHandlerTests
         Func<Task> act = async () => await CreateHandler().Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Allows_A_Tenant_Admin_To_Self_Reactivate_Without_ManageTenantAdmins()
+    {
+        // mycondo-docs ADR-036 — re-activation never reduces the active-admin count, so unlike
+        // deactivation, self-action here is always permitted, even without the composition permission.
+        Guid actorId = Guid.NewGuid();
+        User user = RegisterDeactivatedUser(TenantId);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _currentUser.UserId.Returns(actorId);
+        _tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(TenantId, user.Id, Arg.Any<CancellationToken>()).Returns(true);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanEditAdminTarget(user.Id.Value, actorId, Arg.Any<bool>()))
+            .Do(_ => { });
+
+        await CreateHandler().Handle(new EnableUserCommand(user.Id.Value), CancellationToken.None);
+
+        user.Status.Should().Be(UserStatus.Active);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_Forbidden_When_Lower_Privileged_Actor_Reactivates_A_Tenant_Admin()
+    {
+        User user = RegisterDeactivatedUser(TenantId);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _currentUser.UserId.Returns(Guid.NewGuid());
+        _tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(TenantId, user.Id, Arg.Any<CancellationToken>()).Returns(true);
+        _tenantAdminProtection
+            .When(p => p.EnsureCanEditAdminTarget(user.Id.Value, Arg.Any<Guid>(), false))
+            .Do(_ => throw new ForbiddenException("Only a Tenant Admin can manage another Tenant Admin's account."));
+
+        Func<Task> act = () => CreateHandler().Handle(new EnableUserCommand(user.Id.Value), CancellationToken.None).AsTask();
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        user.Status.Should().Be(UserStatus.Inactive);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

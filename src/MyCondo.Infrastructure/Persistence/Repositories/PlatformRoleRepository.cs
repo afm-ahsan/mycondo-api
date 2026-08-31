@@ -11,5 +11,8 @@ public sealed class PlatformRoleRepository(MyCondoDbContext db) : IPlatformRoleR
     public Task<PlatformRole?> GetByNameAsync(string name, CancellationToken cancellationToken) =>
         db.Set<PlatformRole>().FirstOrDefaultAsync(r => r.Name == name, cancellationToken);
 
+    public Task<List<PlatformRole>> GetAllAsync(CancellationToken cancellationToken) =>
+        db.Set<PlatformRole>().AsNoTracking().OrderBy(r => r.Name).ToListAsync(cancellationToken);
+
     public void Add(PlatformRole platformRole) => db.Set<PlatformRole>().Add(platformRole);
 }

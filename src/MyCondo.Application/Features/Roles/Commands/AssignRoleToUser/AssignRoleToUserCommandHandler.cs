@@ -1,8 +1,10 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
 using MyCondo.Domain.Features.Identity.Roles;
 using MyCondo.Domain.Features.Identity.Users;
@@ -17,6 +19,8 @@ public sealed class AssignRoleToUserCommandHandler(
     IRoleAssignmentRepository roleAssignments,
     IUnitOfWork unitOfWork,
     ICurrentUserProvider currentUser,
+    ITenantAdminProtectionService tenantAdminProtection,
+    IIdentityAuditLogRepository identityAuditLog,
     IClock clock,
     ILogger<AssignRoleToUserCommandHandler> logger
 ) : IRequestHandler<AssignRoleToUserCommand>
@@ -35,6 +39,14 @@ public sealed class AssignRoleToUserCommandHandler(
         if (role.TenantId != tenantId)
         {
             throw new NotFoundException(nameof(Role), command.RoleId);
+        }
+
+        // mycondo-docs ADR-036 — granting a tenant-wide, admin-equivalent role is itself a privileged
+        // mutation regardless of who the target is (including self-promotion), so it requires
+        // manageTenantAdmins on top of the base role.manage action permission.
+        if (tenantAdminProtection.IsTenantAdminEquivalent(role) && !currentUser.HasPermission("user.manageTenantAdmins"))
+        {
+            throw new ForbiddenException("Only a Tenant Admin can grant an admin-equivalent role.");
         }
 
         // Phase-2 scope enforcement (mycondo-docs ADR-020) — null means "no constraint," preserving
@@ -77,10 +89,14 @@ public sealed class AssignRoleToUserCommandHandler(
             throw new ConflictException($"User already has role '{role.Name}' for this scope.");
         }
 
+        DateTimeOffset nowUtc = clock.UtcNow;
         RoleAssignment assignment = RoleAssignment.Grant(
-            tenantId, userId, roleId, command.BuildingId, clock.UtcNow);
+            tenantId, userId, roleId, command.BuildingId, nowUtc);
 
         roleAssignments.Add(assignment);
+        identityAuditLog.Add(IdentityAuditLogEntry.Record(
+            tenantId, nowUtc, currentUser.UserId, "User.Role.Assign", nameof(User), userId.Value.ToString(),
+            metadata: JsonSerializer.Serialize(new { roleId = roleId.Value, roleName = role.Name, buildingId = command.BuildingId })));
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

@@ -27,6 +27,7 @@ using MyCondo.Domain.Features.Finance.FinancialYears;
 using MyCondo.Domain.Features.Finance.FixedDeposits;
 using MyCondo.Domain.Features.Finance.Funds;
 using MyCondo.Domain.Features.Finance.Reports;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Permissions;
 using MyCondo.Domain.Features.Identity.RefreshTokens;
 using MyCondo.Domain.Features.Identity.RoleAssignments;
@@ -245,6 +246,7 @@ public static class DependencyInjection
         services.AddScoped<IFinanceReportRepository, FinanceReportRepository>();
         services.AddScoped<IFinancialStatementNoteRepository, FinancialStatementNoteRepository>();
         services.AddScoped<IFinanceAuditLogRepository, FinanceAuditLogRepository>();
+        services.AddScoped<IIdentityAuditLogRepository, IdentityAuditLogRepository>();
         services.AddScoped<IBankReconciliationRepository, BankReconciliationRepository>();
         services.AddScoped<IBankStatementLineRepository, BankStatementLineRepository>();
         services.AddScoped<IFinanceIntegrityRepository, FinanceIntegrityRepository>();

@@ -4,6 +4,7 @@ using MyCondo.Application.Common.Abstractions;
 using MyCondo.Application.Common.Exceptions;
 using MyCondo.Application.Features.Users.Commands.CreateUser;
 using MyCondo.Domain.Abstractions;
+using MyCondo.Domain.Features.Identity.Audit;
 using MyCondo.Domain.Features.Identity.Users;
 using NSubstitute;
 
@@ -18,6 +19,7 @@ public class CreateUserCommandHandlerTests
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IPasswordHasher _passwordHasher = Substitute.For<IPasswordHasher>();
+    private readonly IIdentityAuditLogRepository _identityAuditLog = Substitute.For<IIdentityAuditLogRepository>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
     public CreateUserCommandHandlerTests()
@@ -28,7 +30,7 @@ public class CreateUserCommandHandlerTests
     }
 
     private CreateUserCommandHandler CreateHandler() => new(
-        _users, _unitOfWork, _currentUser, _passwordHasher, _clock,
+        _users, _unitOfWork, _currentUser, _passwordHasher, _identityAuditLog, _clock,
         Substitute.For<ILogger<CreateUserCommandHandler>>());
 
     [Fact]
