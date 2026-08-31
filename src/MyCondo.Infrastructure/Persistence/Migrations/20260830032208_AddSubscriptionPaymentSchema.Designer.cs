@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 [DbContext(typeof(MyCondoDbContext))]
-[Migration("20260830032208_Add_SubscriptionPaymentSchema")]
-partial class Add_SubscriptionPaymentSchema
+[Migration("20260830032208_AddSubscriptionPaymentSchema")]
+partial class AddSubscriptionPaymentSchema
 {
     /// <inheritdoc />
     protected override void BuildTargetModel(ModelBuilder modelBuilder)

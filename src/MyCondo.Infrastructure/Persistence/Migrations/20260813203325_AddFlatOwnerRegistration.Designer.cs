@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyCondo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(MyCondoDbContext))]
-    [Migration("20260813203325_Add_FlatOwner_Registration")]
-    partial class Add_FlatOwner_Registration
+    [Migration("20260813203325_AddFlatOwnerRegistration")]
+    partial class AddFlatOwnerRegistration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

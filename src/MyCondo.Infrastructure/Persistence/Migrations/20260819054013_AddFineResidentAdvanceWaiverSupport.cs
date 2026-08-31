@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MyCondo.Infrastructure.Persistence.Migrations;
     /// <inheritdoc />
-    public partial class Add_Fine_ResidentAdvance_Waiver_Support : Migration
+    public partial class AddFineResidentAdvanceWaiverSupport : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

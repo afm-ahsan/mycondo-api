@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class Add_HouseholdMember_PrimaryPhoto : Migration
+public partial class AddHouseholdMemberPrimaryPhoto : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

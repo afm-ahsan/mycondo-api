@@ -9,11 +9,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyCondo.Infrastructure.Persistence.Migrations
-{
+namespace MyCondo.Infrastructure.Persistence.Migrations;
     [DbContext(typeof(MyCondoDbContext))]
-    [Migration("20260815144809_Add_User_Avatar")]
-    partial class Add_User_Avatar
+    [Migration("20260819054013_AddFineResidentAdvanceWaiverSupport")]
+    partial class AddFineResidentAdvanceWaiverSupport
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -667,6 +666,12 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("flat_id");
 
+                    b.Property<string>("IncomeAccountType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("income_account_type");
+
                     b.Property<DateOnly>("InvoiceDate")
                         .HasColumnType("date")
                         .HasColumnName("invoice_date");
@@ -692,6 +697,23 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("PeriodStart")
                         .HasColumnType("date")
                         .HasColumnName("period_start");
+
+                    b.Property<Guid?>("ResponsibleFlatOwnershipId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("responsible_flat_ownership_id");
+
+                    b.Property<Guid?>("ResponsibleOccupancyRegistrationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("responsible_occupancy_registration_id");
+
+                    b.Property<string>("ResponsiblePartyType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("responsible_party_type");
+
+                    b.Property<Guid?>("ResponsibleResidentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("responsible_resident_id");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -749,6 +771,30 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("voided_by");
 
+                    b.Property<Guid?>("WaiveLedgerPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waive_ledger_posting_id");
+
+                    b.Property<string>("WaiveReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("waive_reason");
+
+                    b.Property<decimal>("WaivedAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("waived_amount");
+
+                    b.Property<DateTimeOffset?>("WaivedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("waived_at_utc");
+
+                    b.Property<Guid?>("WaivedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waived_by");
+
                     b.HasKey("Id")
                         .HasName("pk_invoices");
 
@@ -765,7 +811,7 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "FlatId", "PeriodStart", "PeriodEnd", "Source")
                         .IsUnique()
                         .HasDatabaseName("ux_invoices_tenant_id_flat_id_period_source")
-                        .HasFilter("source <> 'FacilityBooking'");
+                        .HasFilter("source <> 'FacilityBooking' AND source <> 'Fine'");
 
                     b.ToTable("invoices", "billing");
                 });
@@ -1108,6 +1154,298 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_expenses_tenant_id_expense_type_id");
 
                     b.ToTable("expenses", "expenses");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.AccountMappings.AccountMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ChartOfAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chart_of_account_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("PostingRole")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("posting_role");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_account_mappings");
+
+                    b.HasIndex("TenantId", "PostingRole")
+                        .IsUnique()
+                        .HasDatabaseName("ux_account_mappings_tenant_id_posting_role");
+
+                    b.ToTable("account_mappings", "finance");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.AccountingPeriods.AccountingPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<Guid>("FinancialYearId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("financial_year_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_accounting_periods");
+
+                    b.HasIndex("TenantId", "FinancialYearId")
+                        .HasDatabaseName("ix_accounting_periods_tenant_id_financial_year_id");
+
+                    b.HasIndex("TenantId", "StartDate", "EndDate")
+                        .HasDatabaseName("ix_accounting_periods_tenant_id_start_date_end_date");
+
+                    b.ToTable("accounting_periods", "finance");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.ChartOfAccounts.ChartOfAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsSystemAccount")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system_account");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalBalance")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("normal_balance");
+
+                    b.Property<Guid?>("ParentAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_account_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_chart_of_accounts");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ux_chart_of_accounts_tenant_id_code");
+
+                    b.ToTable("chart_of_accounts", "finance");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.FinancialYears.FinancialYear", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_financial_years");
+
+                    b.HasIndex("TenantId", "StartDate", "EndDate")
+                        .HasDatabaseName("ix_financial_years_tenant_id_start_date_end_date");
+
+                    b.ToTable("financial_years", "finance");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Finance.Funds.Fund", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_funds");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ux_funds_tenant_id_code");
+
+                    b.ToTable("funds", "finance");
                 });
 
             modelBuilder.Entity("MyCondo.Domain.Features.Identity.Permissions.Permission", b =>
@@ -1472,6 +1810,16 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("BirthCertificateNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("birth_certificate_number");
+
+                    b.Property<string>("BloodGroup")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("blood_group");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
@@ -1490,6 +1838,11 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("full_name");
 
+                    b.Property<string>("Gender")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("gender");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
@@ -1499,20 +1852,39 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("national_id_number");
 
+                    b.Property<string>("Nationality")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("nationality");
+
                     b.Property<Guid>("OccupancyRegistrationId")
                         .HasColumnType("uuid")
                         .HasColumnName("occupancy_registration_id");
+
+                    b.Property<string>("Occupation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("occupation");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("phone");
 
+                    b.Property<Guid?>("PrimaryPhotoAttachmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_photo_attachment_id");
+
                     b.Property<string>("RelationshipToPrimary")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("relationship_to_primary");
+
+                    b.Property<string>("Religion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("religion");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -1764,6 +2136,11 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("owner_reviewed_by");
 
+                    b.Property<string>("PrimaryBloodGroup")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("primary_blood_group");
+
                     b.Property<DateOnly?>("PrimaryDateOfBirth")
                         .HasColumnType("date")
                         .HasColumnName("primary_date_of_birth");
@@ -1779,10 +2156,20 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("primary_full_name");
 
+                    b.Property<string>("PrimaryGender")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("primary_gender");
+
                     b.Property<string>("PrimaryNationalIdNumber")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("primary_national_id_number");
+
+                    b.Property<string>("PrimaryNationality")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("primary_nationality");
 
                     b.Property<string>("PrimaryPermanentAddress")
                         .HasMaxLength(500)
@@ -1797,6 +2184,16 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("PrimaryPhotoAttachmentId")
                         .HasColumnType("uuid")
                         .HasColumnName("primary_photo_attachment_id");
+
+                    b.Property<string>("PrimaryProfession")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("primary_profession");
+
+                    b.Property<string>("PrimaryReligion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("primary_religion");
 
                     b.Property<Guid>("PrimaryResidentId")
                         .HasColumnType("uuid")
@@ -2637,6 +3034,10 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("account_type");
 
+                    b.Property<Guid?>("AccountingPeriodId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("accounting_period_id");
+
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -2645,6 +3046,10 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("BusinessDate")
                         .HasColumnType("date")
                         .HasColumnName("business_date");
+
+                    b.Property<Guid?>("ChartOfAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chart_of_account_id");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -2665,6 +3070,10 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("FlatId")
                         .HasColumnType("uuid")
                         .HasColumnName("flat_id");
+
+                    b.Property<Guid?>("FundId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fund_id");
 
                     b.Property<Guid>("PostingId")
                         .HasColumnType("uuid")
@@ -2726,7 +3135,9 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_ledger_postings_tenant_id_business_date");
 
                     b.HasIndex("TenantId", "ReferenceType", "ReferenceId")
-                        .HasDatabaseName("ix_ledger_postings_tenant_id_reference_type_reference_id");
+                        .IsUnique()
+                        .HasDatabaseName("ux_ledger_postings_tenant_id_reference_type_reference_id")
+                        .HasFilter("reference_id IS NOT NULL");
 
                     b.ToTable("ledger_postings", "payments");
                 });
@@ -3626,6 +4037,12 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("building_id");
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("code");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
@@ -3633,6 +4050,27 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("display_order");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsEntryAllowed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_entry_allowed");
+
+                    b.Property<bool>("IsExitAllowed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_exit_allowed");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -3652,14 +4090,122 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
                     b.HasKey("Id")
                         .HasName("pk_gates");
+
+                    b.HasIndex("TenantId", "BuildingId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ux_gates_tenant_id_building_id_code");
 
                     b.HasIndex("TenantId", "BuildingId", "Name")
                         .IsUnique()
                         .HasDatabaseName("ux_gates_tenant_id_building_id_name");
 
                     b.ToTable("gates", "property");
+                });
+
+            modelBuilder.Entity("MyCondo.Domain.Features.Residents.HouseholdMembers.ResidentHouseholdMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BirthCertificateNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("birth_certificate_number");
+
+                    b.Property<string>("BloodGroup")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("blood_group");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly>("DateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("date_of_birth");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("full_name");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("gender");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("NationalIdNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("national_id_number");
+
+                    b.Property<string>("Nationality")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("nationality");
+
+                    b.Property<string>("Occupation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("occupation");
+
+                    b.Property<Guid?>("PrimaryPhotoAttachmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_photo_attachment_id");
+
+                    b.Property<string>("RelationshipType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("relationship_type");
+
+                    b.Property<string>("Religion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("religion");
+
+                    b.Property<Guid>("ResidentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resident_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_resident_household_members");
+
+                    b.HasIndex("TenantId", "ResidentId")
+                        .HasDatabaseName("ix_resident_household_members_tenant_id_resident_id");
+
+                    b.ToTable("household_members", "residents");
                 });
 
             modelBuilder.Entity("MyCondo.Domain.Features.Residents.Resident", b =>
@@ -3672,6 +4218,11 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("alternate_phone");
+
+                    b.Property<string>("BloodGroup")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("blood_group");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -3748,6 +4299,11 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("national_id_number");
 
+                    b.Property<string>("Nationality")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("nationality");
+
                     b.Property<string>("OfficeAddress")
                         .HasMaxLength(400)
                         .HasColumnType("character varying(400)")
@@ -3777,6 +4333,11 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("profession");
+
+                    b.Property<string>("Religion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("religion");
 
                     b.Property<string>("ResidentType")
                         .IsRequired()
@@ -5293,4 +5854,3 @@ namespace MyCondo.Infrastructure.Persistence.Migrations
 #pragma warning restore 612, 618
         }
     }
-}

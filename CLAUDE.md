@@ -295,45 +295,20 @@ Do not accumulate entity mappings inline in `OnModelCreating`.
 
 ### Naming
 
-Follow existing PostgreSQL naming conventions and schema-per-module architecture.
+PostgreSQL object naming (schemas, tables, columns, indexes, constraints) is authoritatively defined in
+`docs/conventions/03-database/01-postgresql-naming.md`. Follow it; do not restate it here.
 
 Do not introduce a new schema or change module ownership without checking the applicable architecture decision.
 
 ### Migrations
 
-Migrations are for:
+EF Core migrations (what they're for, naming, lifecycle/immutability, corrective-migration naming, and
+verification expectations) are authoritatively defined in
+`docs/conventions/03-database/02-ef-core-and-migrations.md`. All EF Core migrations must follow that
+document — this file does not carry a second copy of the rules.
 
-- schema evolution;
-- constraints;
-- indexes;
-- RLS/DCL changes;
-- unavoidable migration-time data transformations.
-
-Do not use migrations for ordinary application catalogue/bootstrap seed data.
-
-After a migration has reached a shared or persistent environment, treat it as immutable.
-
-New schema changes create new migrations.
-
-Do not rewrite migration history unless explicitly performing an approved baseline/cutover operation.
-
-Migration class names use strict PascalCase (no underscores) in the form `<Verb><Subject><Purpose>`, describing structural intent, for example:
-
-```text
-AddOrganizationSubscriptions
-AddSubscriptionFeatureAssignments
-BackfillOrganizationSlugs
-RenameTenantNameToOrganizationName
-RemoveLegacyResidentColumns
-```
-
-Prefer explicit verbs: `Create`, `Add`, `Remove`, `Rename`, `Alter`, `Backfill`, `Normalize`.
-
-Avoid vague names such as `UpdateDatabase`, `SchemaChanges`, `Changes`, `Migration1`, `FixMigration`.
-
-Name a corrective migration after the actual correction (e.g. `AddUniqueOrganizationSubscriptionConstraint`), not after the fact that it fixes something (e.g. `FixPreviousMigration`).
-
-Do not create `Seed_*`, `*Seed`, or permission-catalogue migrations.
+Do not use migrations for ordinary application catalogue/bootstrap seed data; do not create `Seed_*`,
+`*Seed`, or permission-catalogue migrations — see that document's Seed Data section.
 
 ---
 
