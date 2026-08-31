@@ -61,6 +61,7 @@ app.MapPlatformOrganizationEndpoints();
 app.MapPlatformSubscriptionPackageEndpoints();
 app.MapPlatformBillingEndpoints();
 app.MapPlatformUserEndpoints();
+app.MapPlatformRoleEndpoints();
 app.MapTenantEndpoints();
 app.MapRoleEndpoints();
 app.MapUserEndpoints();
