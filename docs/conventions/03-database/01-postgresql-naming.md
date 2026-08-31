@@ -5,6 +5,11 @@
 
 > Apply this to **every** PostgreSQL object: tables, columns, indexes, constraints, sequences, views, functions, schemas, roles. Migrations that violate these rules fail CI.
 
+This document is the **authoritative source for PostgreSQL object naming** (tables, columns, indexes,
+constraints, schemas, etc). For how those names appear inside an EF Core **migration identifier**
+(`AddTenantRowLevelSecurityPolicies`, `GrantAppRoleRuntimePrivileges`, …), and for the migration lifecycle
+and verification rules, see [`02-ef-core-and-migrations.md`](./02-ef-core-and-migrations.md).
+
 ---
 
 ## 1. Universal Rules
@@ -191,7 +196,7 @@ ALTER TABLE app.amc_contract
 | Pattern                                 | Example                                                  |
 |-----------------------------------------|----------------------------------------------------------|
 | B-tree (default)                        | `ix_<table>_<columns>` → `ix_invoice_customer_status_date` |
-| Unique index (not a constraint)         | `uix_<table>_<columns>`                                  |
+| Unique index (not a constraint)         | `ux_<table>_<columns>`                                   |
 | Partial                                 | `ix_<table>_<columns>__<predicate>` → `ix_invoice_customer__unpaid` |
 | Covering (`INCLUDE`)                    | `ix_<table>_<key_cols>__inc_<inc_cols>`                  |
 | GIN/GIST                                | `gin_<table>_<column>`, `gist_<table>_<column>`          |
@@ -394,7 +399,7 @@ If the project handles PHI / PII / financial data:
 | `timestamp` columns (no TZ)                                 | `timestamptz`, suffix `_at_utc`                                    |
 | `varchar(50)` for everything                                | `text` unless a true business limit exists                         |
 | `ON DELETE CASCADE` everywhere                              | `RESTRICT` by default; `CASCADE` requires justification            |
-| EF auto-generated constraint names                          | Explicit `pk_*`, `fk_*`, `uix_*`, `ix_*`                           |
+| EF auto-generated constraint names                          | Explicit `pk_*`, `fk_*`, `ux_*`, `ix_*`                           |
 | Missing index on FK column                                  | Always add an index                                                |
 | Storing money as `float`                                    | `numeric(19, 4)`                                                   |
 | Storing JSON as `json` instead of `jsonb`                   | Always `jsonb`                                                     |

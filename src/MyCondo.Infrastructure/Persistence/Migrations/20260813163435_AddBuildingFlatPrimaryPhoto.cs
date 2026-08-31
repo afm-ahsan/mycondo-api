@@ -12,7 +12,7 @@ namespace MyCondo.Infrastructure.Persistence.Migrations;
 /// handler like the occupancy-registration primary photo). No RLS changes: both tables already
 /// carry tenant-isolation policies from prior migrations.
 /// </summary>
-public partial class Add_Building_Flat_Primary_Photo : Migration
+public partial class AddBuildingFlatPrimaryPhoto : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

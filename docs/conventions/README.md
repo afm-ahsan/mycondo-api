@@ -49,8 +49,8 @@ project-conventions/
 5. `06-devops/` — set up Docker, env config, CI before writing business code.
 
 ### Before writing any database migration
-- `03-database/01-postgresql-naming.md` (mandatory).
-- `03-database/03-migrations.md`.
+- `03-database/02-ef-core-and-migrations.md` (mandatory — migration naming, lifecycle, verification).
+- `03-database/01-postgresql-naming.md` (mandatory — PostgreSQL object naming).
 
 ### Before exposing any new API endpoint
 - `04-api-design/01-rest-guidelines.md`.

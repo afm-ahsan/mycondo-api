@@ -1,25 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class Add_Occupancy_AlternatePhone_Employer_OfficeAddress : Migration
+public partial class AddOccupancyFatherMotherMaritalStatus : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<string>(
-            name: "primary_alternate_phone",
-            schema: "leasing",
-            table: "occupancy_registrations",
-            type: "character varying(30)",
-            maxLength: 30,
-            nullable: true);
-
-        migrationBuilder.AddColumn<string>(
-            name: "primary_employer",
+            name: "primary_father_name",
             schema: "leasing",
             table: "occupancy_registrations",
             type: "character varying(200)",
@@ -27,11 +19,19 @@ public partial class Add_Occupancy_AlternatePhone_Employer_OfficeAddress : Migra
             nullable: true);
 
         migrationBuilder.AddColumn<string>(
-            name: "primary_office_address",
+            name: "primary_marital_status",
             schema: "leasing",
             table: "occupancy_registrations",
-            type: "character varying(400)",
-            maxLength: 400,
+            type: "character varying(20)",
+            maxLength: 20,
+            nullable: true);
+
+        migrationBuilder.AddColumn<string>(
+            name: "primary_mother_name",
+            schema: "leasing",
+            table: "occupancy_registrations",
+            type: "character varying(200)",
+            maxLength: 200,
             nullable: true);
     }
 
@@ -39,17 +39,17 @@ public partial class Add_Occupancy_AlternatePhone_Employer_OfficeAddress : Migra
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "primary_alternate_phone",
+            name: "primary_father_name",
             schema: "leasing",
             table: "occupancy_registrations");
 
         migrationBuilder.DropColumn(
-            name: "primary_employer",
+            name: "primary_marital_status",
             schema: "leasing",
             table: "occupancy_registrations");
 
         migrationBuilder.DropColumn(
-            name: "primary_office_address",
+            name: "primary_mother_name",
             schema: "leasing",
             table: "occupancy_registrations");
     }

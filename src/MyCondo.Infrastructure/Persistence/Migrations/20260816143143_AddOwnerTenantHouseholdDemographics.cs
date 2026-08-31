@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class Add_Owner_Tenant_Household_Demographics : Migration
+public partial class AddOwnerTenantHouseholdDemographics : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

@@ -17,7 +17,7 @@ namespace MyCondo.Infrastructure.Persistence.Migrations;
 /// (2) residents.residents gains the owner-profile columns captured by the registration wizard
 ///     (identity, contact, family/professional) — nullable, unused by Occupant/FamilyMember rows.
 /// </summary>
-public partial class Add_FlatOwner_Registration : Migration
+public partial class AddFlatOwnerRegistration : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

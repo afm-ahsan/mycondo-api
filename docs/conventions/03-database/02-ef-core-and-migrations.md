@@ -103,7 +103,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
                  .HasMaxLength(320);
             email.HasIndex(e => e.Value)
                  .IsUnique()
-                 .HasDatabaseName("uix_customer_email");
+                 .HasDatabaseName("ux_customer_email");
         });
 
         // Smart enum / state — store as text
@@ -153,7 +153,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
 ### Rules
 
 - **`sealed`.**
-- **Explicit constraint names** — `pk_*`, `fk_*`, `uix_*`, `ix_*`. EF auto-names are forbidden.
+- **Explicit constraint names** — `pk_*`, `fk_*`, `ux_*`, `ix_*`. EF auto-names are forbidden.
 - **`HasConversion`** for strongly-typed IDs.
 - **`OwnsOne` / `OwnsMany`** for value objects and child entities.
 - **`HasMaxLength`** on every string column. Leaving it off creates `text` (which is fine for some, but most strings have a real limit).
@@ -210,10 +210,98 @@ const string sql = """
 
 ## 5. Migrations
 
+> This section is the **authoritative EF Core migration engineering standard** for this repository —
+> naming, lifecycle, and verification. `CLAUDE.md` / `AGENTS.md` only point here; they do not carry a
+> second copy of these rules. PostgreSQL object naming (tables, columns, indexes, constraints) is owned
+> by [`01-postgresql-naming.md`](./01-postgresql-naming.md) — this section only covers how that naming
+> shows up *inside a migration identifier* (e.g. RLS/grant migrations), not the object-naming rules
+> themselves.
+
+### Naming convention
+
+EF Core migration identifiers use the timestamp prefix EF Core generates plus a strict-PascalCase name:
+
+```text
+yyyyMMddHHmmss_<VerbSubjectPurpose>
+```
+
+- **Timestamp**: the 14-digit `yyyyMMddHHmmss` prefix EF Core assigns automatically at `migrations add`
+  time. Never hand-edit it, and never back- or forward-date one to force ordering — chronological order
+  *is* migration order.
+- **Identifier**: strict **PascalCase**, no underscores, in the form `<Verb><Subject><Purpose>`:
+
+  ```text
+  AddOrganizationSubscriptions
+  AddSubscriptionFeatureAssignments
+  AddPrimaryAdministratorToOrganization
+  AddFinancialAccountRlsPolicies
+  BackfillOrganizationSlugs
+  RenameTenantNameToOrganizationName
+  RemoveLegacyResidentColumns
+  GrantAppRoleRuntimePrivileges
+  CreateFinanceSchema
+  ```
+
+- **Preferred verbs**: `Add`, `Remove`, `Rename`, `Alter`, `Create`, `Drop`, `Backfill`, `Normalize`,
+  `Seed` (schema-level only — see [Seed Data](#7-seed-data) for why catalogue seeding itself never
+  belongs in a migration), `Grant`, `Revoke`, `Enable`, `Disable`, `Replace`.
+- **Prohibited**: underscore-separated identifiers (`Add_User_Avatar`, `Add_Gate_Configuration_Fields`)
+  and vague/placeholder names that don't describe schema/business intent:
+
+  ```text
+  UpdateDatabase
+  SchemaChanges
+  Changes
+  Migration1
+  LatestMigration
+  FinalFix
+  FixMigration
+  ```
+
+- **Corrective migrations** are named after the actual correction, not the fact that something is being
+  fixed — `AddUniqueOrganizationSubscriptionConstraint`, not `FixPreviousMigration`.
+- **PostgreSQL-specific migrations** (RLS, grants, schemas, privileges) name the actual action, not
+  generic technical noise — `AddTenantRowLevelSecurityPolicies`, `AddExpenseRowLevelSecurityPolicies`,
+  `GrantAppRoleRuntimePrivilegesForFinance`. Acronyms stay readable PascalCase (`AddFinancialAccountRlsPolicies`,
+  not `AddFinancialAccountRLSPolicies`).
+- **Automated enforcement**: `tests/MyCondo.ArchitectureTests/MigrationNamingConventionTests.cs` reflects
+  over every `[Migration]` attribute in `MyCondo.Infrastructure` and fails the build on a timestamp/casing
+  violation, a banned name, or a class name that doesn't match its `[Migration]` id. It runs as part of
+  the normal `dotnet test` / CI pipeline — there is no separate opt-in step.
+
+### Migration lifecycle
+
+- **One migration, one coherent schema/domain change.** Closely related changes forming one atomic
+  feature may share a migration; unrelated changes never do.
+- **Immutable once shared.** After a migration has been applied to any shared or persistent environment
+  (anything beyond a developer's disposable local/test database), treat it as immutable — never edit,
+  rename, or delete it, and never rewrite migration history to "fix" it. New schema changes are new
+  migrations, full stop. (MyCondo's own migration-history normalization was possible only because, at
+  the time, none of the renamed migrations had reached a shared/persistent database — see the 2026-08-10
+  clean-baseline cutover in [Seed Data](#7-seed-data) for the precedent and why it does not repeat.)
+- **Never reuse a migration identity** (timestamp or name) once created.
+- **Environment/demo/bootstrap data belongs in application seeders**, not migrations — see
+  [Seed Data](#7-seed-data). A migration may contain data only when it is true migration-controlled
+  reference data required for schema/application correctness (rare).
+
+### Verification expectations
+
+Before a migration is considered done:
+
+- `dotnet build` succeeds and `dotnet ef migrations list` (against the correct `--project` /
+  `--startup-project`, matching the build configuration actually built) shows it in the expected
+  chronological position with no duplicate ids.
+- The migration applies cleanly (`dotnet ef database update`) to an **empty, disposable** database —
+  never a shared/persistent one — and `Down()` is exercised for anything non-trivial (see
+  [§ 9 Testing Migrations](#9-testing-migrations)).
+- `MigrationNamingConventionTests` passes (naming/enforcement — see above).
+- For RLS, grants, or tenant-isolation changes: the relevant multitenancy/integration tests pass against
+  the rebuilt schema, not just a green build.
+
 ### Add a migration
 
 ```bash
-dotnet ef migrations add Add_Customer_Table \
+dotnet ef migrations add AddCustomerTable \
     --project src/<Project>.Infrastructure \
     --startup-project src/<Project>.Api \
     --output-dir Persistence/Migrations
@@ -228,7 +316,7 @@ dotnet ef migrations add Add_Customer_Table \
 /// Why: First module of the system, foundational for invoicing and AMC.
 /// Notes: No data backfill required (greenfield).
 /// </summary>
-public partial class Add_Customer_Table : Migration
+public partial class AddCustomerTable : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -255,7 +343,7 @@ public partial class Add_Customer_Table : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "uix_customer_email",
+            name: "ux_customer_email",
             schema: "app",
             table: "customer",
             column: "email",
@@ -277,7 +365,7 @@ public partial class Add_Customer_Table : Migration
 
 ### Rules
 
-- **Descriptive names**: `Add_Customer_Table`, `Add_Quotation_Status_Index`, `Backfill_Customer_DefaultRegion`. Never `Migration1` or `Update`.
+- **Naming**: see [Naming convention](#naming-convention) above.
 - **Comment block at the top** describes intent (why, not what).
 - **One concern per migration.** Don't bundle "add table + add index + backfill" in one file.
 - **`Down()` is implemented**, even if "drop". A migration that can't be rolled back is a risk.
@@ -306,7 +394,7 @@ For breaking schema changes (e.g. renaming a column), use three deploys:
 
 - **Never `DROP COLUMN` in the same deploy** as code change that stops using it. Production traffic from the old container will fail.
 - **`ALTER COLUMN TYPE` is destructive** — apply on a new column with backfill, then swap.
-- **Document each phase as its own migration** with explicit names: `Expand_Customer_Add_FullName`, `Backfill_Customer_FullName`, `Contract_Customer_Drop_DisplayName`.
+- **Document each phase as its own migration** with explicit names: `AddCustomerFullName`, `BackfillCustomerFullName`, `RemoveCustomerDisplayName`.
 
 ---
 
@@ -465,7 +553,7 @@ dotnet ef migrations has-pending-model-changes \
 | Mistake                                                          | Fix                                                              |
 |------------------------------------------------------------------|------------------------------------------------------------------|
 | Inline `modelBuilder.Entity<T>(...)` in `OnModelCreating`        | One `IEntityTypeConfiguration<T>` per entity                     |
-| EF auto-generated constraint names                               | Explicit `pk_*`, `fk_*`, `uix_*`, `ix_*`                         |
+| EF auto-generated constraint names                               | Explicit `pk_*`, `fk_*`, `ux_*`, `ix_*`                         |
 | Cross-aggregate navigation properties                            | Reference by ID + Dapper joins for reads                         |
 | Bundling unrelated changes in one migration                      | One concern per migration                                        |
 | Renaming a column directly                                       | Expand → Migrate → Contract                                      |

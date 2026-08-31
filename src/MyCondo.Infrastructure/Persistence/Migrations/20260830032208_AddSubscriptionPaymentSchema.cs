@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class Add_SubscriptionPaymentSchema : Migration
+public partial class AddSubscriptionPaymentSchema : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
