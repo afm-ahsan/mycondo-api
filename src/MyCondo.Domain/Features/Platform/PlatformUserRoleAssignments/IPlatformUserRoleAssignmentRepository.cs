@@ -20,7 +20,7 @@ public interface IPlatformUserRoleAssignmentRepository
     /// same role's holder set must wait for this transaction to commit/roll back before it can read a
     /// consistent count. "Active" excludes assignments belonging to an already-<see cref="PlatformUserStatus.Disabled"/>
     /// <see cref="PlatformUsers.PlatformUser"/>. Must be called inside an explicit
-    /// <see cref="MyCondo.Domain.Abstractions.IUnitOfWork"/> transaction (see mycondo-docs ADR-035 —
+    /// <see cref="MyCondo.Domain.Abstractions.IUnitOfWork"/> transaction (see mycondo-docs ADR-036 —
     /// last-active-admin invariant).
     /// </summary>
     Task<int> LockAndCountActiveSuperAdminHoldersAsync(

@@ -11,7 +11,7 @@ namespace MyCondo.Application.UnitTests.Features.Identity.Audit.Queries.GetIdent
 
 /// <summary>
 /// Mirrors GetFinanceAuditLogQueryHandlerTests' coverage of the actor-name resolution fallback chain
-/// for <see cref="IdentityAuditLogEntry"/> (mycondo-docs ADR-035), plus the tenant-scoping guard every
+/// for <see cref="IdentityAuditLogEntry"/> (mycondo-docs ADR-036), plus the tenant-scoping guard every
 /// query handler enforces before touching the repository.
 /// </summary>
 public class GetIdentityAuditLogQueryHandlerTests

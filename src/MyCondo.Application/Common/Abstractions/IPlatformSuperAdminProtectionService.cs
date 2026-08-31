@@ -6,7 +6,7 @@ namespace MyCondo.Application.Common.Abstractions;
 /// <summary>
 /// Platform-scope analogue of <see cref="ITenantAdminProtectionService"/> — enforces the
 /// <c>platform.user.manageSuperAdmins</c> composition permission, self-protection, and the race-safe
-/// last-active-Super-Admin invariant for the Platform "SuperAdmin" role. See mycondo-docs ADR-035.
+/// last-active-Super-Admin invariant for the Platform "SuperAdmin" role. See mycondo-docs ADR-036.
 /// </summary>
 public interface IPlatformSuperAdminProtectionService
 {

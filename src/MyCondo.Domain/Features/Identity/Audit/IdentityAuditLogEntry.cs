@@ -3,7 +3,7 @@ using MyCondo.Domain.Common;
 namespace MyCondo.Domain.Features.Identity.Audit;
 
 /// <summary>
-/// Append-only record of a security-sensitive tenant identity operation (mycondo-docs ADR-035) — user
+/// Append-only record of a security-sensitive tenant identity operation (mycondo-docs ADR-036) — user
 /// create/edit/activate/deactivate, role assigned/revoked, and a privileged-target action denied by
 /// <c>ITenantAdminProtectionService</c> (self-protection, target-privilege, or last-active-admin
 /// rejection). Tenant-scoped, RLS-protected — same append-only shape as

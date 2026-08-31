@@ -16,7 +16,7 @@ using MyCondo.Domain.Features.Platform.PlatformUsers;
 namespace MyCondo.Api.Endpoints;
 
 /// <summary>
-/// Platform-scope operator account administration (mycondo-docs ADR-035). Structurally mirrors
+/// Platform-scope operator account administration (mycondo-docs ADR-036). Structurally mirrors
 /// <see cref="UserEndpoints"/>/<see cref="RoleEndpoints"/> but every gate is
 /// <see cref="EndpointRequirePlatformPermissionExtensions.RequirePlatformPermission"/>. Role
 /// assign/revoke is gated at the same coarse action-permission granularity <see cref="RoleEndpoints"/>

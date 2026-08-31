@@ -14,7 +14,7 @@ namespace MyCondo.Application.UnitTests.Features.Platform.Users.Commands.AssignP
 
 /// <summary>
 /// Platform-scope analogue of AssignRoleToUserCommandHandlerTests: granting the SuperAdmin role —
-/// including to oneself — requires <c>platform.user.manageSuperAdmins</c> (mycondo-docs ADR-035).
+/// including to oneself — requires <c>platform.user.manageSuperAdmins</c> (mycondo-docs ADR-036).
 /// </summary>
 public class AssignPlatformRoleToUserCommandHandlerTests
 {

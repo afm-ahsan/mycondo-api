@@ -11,7 +11,7 @@ using NSubstitute;
 namespace MyCondo.Application.UnitTests.Features.Users.Commands.DeactivateUser;
 
 /// <summary>
-/// Proves the ADR-035 privileged-target protection wired into <see cref="DeactivateUserCommandHandler"/>:
+/// Proves the ADR-036 privileged-target protection wired into <see cref="DeactivateUserCommandHandler"/>:
 /// a Tenant Admin cannot self-disable, a lower-privileged actor cannot disable a Tenant Admin, the
 /// tenant's last active Tenant Admin can never be disabled, and deactivation always records an
 /// <see cref="IdentityAuditLogEntry"/>. Also proves the transaction is opened only when the target

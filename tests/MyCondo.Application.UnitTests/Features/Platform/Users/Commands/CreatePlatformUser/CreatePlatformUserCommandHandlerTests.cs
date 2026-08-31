@@ -13,7 +13,7 @@ using NSubstitute;
 namespace MyCondo.Application.UnitTests.Features.Platform.Users.Commands.CreatePlatformUser;
 
 /// <summary>
-/// Proves the ADR-035 grant-time gate in <see cref="CreatePlatformUserCommandHandler"/>: creating a
+/// Proves the ADR-036 grant-time gate in <see cref="CreatePlatformUserCommandHandler"/>: creating a
 /// Platform user with an initial SuperAdmin role requires <c>platform.user.manageSuperAdmins</c>,
 /// mirroring the tenant <c>AssignRoleToUserCommandHandler</c>'s self-promotion-not-exempt behavior.
 /// </summary>

@@ -29,7 +29,7 @@ public sealed class UpdatePlatformUserCommandHandler(
         PlatformUser user = await platformUsers.GetByIdAsync(platformUserId, cancellationToken)
             ?? throw new NotFoundException(nameof(PlatformUser), command.PlatformUserId);
 
-        // mycondo-docs ADR-035 — a Super Admin may always edit its own profile; a lower-privileged
+        // mycondo-docs ADR-036 — a Super Admin may always edit its own profile; a lower-privileged
         // actor may never edit another Super Admin's profile.
         if (await superAdminProtection.TargetIsSuperAdminAsync(platformUserId, cancellationToken))
         {

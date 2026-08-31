@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 /// <summary>
-/// Adds the tenant-scoped identity audit log (mycondo-docs ADR-035) — user/role administrative
+/// Adds the tenant-scoped identity audit log (mycondo-docs ADR-036) — user/role administrative
 /// mutations and privileged-target denials. Same append-only shape as
 /// <c>finance.finance_audit_log</c>, in the <c>identity</c> schema alongside the rest of the tenant
 /// identity aggregate.

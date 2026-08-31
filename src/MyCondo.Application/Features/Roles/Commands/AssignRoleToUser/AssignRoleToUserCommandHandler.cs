@@ -41,7 +41,7 @@ public sealed class AssignRoleToUserCommandHandler(
             throw new NotFoundException(nameof(Role), command.RoleId);
         }
 
-        // mycondo-docs ADR-035 — granting a tenant-wide, admin-equivalent role is itself a privileged
+        // mycondo-docs ADR-036 — granting a tenant-wide, admin-equivalent role is itself a privileged
         // mutation regardless of who the target is (including self-promotion), so it requires
         // manageTenantAdmins on top of the base role.manage action permission.
         if (tenantAdminProtection.IsTenantAdminEquivalent(role) && !currentUser.HasPermission("user.manageTenantAdmins"))

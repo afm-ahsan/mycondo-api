@@ -14,7 +14,7 @@ namespace MyCondo.MultiTenancyTests;
 /// <summary>
 /// Proves the race-safety claim in <c>ITenantAdminProtectionService.EnsureNotLastActiveAdminAsync</c>
 /// and <c>IPlatformSuperAdminProtectionService.EnsureNotLastActiveSuperAdminAsync</c> (mycondo-docs
-/// ADR-035) against a real PostgreSQL database — not mocks, which cannot exhibit the race at all.
+/// ADR-036) against a real PostgreSQL database — not mocks, which cannot exhibit the race at all.
 ///
 /// The invariant these <c>FOR UPDATE</c> row-lock queries exist to protect: two concurrent requests
 /// revoking an admin-equivalent role from the tenant's two remaining holders must not both observe

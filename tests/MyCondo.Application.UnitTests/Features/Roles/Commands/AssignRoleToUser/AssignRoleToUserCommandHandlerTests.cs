@@ -14,7 +14,7 @@ using NSubstitute;
 namespace MyCondo.Application.UnitTests.Features.Roles.Commands.AssignRoleToUser;
 
 /// <summary>
-/// Proves the ADR-035 grant-time gate in <see cref="AssignRoleToUserCommandHandler"/>: granting a
+/// Proves the ADR-036 grant-time gate in <see cref="AssignRoleToUserCommandHandler"/>: granting a
 /// tenant-wide, admin-equivalent system role — including granting it to oneself — requires
 /// <c>user.manageTenantAdmins</c> on top of the base <c>role.manage</c> permission already enforced at
 /// the endpoint filter. Also proves cross-tenant IDOR is closed for the role, building, and user lookups,

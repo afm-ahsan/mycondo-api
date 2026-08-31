@@ -9,7 +9,7 @@ using NSubstitute;
 namespace MyCondo.Application.UnitTests.Common.Services;
 
 /// <summary>
-/// Unit tests for <see cref="TenantAdminProtectionService"/> (mycondo-docs ADR-035) — the handler-level
+/// Unit tests for <see cref="TenantAdminProtectionService"/> (mycondo-docs ADR-036) — the handler-level
 /// gate for tenant-wide, admin-equivalent system roles. Covers the "tenant-admin-equivalent" predicate,
 /// self-protection, the manageTenantAdmins composition permission, and the last-active-admin invariant.
 /// </summary>

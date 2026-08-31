@@ -6,7 +6,7 @@ namespace MyCondo.Infrastructure.Persistence.Migrations;
 
 /// <summary>
 /// Enables and forces Row-Level Security, and creates the standard tenant-isolation policy, on the
-/// new <c>identity.identity_audit_log</c> table (mycondo-docs ADR-035) — a new table gets its own new
+/// new <c>identity.identity_audit_log</c> table (mycondo-docs ADR-036) — a new table gets its own new
 /// RLS migration rather than editing the immutable clean-baseline migration (mycondo-docs ADR-024; see
 /// mycondo-api/.claude/skills/postgresql-rls.md), same pattern as
 /// <c>AddTenantRowLevelSecurityPolicyForFinanceAuditLog</c>. No new Grant-privileges migration is

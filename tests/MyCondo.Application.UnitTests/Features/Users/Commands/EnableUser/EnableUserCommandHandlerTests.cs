@@ -71,7 +71,7 @@ public class EnableUserCommandHandlerTests
     [Fact]
     public async Task Allows_A_Tenant_Admin_To_Self_Reactivate_Without_ManageTenantAdmins()
     {
-        // mycondo-docs ADR-035 — re-activation never reduces the active-admin count, so unlike
+        // mycondo-docs ADR-036 — re-activation never reduces the active-admin count, so unlike
         // deactivation, self-action here is always permitted, even without the composition permission.
         Guid actorId = Guid.NewGuid();
         User user = RegisterDeactivatedUser(TenantId);

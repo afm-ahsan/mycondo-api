@@ -29,7 +29,7 @@ public sealed class ActivatePlatformUserCommandHandler(
         PlatformUser user = await platformUsers.GetByIdAsync(platformUserId, cancellationToken)
             ?? throw new NotFoundException(nameof(PlatformUser), command.PlatformUserId);
 
-        // mycondo-docs ADR-035 — re-activating never reduces the platform's active-Super-Admin count,
+        // mycondo-docs ADR-036 — re-activating never reduces the platform's active-Super-Admin count,
         // so no last-admin check here, only the target-privilege composition (self always allowed).
         if (await superAdminProtection.TargetIsSuperAdminAsync(platformUserId, cancellationToken))
         {

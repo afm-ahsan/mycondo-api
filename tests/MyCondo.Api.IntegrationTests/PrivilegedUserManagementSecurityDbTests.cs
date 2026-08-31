@@ -15,7 +15,7 @@ using MyCondo.Infrastructure.Persistence;
 namespace MyCondo.Api.IntegrationTests;
 
 /// <summary>
-/// End-to-end HTTP round-trip tests for the ADR-035 privileged tenant-user-management protections — the
+/// End-to-end HTTP round-trip tests for the ADR-036 privileged tenant-user-management protections — the
 /// M5 backend security regression milestone. Proves, through the real endpoints (not mocked handlers):
 /// self-protection, the <c>user.manageTenantAdmins</c> composition-permission gate, the last-active-
 /// Tenant-Admin invariant, cross-tenant IDOR closure on every mutation, and that every mutation is
@@ -70,7 +70,7 @@ public class PrivilegedUserManagementSecurityDbTests : IClassFixture<PostgresApi
     /// a user's token was already issued has no effect until they log in again. Every test below that
     /// grants a role to an already-registered second actor must re-authenticate through this helper
     /// before exercising the newly granted permission — otherwise it would only prove the coarse
-    /// endpoint-level RequirePermission gate rejected a stale token, not the ADR-035 handler-level
+    /// endpoint-level RequirePermission gate rejected a stale token, not the ADR-036 handler-level
     /// admin-protection gate this suite exists to verify.
     /// </summary>
     private static async Task<AuthTokensDto> LoginAsync(HttpClient client, Guid tenantId, string email)

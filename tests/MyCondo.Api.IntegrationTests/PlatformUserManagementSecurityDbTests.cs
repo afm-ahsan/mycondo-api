@@ -19,7 +19,7 @@ namespace MyCondo.Api.IntegrationTests;
 
 /// <summary>
 /// Platform-scope analogue of <see cref="PrivilegedUserManagementSecurityDbTests"/> — end-to-end HTTP
-/// round-trip tests for the ADR-035 Platform Super Admin protections (M5 backend security regression
+/// round-trip tests for the ADR-036 Platform Super Admin protections (M5 backend security regression
 /// milestone): self-protection, the <c>platform.user.manageSuperAdmins</c> composition-permission gate,
 /// and the last-active-Super-Admin invariant, all through the real endpoints. Platform roles have no
 /// HTTP management surface in this MVP slice (see PlatformUserEndpoints' own doc comment), so

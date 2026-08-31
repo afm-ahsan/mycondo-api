@@ -259,7 +259,7 @@ public static class PermissionCatalogue
         ("finance.reconciliation.manage", "Start a bank reconciliation and add/match/exclude/adjust its statement lines", "finance", false),
         ("finance.reconciliation.reconcile", "Complete a bank reconciliation", "finance", false),
 
-        // Privileged User Visibility, Role Protection & Administrative Actions (mycondo-docs ADR-035).
+        // Privileged User Visibility, Role Protection & Administrative Actions (mycondo-docs ADR-036).
         // Platform Users — the operator-account CRUD/role-assignment slice, additive to the existing
         // platform.organization.*/platform.subscription.*/etc. entries above. manageSuperAdmins is the
         // privileged-target composition permission: required, in addition to the base view/create/update/

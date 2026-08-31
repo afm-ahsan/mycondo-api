@@ -6,7 +6,7 @@ using MyCondo.Infrastructure.Persistence;
 namespace MyCondo.MultiTenancyTests;
 
 /// <summary>
-/// Real RLS enforcement tests for <c>identity.identity_audit_log</c> (mycondo-docs ADR-035), same
+/// Real RLS enforcement tests for <c>identity.identity_audit_log</c> (mycondo-docs ADR-036), same
 /// pattern as <see cref="FinanceRlsTests"/>'s <c>FinanceAuditLog_Cross_Tenant_Isolation</c> and
 /// <c>Finance_Tables_Have_Rls_Enabled_And_Forced</c>. A tenant's privileged-user-management audit trail
 /// must be exactly as isolated as its finance audit trail — an attacker who compromises one tenant's

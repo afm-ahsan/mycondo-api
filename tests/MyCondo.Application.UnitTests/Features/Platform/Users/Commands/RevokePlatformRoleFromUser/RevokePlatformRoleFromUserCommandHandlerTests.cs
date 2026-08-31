@@ -15,7 +15,7 @@ namespace MyCondo.Application.UnitTests.Features.Platform.Users.Commands.RevokeP
 /// <summary>
 /// Platform-scope analogue of RevokeRoleFromUserCommandHandlerTests: revoking the SuperAdmin role
 /// (demotion) is subject to self-protection, the manageSuperAdmins composition permission, and the
-/// race-safe last-active-Super-Admin invariant (mycondo-docs ADR-035).
+/// race-safe last-active-Super-Admin invariant (mycondo-docs ADR-036).
 /// </summary>
 public class RevokePlatformRoleFromUserCommandHandlerTests
 {

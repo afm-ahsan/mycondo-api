@@ -13,7 +13,7 @@ namespace MyCondo.Application.UnitTests.Features.Platform.Users.Commands.Deactiv
 /// <summary>
 /// Platform-scope analogue of DeactivateUserCommandHandlerTests: a Super Admin cannot self-disable, a
 /// lower-privileged actor cannot disable a Super Admin, and the platform's last active Super Admin can
-/// never be disabled (mycondo-docs ADR-035). Also proves the transaction opens only when the target
+/// never be disabled (mycondo-docs ADR-036). Also proves the transaction opens only when the target
 /// actually holds the SuperAdmin role.
 /// </summary>
 public class DeactivatePlatformUserCommandHandlerTests

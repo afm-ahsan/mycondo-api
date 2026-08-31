@@ -5,7 +5,7 @@ using MyCondo.Application.Features.Identity.Audit.Queries.GetIdentityAuditLog;
 
 namespace MyCondo.Api.Endpoints;
 
-/// <summary>Tenant-scope identity audit trail (mycondo-docs ADR-035) — user/role administrative
+/// <summary>Tenant-scope identity audit trail (mycondo-docs ADR-036) — user/role administrative
 /// mutations and privileged-target denials. Structurally mirrors the Finance audit-log endpoint in
 /// <see cref="FinanceEndpoints"/>.</summary>
 public static class IdentityAuditEndpoints

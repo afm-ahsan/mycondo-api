@@ -87,7 +87,7 @@ public class RevokeRoleFromUserCommandHandlerTests
     [Fact]
     public async Task Throws_Forbidden_When_Actor_Attempts_To_Self_Revoke_An_Admin_Equivalent_Role()
     {
-        // mycondo-docs ADR-035 — revoking an admin-equivalent role from oneself is self-demotion and is
+        // mycondo-docs ADR-036 — revoking an admin-equivalent role from oneself is self-demotion and is
         // always rejected via EnsureCanMutateAdminTarget's self-protection, even with manageTenantAdmins.
         Role role = SystemRole();
         User user = AUser();

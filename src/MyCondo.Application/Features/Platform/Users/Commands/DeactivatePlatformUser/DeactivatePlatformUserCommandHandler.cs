@@ -29,7 +29,7 @@ public sealed class DeactivatePlatformUserCommandHandler(
         PlatformUser user = await platformUsers.GetByIdAsync(platformUserId, cancellationToken)
             ?? throw new NotFoundException(nameof(PlatformUser), command.PlatformUserId);
 
-        // mycondo-docs ADR-035 — a Super Admin cannot self-disable, a lower-privileged actor cannot
+        // mycondo-docs ADR-036 — a Super Admin cannot self-disable, a lower-privileged actor cannot
         // disable a Super Admin, and the platform's last active Super Admin can never be disabled.
         bool targetIsSuperAdmin = await superAdminProtection.TargetIsSuperAdminAsync(platformUserId, cancellationToken);
 

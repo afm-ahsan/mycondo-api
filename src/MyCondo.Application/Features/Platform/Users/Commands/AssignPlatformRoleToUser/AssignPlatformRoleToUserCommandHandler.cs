@@ -34,7 +34,7 @@ public sealed class AssignPlatformRoleToUserCommandHandler(
         PlatformRole role = await platformRoles.GetByIdAsync(roleId, cancellationToken)
             ?? throw new NotFoundException(nameof(PlatformRole), command.RoleId);
 
-        // mycondo-docs ADR-035 — granting the SuperAdmin role is itself a privileged mutation
+        // mycondo-docs ADR-036 — granting the SuperAdmin role is itself a privileged mutation
         // regardless of who the target is (including self-promotion), so it requires
         // manageSuperAdmins on top of the base action permission.
         if (superAdminProtection.IsSuperAdmin(role) && !currentUser.HasPermission("platform.user.manageSuperAdmins"))

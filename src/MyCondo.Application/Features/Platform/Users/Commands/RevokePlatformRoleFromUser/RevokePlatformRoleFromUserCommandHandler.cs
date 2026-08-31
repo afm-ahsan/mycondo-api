@@ -43,7 +43,7 @@ public sealed class RevokePlatformRoleFromUserCommandHandler(
         PlatformUserRoleAssignment assignment = assignments.FirstOrDefault(a => a.PlatformRoleId == roleId)
             ?? throw new NotFoundException(nameof(PlatformUserRoleAssignment), command.PlatformUserId);
 
-        // mycondo-docs ADR-035 — revoking the SuperAdmin role (demotion) is subject to self-protection
+        // mycondo-docs ADR-036 — revoking the SuperAdmin role (demotion) is subject to self-protection
         // and the manageSuperAdmins composition permission, on top of the last-holder protection.
         bool isSuperAdminRole = superAdminProtection.IsSuperAdmin(role);
 

@@ -34,7 +34,7 @@ public sealed class DeactivateUserCommandHandler(
             throw new NotFoundException(nameof(User), command.UserId);
         }
 
-        // mycondo-docs ADR-035 — a Tenant Admin cannot self-disable, a lower-privileged actor cannot
+        // mycondo-docs ADR-036 — a Tenant Admin cannot self-disable, a lower-privileged actor cannot
         // disable a Tenant Admin, and the tenant's last active Tenant Admin can never be disabled.
         bool targetIsTenantAdmin = await tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(
             tenantId, userId, cancellationToken);

@@ -34,7 +34,7 @@ public sealed class EnableUserCommandHandler(
             throw new NotFoundException(nameof(User), command.UserId);
         }
 
-        // mycondo-docs ADR-035 — re-activating never reduces the tenant's active-admin count, so no
+        // mycondo-docs ADR-036 — re-activating never reduces the tenant's active-admin count, so no
         // last-admin check here, only the target-privilege composition (self always allowed).
         if (await tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(tenantId, userId, cancellationToken))
         {

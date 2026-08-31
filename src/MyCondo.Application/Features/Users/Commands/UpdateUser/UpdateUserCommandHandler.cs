@@ -34,7 +34,7 @@ public sealed class UpdateUserCommandHandler(
             throw new NotFoundException(nameof(User), command.UserId);
         }
 
-        // mycondo-docs ADR-035 — a Tenant Admin may always edit its own profile; a lower-privileged
+        // mycondo-docs ADR-036 — a Tenant Admin may always edit its own profile; a lower-privileged
         // actor may never edit another Tenant Admin's profile.
         if (await tenantAdminProtection.TargetHoldsTenantAdminRoleAsync(tenantId, userId, cancellationToken))
         {

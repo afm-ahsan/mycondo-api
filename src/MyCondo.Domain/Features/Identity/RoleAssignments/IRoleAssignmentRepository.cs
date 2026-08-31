@@ -28,7 +28,7 @@ public interface IRoleAssignmentRepository
     /// every tenant-wide holder row for this role before counting, so a concurrent request against the
     /// same role's holder set must wait for this transaction to commit/roll back before it can read a
     /// consistent count. Must be called inside an explicit <see cref="MyCondo.Domain.Abstractions.IUnitOfWork"/>
-    /// transaction (see mycondo-docs ADR-035 — last-active-admin invariant).
+    /// transaction (see mycondo-docs ADR-036 — last-active-admin invariant).
     /// </summary>
     Task<int> LockAndCountTenantWideHoldersAsync(Guid tenantId, RoleId roleId, CancellationToken cancellationToken);
 

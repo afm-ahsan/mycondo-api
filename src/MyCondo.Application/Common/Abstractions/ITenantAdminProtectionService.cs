@@ -9,7 +9,7 @@ namespace MyCondo.Application.Common.Abstractions;
 /// <c>RequiresBuildingScope != true</c>): the <c>user.manageTenantAdmins</c> composition permission,
 /// self-protection, and the race-safe last-active-admin invariant. Composes with the coarse
 /// action-permission check already enforced at the endpoint filter (<c>RequirePermission</c>) — this
-/// service is the second, handler-level gate. See mycondo-docs ADR-035.
+/// service is the second, handler-level gate. See mycondo-docs ADR-036.
 /// </summary>
 public interface ITenantAdminProtectionService
 {

@@ -12,7 +12,7 @@ namespace MyCondo.Application.UnitTests.Features.Platform.Users.Commands.UpdateP
 
 /// <summary>
 /// Platform-scope analogue of UpdateUserCommandHandlerTests: a Super Admin may always edit its own
-/// profile; a lower-privileged actor may never edit another Super Admin's profile (mycondo-docs ADR-035).
+/// profile; a lower-privileged actor may never edit another Super Admin's profile (mycondo-docs ADR-036).
 /// </summary>
 public class UpdatePlatformUserCommandHandlerTests
 {

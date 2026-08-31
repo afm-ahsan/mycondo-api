@@ -52,7 +52,7 @@ public sealed class RevokeRoleFromUserCommandHandler(
                 tenantId, userId, roleId, command.BuildingId, cancellationToken)
             ?? throw new NotFoundException(nameof(RoleAssignment), command.UserId);
 
-        // mycondo-docs ADR-035 — revoking a tenant-wide, admin-equivalent role (demotion) is subject to
+        // mycondo-docs ADR-036 — revoking a tenant-wide, admin-equivalent role (demotion) is subject to
         // self-protection and the manageTenantAdmins composition permission, on top of the pre-existing
         // last-holder protection every tenant-wide system role has always had.
         bool isSystemTenantWide = role.IsSystem && command.BuildingId is null;

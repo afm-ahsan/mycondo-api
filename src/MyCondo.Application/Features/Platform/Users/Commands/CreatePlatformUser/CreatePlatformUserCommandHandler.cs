@@ -45,7 +45,7 @@ public sealed class CreatePlatformUserCommandHandler(
             initialRole = await platformRoles.GetByNameAsync(command.InitialRoleName, cancellationToken)
                 ?? throw new NotFoundException(nameof(PlatformRole), command.InitialRoleName);
 
-            // mycondo-docs ADR-035 — granting the SuperAdmin role is itself a privileged mutation
+            // mycondo-docs ADR-036 — granting the SuperAdmin role is itself a privileged mutation
             // regardless of who the target is, mirroring tenant AssignRoleToUserCommandHandler's
             // grant-time gate.
             if (superAdminProtection.IsSuperAdmin(initialRole)

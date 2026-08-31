@@ -9,7 +9,7 @@ using NSubstitute;
 namespace MyCondo.Application.UnitTests.Common.Services;
 
 /// <summary>
-/// Unit tests for <see cref="PlatformSuperAdminProtectionService"/> (mycondo-docs ADR-035) — the
+/// Unit tests for <see cref="PlatformSuperAdminProtectionService"/> (mycondo-docs ADR-036) — the
 /// Platform-scope analogue of <see cref="TenantAdminProtectionServiceTests"/>, guarding the "SuperAdmin"
 /// Platform role.
 /// </summary>

@@ -8,7 +8,7 @@ namespace MyCondo.Application.Features.Platform.Users.Commands.CreatePlatformUse
 /// there is no generated-temporary-password flow, mirroring tenant <c>CreateUserCommand</c>.
 /// <see cref="InitialRoleName"/> is optional; when provided and it names the SuperAdmin role, granting
 /// it is itself a privileged mutation gated on <c>platform.user.manageSuperAdmins</c> (see mycondo-docs
-/// ADR-035).
+/// ADR-036).
 /// </summary>
 public sealed record CreatePlatformUserCommand(
     string DisplayName,
